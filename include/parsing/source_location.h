@@ -45,7 +45,7 @@ public:
     }
   }
 
-  friend std::ostream &operator<<(std::ostream &stream, const source_location loc) {
+  friend std::ostream &operator<<(std::ostream &stream, const source_location &loc) {
     std::stringstream ss;
     ss << "line: " << loc.row << ", column: " << loc.col;
     stream << ss.str();

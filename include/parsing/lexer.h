@@ -14,19 +14,8 @@
 namespace parsing {
 
 enum class token_type {
-  DOT,
-  KEYWORD,
-  IDENTIFIER,
-  INT_LITERAL,
-  FLOAT_LITERAL,
-  MINUS,
-  PLUS,
-  PAREN_OPEN,
-  PAREN_CLOSE,
-  BRACE_OPEN,
-  BRACE_CLOSE,
-  BRACKET_OPEN,
-  BRACKET_CLOSE
+#define TOKEN_TYPE(NAME) NAME,
+#include "parsing/tokens.def"
 };
 ///
 ///
@@ -34,6 +23,7 @@ struct token {
   token_type type;
   string_table::entry text;
   source_location loc;
+  friend std::ostream &operator<<(std::ostream &stream, const token &tok);
 };
 
 ///
@@ -93,7 +83,7 @@ class cin_line_lexer : public lexer_base {
 
 public:
   cin_line_lexer() {
-    std::cin >> line;
+    std::getline(std::cin, line);
     it = line.begin();
   }
 };

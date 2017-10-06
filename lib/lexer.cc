@@ -6,6 +6,18 @@ namespace parsing {
 using unit = lexer_base::unit;
 using result = lexer_base::result;
 
+std::ostream &operator<<(std::ostream &stream, const token_type ty) {
+#define TOKEN_TYPE(NAME)                                                       \
+  if (ty == token_type::NAME)                                                  \
+    stream << #NAME;
+#include "parsing/tokens.def"
+  return stream;
+}
+std::ostream &operator<<(std::ostream &stream, const token &tok) {
+  stream << tok.type;
+  return stream;
+}
+
 bool lexer_base::is_eof() {
   if (!history.empty()) {
     return false;
@@ -49,7 +61,7 @@ result lexer_base::next() {
     if (std::iscntrl(u) && !std::isspace(u)) {
       auto loc = this->loc;
       loc.rewind(u);
-      return lexer_error{ "Found junk", loc };
+      return lexer_error{"Found junk", loc};
     }
   } while (!std::isgraph(u));
   auto start_loc = prev_location();
@@ -57,13 +69,13 @@ result lexer_base::next() {
   text.clear();
   result res;
   // Dispatch to more concrete lexing functions
-  if (std::isalnum(u)) {
+  if (std::isalnum(u) || u == '_') {
     res = lex_alnum(u);
   } else if (std::ispunct(u)) {
     res = lex_punct(u);
   } else {
     // FIXME make this more sophisticated for non-ascii characters
-    return lexer_error{ "Cannot handle character", start_loc };
+    return lexer_error{"Cannot handle character", start_loc};
   }
   if (auto *T = std::get_if<token>(&res)) {
     T->loc = start_loc;
@@ -79,19 +91,39 @@ result lexer_base::lex_alnum(unit u) {
   }
 }
 result lexer_base::lex_punct(unit u) {
-  return lexer_error{ "Not implemented", loc };
+  return lexer_error{"Not implemented", loc};
 }
 result lexer_base::lex_number(unit u) {
   text << u;
   if (is_eof()) {
-    return token{ token_type::INT_LITERAL, str_table.get_handle(text.str()), prev_location() };
+    return token{token_type::INT_LITERAL, str_table.get_handle(text.str()),
+                 prev_location()};
   }
   if (u == '0') {
-
   }
-  return lexer_error{ "Not implemented", loc };
+  return lexer_error{"Not implemented", loc};
 }
+
+static bool is_keyword(string_table::entry word) {
+  return true; // FIXME
+}
+
 result lexer_base::lex_id_keyword(unit u) {
-  return lexer_error{ "Not implemented", loc };
+  do {
+    text << u;
+    if (is_eof()) {
+      break;
+    }
+    u = consume_unit();
+  } while (std::isalnum(u) || u == '_');
+  if (!is_eof()) {
+    unconsume_unit(u);
+  }
+  auto str = str_table.get_handle(text.str());
+  if (is_keyword(str)) {
+    return token{token_type::KEYWORD, str, {}};
+  } else {
+    return token{token_type::IDENTIFIER, str, {}};
+  }
 }
 } // namespace parsing

@@ -5,28 +5,29 @@ using namespace parsing;
 
 int main(int argc, char **argv) {
   struct lex_visitor {
-    bool operator()(lexer_error err) {
+    void operator()(lexer_error err) {
       cout << err.msg << ' ' << '(' << err.loc << ')' << '\n';
-      return false;
     }
-    bool operator()(std::monostate eof) {
+    void operator()(std::monostate eof) {
       cout << "EOF\n";
-      return false;
     }
-    bool operator()(token T) {
-      cout << "Token\n";
-      if (!T.text.empty()) {
-        cout << T.text << '\n';
-      }
-      return true;
+    void operator()(token T) {
+      cout << T << '\n';
     }
   } visitor;
+  bool error = false;
   do {
     cout << "Enter text:\n";
     cin_line_lexer lexer;
-    if (!std::visit(visitor, lexer.next())) {
-      break;
-    }
-  } while(true);
+    lexer_base::result res;
+    do {
+      res = lexer.next();
+      std::visit(visitor, res);
+      if (std::holds_alternative<lexer_error>(res)) {
+        error = true;
+        break;
+      }
+    } while (!std::holds_alternative<std::monostate>(res));
+  } while(!error);
   return 0;
 }
