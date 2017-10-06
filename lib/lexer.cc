@@ -90,27 +90,31 @@ result lexer_base::lex_float() { return lexer_error{"Not implemented", loc}; }
 /// This macro helps implementing binary, octal and hex literals with
 /// minimal code duplication
 #define LEX_SPECIAL_BASE_INT(NAME, PREFIX, TYPE, IS_DIGIT)                     \
-  text << PREFIX;                                                              \
-  advance();                                                                   \
-  auto next = window[1];                                                       \
-  if (!next || !IS_DIGIT(*next)) {                                             \
-    return lexer_error{NAME " literal must have digits after " PREFIX, loc};   \
-  }                                                                            \
   do {                                                                         \
+    text << PREFIX;                                                            \
     advance();                                                                 \
-    text << current();                                                         \
-    next = window[1];                                                          \
-  } while (next && IS_DIGIT(*next));                                           \
-  return token{token_type::TYPE, str_table.get_handle(text.str()), {}};
+    auto next = window[1];                                                     \
+    if (!next || !IS_DIGIT(*next)) {                                           \
+      return lexer_error{NAME " literal must have digits after " PREFIX, loc}; \
+    }                                                                          \
+    do {                                                                       \
+      advance();                                                               \
+      text << current();                                                       \
+      next = window[1];                                                        \
+    } while (next && IS_DIGIT(*next));                                         \
+    return token{token_type::TYPE, str_table.get_handle(text.str()), {}};      \
+  } while (false)
 
 result lexer_base::lex_hex_int() {
-  LEX_SPECIAL_BASE_INT("Hex", "0x", HEX_LITERAL, std::isxdigit)
+  LEX_SPECIAL_BASE_INT("Hex", "0x", HEX_LITERAL, std::isxdigit);
 }
 result lexer_base::lex_bin_int() {
-  LEX_SPECIAL_BASE_INT("Binary", "0b", BIN_LITERAL, [](unit u) { return u == '0' || u == '1'; })
+  LEX_SPECIAL_BASE_INT("Binary", "0b", BIN_LITERAL,
+                       [](unit u) { return u == '0' || u == '1'; });
 }
 result lexer_base::lex_oct_int() {
-  LEX_SPECIAL_BASE_INT("Octal", "0o", OCT_LITERAL, [](unit u) { return u >= '0' && u <= '7'; })
+  LEX_SPECIAL_BASE_INT("Octal", "0o", OCT_LITERAL,
+                       [](unit u) { return u >= '0' && u <= '7'; });
 }
 
 result lexer_base::lex_number() {
@@ -118,22 +122,65 @@ result lexer_base::lex_number() {
     text << current();
     return token{token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
   }
+  auto next = window[1];
   if (current() == '0') {
-    auto next = *window[1];
-    if (next == '.') {
+    if (*next == '.') {
       return lex_float();
-    } else if (next == 'x' || next == 'X') {
+    } else if (*next == 'x' || *next == 'X') {
       return lex_hex_int();
-    } else if (next == 'b' || next == 'B') {
+    } else if (*next == 'b' || *next == 'B') {
       return lex_bin_int();
-    } else if (next == 'o' || next == 'O') {
+    } else if (*next == 'o' || *next == 'O') {
       return lex_oct_int();
     }
     // token that starts with 0 and isn't one of the above must end here
     text << current();
     return token{token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
   }
-  return lexer_error{"Not implemented", loc};
+  text << current();
+  // consume leading digits
+  while (next && std::isdigit(*next)) {
+    advance();
+    text << current();
+    next = window[1];
+  }
+  token_type ty = token_type::INT_LITERAL;
+  if (next && *next == '.') {
+    ty = token_type::FLOAT_LITERAL;
+    advance(); // consume '.'
+    text << current();
+    next = window[1];
+    // consume decimal places
+    while (next && std::isdigit(*next)) {
+      advance();
+      text << current();
+      next = window[1];
+    }
+  }
+  if (next && *next == 'e' || *next == 'E') {
+    advance(); // consume 'e'/'E'
+    text << current();
+    next = window[1];
+    if (!next) {
+      return lexer_error{"Missing digits after exponent part of number literal",
+                         loc};
+    }
+    if (*next == '-') {
+      ty = token_type::FLOAT_LITERAL;
+    }
+    if (*next == '-' || *next == '+') {
+      advance(); // consume sign
+      text << current();
+      next = window[1];
+    }
+    // consume exponent
+    while (next && std::isdigit(*next)) {
+      advance();
+      text << current();
+      next = window[1];
+    }
+  }
+  return token{ty, str_table.get_handle(text.str()), {}};
 }
 
 static bool is_keyword(string_table::entry word) {
