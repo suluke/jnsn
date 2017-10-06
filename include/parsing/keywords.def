@@ -2,16 +2,71 @@
 #define KEYWORD(NAME)
 #endif
 
+// cf. Standard ECMA-262 ECMAScript® 2017 Language Specification
+// 8th edition (June 2017) page 241
+
+// variable declarations
 KEYWORD(var)
-KEYWORD(let)
 KEYWORD(const)
+// control flow
 KEYWORD(if)
 KEYWORD(else)
 KEYWORD(do)
 KEYWORD(while)
 KEYWORD(for)
+KEYWORD(switch)
+KEYWORD(case)
+KEYWORD(break)
+KEYWORD(continue)
+KEYWORD(default)
+// function
 KEYWORD(function)
+KEYWORD(return)
+// exceptions
+KEYWORD(throw)
 KEYWORD(try)
 KEYWORD(catch)
+KEYWORD(finally)
+// classes
+KEYWORD(class)
+KEYWORD(extends)
+KEYWORD(super)
+KEYWORD(this)
+// type & object inspection
+KEYWORD(typeof)
+KEYWORD(instanceof)
+KEYWORD(in)
+KEYWORD(new)
+KEYWORD(delete)
+// modules
+KEYWORD(export)
+KEYWORD(import)
+// async/await
+//~ KEYWORD(async) // not a real keyword it seems
+KEYWORD(await)
+KEYWORD(yield)
+// other
+KEYWORD(debugger)
+KEYWORD(with)
+KEYWORD(void)
+
+// reserverd words
+KEYWORD(static)
+KEYWORD(let)
+KEYWORD(enum)
+KEYWORD(implements)
+KEYWORD(package)
+KEYWORD(protected)
+KEYWORD(interface)
+KEYWORD(private)
+KEYWORD(public)
+
+// special values (not "real" keywords, but we don't differentiate here (yet))
+//~ KEYWORD(true)
+//~ KEYWORD(false)
+//~ KEYWORD(null)
+//~ KEYWORD(undefined)
+//~ KEYWORD(NaN)
+//~ KEYWORD(Infinity)
 
 #undef KEYWORD
