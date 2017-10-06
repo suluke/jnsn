@@ -105,7 +105,11 @@ result lexer_base::lex_number(unit u) {
 }
 
 static bool is_keyword(string_table::entry word) {
-  return true; // FIXME
+#define KEYWORD(NAME)                                                          \
+  if (word == #NAME)                                                           \
+    return true;
+#include "parsing/keywords.def"
+  return false;
 }
 
 result lexer_base::lex_id_keyword(unit u) {

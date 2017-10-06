@@ -1,0 +1,17 @@
+#ifndef KEYWORD
+#define KEYWORD(NAME)
+#endif
+
+KEYWORD(var)
+KEYWORD(let)
+KEYWORD(const)
+KEYWORD(if)
+KEYWORD(else)
+KEYWORD(do)
+KEYWORD(while)
+KEYWORD(for)
+KEYWORD(function)
+KEYWORD(try)
+KEYWORD(catch)
+
+#undef KEYWORD
