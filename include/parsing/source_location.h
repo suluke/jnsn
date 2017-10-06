@@ -9,9 +9,13 @@ namespace parsing {
 using unit_t = char;
 
 class source_location {
-  size_t row, col, next_row, next_col;
+  size_t row, col;
 public:
-  source_location() : row(0), col(0), next_row(0), next_col(0) {}
+  /// Why does row begin at 0? To allow filling the lexer's sliding window
+  /// with some initial content plus a newline so it isn't regarded as EOF
+  /// and the source_location is still at the correct position after the
+  /// sliding window's initial content has been consumed
+  source_location() : row(0), col(1) {}
   source_location(const source_location &) = default;
   source_location(source_location &&) = default;
   source_location &operator=(const source_location &) = default;
@@ -21,27 +25,13 @@ public:
   size_t get_col() { return col; }
 
   void advance(unit_t u) {
-    row = next_row;
-    col = next_col;
     if (u == '\n') {
-      ++next_row;
-      next_col = 0;
+      ++row;
+      col = 1;
     } else if (u == '\r') {
       // do nothing
     } else {
-      ++next_col;
-    }
-  }
-  /// FIXME this will not correctly restore the col value
-  void rewind(unit_t u) {
-    next_row = row;
-    next_col = col;
-    if (u == '\n') {
-      --row;
-    } else if (u == '\r') {
-      // do nothing
-    } else {
-      --col;
+      ++col;
     }
   }
 

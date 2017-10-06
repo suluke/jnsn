@@ -4,7 +4,6 @@
 #include "parsing/source_location.h"
 #include "parsing/string_table.h"
 #include <cassert>
-#include <deque>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -17,12 +16,17 @@ enum class token_type {
 #define TOKEN_TYPE(NAME) NAME,
 #include "parsing/tokens.def"
 };
+enum class keyword_type {
+#define KEYWORD(NAME) kw_##NAME,
+#include "parsing/keywords.def"
+};
 ///
 ///
 struct token {
   token_type type;
   string_table::entry text;
   source_location loc;
+
   friend std::ostream &operator<<(std::ostream &stream, const token &tok);
 };
 
@@ -40,30 +44,35 @@ public:
   using unit = char;
   using read_t = std::optional<unit>;
   using result = std::variant<std::monostate, lexer_error, token>;
+  using window_t = std::array<read_t, 3>;
 
 private:
-  std::deque<unit> history;
   source_location loc;
   std::stringstream text;
   string_table str_table;
+  window_t window;
+  unit current() { return *window[0]; }
+  std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
 
-  bool is_eof();
-  unit consume_unit();
-  void unconsume_unit(unit u);
-  source_location prev_location() {
-    auto prev = loc;
-    prev.rewind(' ');
-    return prev;
-  }
+  bool eof();
+  void advance();
 
-  result lex_alnum(unit u);
-  result lex_punct(unit u);
-  result lex_number(unit u);
-  result lex_id_keyword(unit u);
+  result lex_alnum();
+  result lex_punct();
+  result lex_number();
+  result lex_id_keyword();
+  result lex_line_comment();
+  result lex_block_comment();
+  result lex_regex();
+  result lex_float();
+  result lex_hex_int();
+  result lex_bin_int();
+  result lex_oct_int();
 
 public:
+  lexer_base() : window({' ', ' ', '\n'}) {}
   result next();
 };
 
