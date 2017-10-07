@@ -92,9 +92,9 @@ result lexer_base::lex_alnum() {
 }
 result lexer_base::lex_punct() {
   if (current() == '.') {
-    if (next_unit() && *next_unit() == '.') {
+    if (peek() && *peek() == '.') {
       advance();
-      if (!next_unit() || *next_unit() != '.') {
+      if (!peek() || *peek() != '.') {
         return lexer_error{"Unexpected char after '..'. Expected third dot.",
                            loc};
       }
@@ -105,8 +105,51 @@ result lexer_base::lex_punct() {
     } else {
       return token{token_type::DOT, {}, {}};
     }
+  } else if (current() == '/') {
+    if (!peek()) {
+      return token{token_type::SLASH, {}, {}};
+    }
+    if (*peek() == '/') {
+      return lex_line_comment();
+    } else if (*peek() == '*') {
+      return lex_block_comment();
+    } else if (*peek() == '=') {
+      advance();
+      return token{token_type::DIV_EQ, {}, {}};
+    }
+    return token{token_type::SLASH, {}, {}};
   }
   return lexer_error{"Not implemented", loc};
+}
+
+result lexer_base::lex_line_comment() {
+  text << current();
+  do {
+    advance();
+    text << current();
+  } while (peek() && *peek() != '\n');
+  return token{token_type::LINE_COMMENT, str_table.get_handle(text.str()), {}};
+}
+
+result lexer_base::lex_block_comment() {
+  auto start = loc;
+  text << "/*";
+  advance(); // now pointing on *
+  bool closed = false;
+  while (peek()) {
+    advance();
+    text << current();
+    if (current() == '*' && peek() && *peek() == '/') {
+      advance();
+      text << current();
+      closed = true;
+      break;
+    }
+  }
+  if (!closed) {
+    return lexer_error{"Reached end of file while lexing block comment", start};
+  }
+  return token{token_type::BLOCK_COMMENT, str_table.get_handle(text.str()), {}};
 }
 
 /// This macro helps implementing binary, octal and hex literals with
@@ -115,13 +158,13 @@ result lexer_base::lex_punct() {
   do { /* idiomatic do-while-false-wrapper */                                  \
     text << PREFIX;                                                            \
     advance(); /* now points to second char of prefix */                       \
-    if (!next_unit() || !IS_DIGIT(*next_unit())) {                             \
+    if (!peek() || !IS_DIGIT(*peek())) {                             \
       return lexer_error{NAME " literal must have digits after " PREFIX, loc}; \
     }                                                                          \
     do {                                                                       \
       advance();                                                               \
       text << current();                                                       \
-    } while (next_unit() && IS_DIGIT(*next_unit()));                           \
+    } while (peek() && IS_DIGIT(*peek()));                           \
     return token{token_type::TYPE, str_table.get_handle(text.str()), {}};      \
   } while (false)
 
@@ -136,27 +179,28 @@ result lexer_base::lex_oct_int() {
   LEX_SPECIAL_BASE_INT("Octal", "0o", OCT_LITERAL,
                        [](unit u) { return u >= '0' && u <= '7'; });
 }
+#undef LEX_SPECIAL_BASE_INT
 
 result lexer_base::lex_number() {
   // this method can be entered either by having a leading digit or a
   // leading dot
   token_type ty = token_type::INT_LITERAL;
   if (current() != '.') { // we got a digit
-    if (!next_unit()) {
+    if (!peek()) {
       text << current();
       return token{
           token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
     }
     if (current() == '0') {
-      if (*next_unit() == '.') {
+      if (*peek() == '.') {
         // fall through
-      } else if (*next_unit() == 'x' || *next_unit() == 'X') {
+      } else if (*peek() == 'x' || *peek() == 'X') {
         return lex_hex_int();
-      } else if (*next_unit() == 'b' || *next_unit() == 'B') {
+      } else if (*peek() == 'b' || *peek() == 'B') {
         return lex_bin_int();
-      } else if (*next_unit() == 'o' || *next_unit() == 'O') {
+      } else if (*peek() == 'o' || *peek() == 'O') {
         return lex_oct_int();
-      } else if (!std::isspace(*next_unit())) {
+      } else if (!std::isspace(*peek())) {
         return lexer_error{"Tokens beginning with '0' must be followed by '.', "
                            "'x', 'b', 'o' or spaces",
                            loc};
@@ -164,15 +208,15 @@ result lexer_base::lex_number() {
     }
     text << current();
     // consume remaining leading digits
-    while (next_unit() && std::isdigit(*next_unit())) {
+    while (peek() && std::isdigit(*peek())) {
       advance();
       text << current();
     }
     // a dot will also be part of the number
-    if (next_unit() && *next_unit() == '.') {
+    if (peek() && *peek() == '.') {
       advance();
     }
-  } else if (!next_unit() || !std::isdigit(*next_unit())) {
+  } else if (!peek() || !std::isdigit(*peek())) {
     return lexer_error{"Expected number, but no digits after leading dot ('.')",
                        loc};
   }
@@ -181,35 +225,35 @@ result lexer_base::lex_number() {
     ty = token_type::FLOAT_LITERAL;
     text << current();
     // consume decimal places
-    while (next_unit() && std::isdigit(*next_unit())) {
+    while (peek() && std::isdigit(*peek())) {
       advance();
       text << current();
     }
   }
-  if (!next_unit()) {
+  if (!peek()) {
     return token{ty, str_table.get_handle(text.str()), {}};
   }
-  if (*next_unit() == 'e' || *next_unit() == 'E') {
+  if (*peek() == 'e' || *peek() == 'E') {
     advance();
     text << current();
-    if (!next_unit() || (!std::isdigit(*next_unit()) && *next_unit() != '+' &&
-                         *next_unit() != '-')) {
+    if (!peek() || (!std::isdigit(*peek()) && *peek() != '+' &&
+                         *peek() != '-')) {
       return lexer_error{"Missing digits after exponent part of number literal",
                          loc};
     }
-    if (*next_unit() == '-') {
+    if (*peek() == '-') {
       ty = token_type::FLOAT_LITERAL;
     }
-    if (*next_unit() == '-' || *next_unit() == '+') {
+    if (*peek() == '-' || *peek() == '+') {
       advance(); // consume sign
       text << current();
     }
-    if (!next_unit() || !std::isdigit(*next_unit())) {
+    if (!peek() || !std::isdigit(*peek())) {
       return lexer_error{
           "Missing digits after exponent part's sign of number literal", loc};
     }
     // consume exponent
-    while (next_unit() && std::isdigit(*next_unit())) {
+    while (peek() && std::isdigit(*peek())) {
       advance();
       text << current();
     }
@@ -227,8 +271,8 @@ static bool is_keyword(string_table::entry word) {
 
 result lexer_base::lex_id_keyword() {
   text << current();
-  while (next_unit() && (std::isalnum(*next_unit()) || *next_unit() == '_' ||
-                         *next_unit() == '$' || *next_unit() == '\\')) {
+  while (peek() && (std::isalnum(*peek()) || *peek() == '_' ||
+                         *peek() == '$' || *peek() == '\\')) {
     // TODO backslash may be used to start unicode id sequence, so we
     // should dispatch to some method that can handle that correctly
     advance();

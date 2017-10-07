@@ -16,6 +16,7 @@ enum class token_type {
 #define TOKEN_TYPE(NAME, STR) NAME,
 #include "parsing/tokens.def"
 };
+std::ostream &operator<<(std::ostream &stream, const token_type ty);
 enum class keyword_type {
 #define KEYWORD(NAME) kw_##NAME,
 #include "parsing/keywords.def"
@@ -54,7 +55,7 @@ private:
   string_table str_table;
   window_t window;
   unit current() { return *window[0]; }
-  read_t next_unit() { return window[1]; }
+  read_t peek() { return window[1]; }
   std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
