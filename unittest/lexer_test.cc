@@ -83,15 +83,14 @@ TEST_F(lexer_test, numbers) {
   INPUT_IS_TOKEN_TEXT("0o123", OCT_LITERAL);
   INPUT_IS_TOKEN_TEXT("0b010", BIN_LITERAL);
 
+  TOKEN_SEQUENCE("0;", TOKEN(INT_LITERAL, "0"), TOKEN(SEMICOLON, ""));
+
   LEXER_ERROR("00");
   LEXER_ERROR("01");
   LEXER_ERROR("01.2");
   LEXER_ERROR("1e");
   LEXER_ERROR("1e+");
   LEXER_ERROR("1e-");
-  // Dots not preceded by an identifier are interpreted as the start of a
-  // number
-  LEXER_ERROR(".");
 }
 
 TEST_F(lexer_test, comments) {
@@ -107,4 +106,31 @@ TEST_F(lexer_test, operators) {
     SINGLE_NOTEXT_TOKEN(STR, NAME);                                            \
   }
 #include "parsing/tokens.def"
+}
+
+TEST_F(lexer_test, big1) {
+  const auto prog = R"delim(
+    /* Test */
+    function test() {
+      for (let i = 0; i < 10; ++i) {
+        console.log((i + 1) * 1e1);
+      }
+    }
+    test();
+  )delim";
+  TOKEN_SEQUENCE(prog,
+    TOKEN(BLOCK_COMMENT, "/* Test */"), TOKEN(KEYWORD, "function"),
+    TOKEN(IDENTIFIER, "test"), TOKEN(PAREN_OPEN, ""), TOKEN(PAREN_CLOSE, ""),
+    TOKEN(BRACE_OPEN, ""), TOKEN(KEYWORD, "for"), TOKEN(PAREN_OPEN, ""),
+    TOKEN(KEYWORD, "let"), TOKEN(IDENTIFIER, "i"), TOKEN(EQ, ""), TOKEN(INT_LITERAL, "0"),
+    TOKEN(SEMICOLON, ""), TOKEN(IDENTIFIER, "i"), TOKEN(LT, ""), TOKEN(INT_LITERAL, "10"),
+    TOKEN(SEMICOLON, ""), TOKEN(INCR, ""), TOKEN(IDENTIFIER, "i"), TOKEN(PAREN_CLOSE, ""),
+    TOKEN(BRACE_OPEN, ""), TOKEN(IDENTIFIER, "console"), TOKEN(DOT, ""),
+    TOKEN(IDENTIFIER, "log"), TOKEN(PAREN_OPEN, ""), TOKEN(PAREN_OPEN, ""),
+    TOKEN(IDENTIFIER, "i"), TOKEN(PLUS, ""), TOKEN(INT_LITERAL, "1"),
+    TOKEN(PAREN_CLOSE, ""), TOKEN(ASTERISK, ""), TOKEN(INT_LITERAL, "1e1"),
+    TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, ""), TOKEN(BRACE_CLOSE, ""),
+    TOKEN(BRACE_CLOSE, ""), TOKEN(IDENTIFIER, "test"), TOKEN(PAREN_OPEN, ""),
+    TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, "")
+  );
 }
