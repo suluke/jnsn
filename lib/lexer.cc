@@ -92,7 +92,14 @@ result lexer_base::lex_alnum() {
 }
 result lexer_base::lex_punct() {
   if (current() == '.') {
-    if (!prev || prev->type != token_type::IDENTIFIER) {
+    if (next_unit() && *next_unit() == '.') {
+      advance();
+      if (!next_unit() || *next_unit() != '.') {
+        return lexer_error{"Unexpected char after '..'. Expected third dot.", loc};
+      }
+      advance();
+      return token{token_type::DOTDOTDOT, {}, {}};
+    } else if (!prev || prev->type != token_type::IDENTIFIER) {
       return lex_number();
     } else {
       return token{token_type::DOT, {}, {}};
