@@ -35,7 +35,8 @@ protected:
     lexer.set_text(INPUT);                                                     \
     for (auto &expected : expected_tokens) {                                   \
       auto res = lexer.next();                                                 \
-      ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;       \
+      ASSERT_TRUE(std::holds_alternative<token>(res))                          \
+          << "Details:\n  Actual: " << res << "\nExpected: " << expected;      \
       auto tok = std::get<token>(res);                                         \
       ASSERT_EQ(tok.type, expected.type);                                      \
       ASSERT_EQ(tok.text, expected.text);                                      \
