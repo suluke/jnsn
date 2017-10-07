@@ -151,11 +151,10 @@ result lexer_base::lex_number() {
         return lex_bin_int();
       } else if (*next == 'o' || *next == 'O') {
         return lex_oct_int();
-      } else {
-        // token that starts with '0' and isn't one of the above must end here
-        text << current();
-        return token{
-            token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
+      } else if (!std::isspace(*next)) {
+        return lexer_error{"Tokens beginning with '0' must be followed by '.', "
+                           "'x', 'b', 'o' or spaces",
+                           loc};
       }
     }
     text << current();
