@@ -1,5 +1,6 @@
 #include "parsing/lexer.h"
 #include "gtest/gtest.h"
+#include <initializer_list>
 
 using namespace parsing;
 
@@ -28,30 +29,27 @@ protected:
   constant_string_lexer lexer;
 };
 
-#define SINGLE_TOKEN(INPUT, TYPE)                                              \
+#define TOKEN_SEQUENCE(INPUT, ...)                                             \
   do {                                                                         \
+    std::initializer_list<token> expected_tokens = {__VA_ARGS__};              \
     lexer.set_text(INPUT);                                                     \
+    for (auto &expected : expected_tokens) {                                   \
+      auto res = lexer.next();                                                 \
+      ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;       \
+      auto tok = std::get<token>(res);                                         \
+      ASSERT_EQ(tok.type, expected.type);                                      \
+      ASSERT_EQ(tok.text, expected.text);                                      \
+    }                                                                          \
     auto res = lexer.next();                                                   \
-    ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;         \
-    auto tok = std::get<token>(res);                                           \
-    ASSERT_EQ(tok.type, token_type::TYPE);                                     \
-    res = lexer.next();                                                        \
-    ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res))                \
-        << "was: " << res;                                                     \
+    ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res));               \
   } while (false)
+// end define TOKEN_SEQUENCE(INPUT, ...)
+
+#define SINGLE_NOTEXT_TOKEN(INPUT, TYPE)                                       \
+  TOKEN_SEQUENCE(INPUT, token{token_type::TYPE, "", {}})
 
 #define INPUT_IS_TOKEN_TEXT(INPUT, TYPE)                                       \
-  do {                                                                         \
-    lexer.set_text(INPUT);                                                     \
-    auto res = lexer.next();                                                   \
-    ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;         \
-    auto tok = std::get<token>(res);                                           \
-    ASSERT_EQ(tok.type, token_type::TYPE);                                     \
-    ASSERT_EQ(tok.text, INPUT);                                                \
-    res = lexer.next();                                                        \
-    ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res))                \
-        << "was: " << res;                                                     \
-  } while (false)
+  TOKEN_SEQUENCE(INPUT, token{token_type::TYPE, INPUT, {}})
 
 #define LEXER_ERROR(INPUT)                                                     \
   do {                                                                         \
@@ -59,6 +57,18 @@ protected:
     auto res = lexer.next();                                                   \
     ASSERT_TRUE(std::holds_alternative<lexer_error>(res)) << "was: " << res;   \
   } while (false)
+
+#define TOKEN(TYPE, TEXT)                                                      \
+  token {                                                                      \
+    token_type::TYPE, TEXT, {}                                                 \
+  }
+
+TEST_F(lexer_test, identifiers) {
+  INPUT_IS_TOKEN_TEXT("abc", IDENTIFIER);
+  INPUT_IS_TOKEN_TEXT("$abc", IDENTIFIER);
+  INPUT_IS_TOKEN_TEXT("_abc", IDENTIFIER);
+  INPUT_IS_TOKEN_TEXT("abc\\", IDENTIFIER); // FIXME
+}
 
 TEST_F(lexer_test, numbers) {
   INPUT_IS_TOKEN_TEXT("123", INT_LITERAL);
@@ -78,14 +88,22 @@ TEST_F(lexer_test, numbers) {
   LEXER_ERROR("1e");
   LEXER_ERROR("1e+");
   LEXER_ERROR("1e-");
-  // Dots not preceded by an identifier are interpreted as the start of a number
+  // Dots not preceded by an identifier are interpreted as the start of a
+  // number
   LEXER_ERROR(".");
+}
+
+TEST_F(lexer_test, comments) {
+  TOKEN_SEQUENCE("abc // test", TOKEN(IDENTIFIER, "abc"),
+                 TOKEN(LINE_COMMENT, "// test"));
+  TOKEN_SEQUENCE("abc /* test */", TOKEN(IDENTIFIER, "abc"),
+                 TOKEN(BLOCK_COMMENT, "/* test */"));
 }
 
 TEST_F(lexer_test, operators) {
 #define TOKEN_TYPE(NAME, STR)                                                  \
   if (STR != "" && STR != ".") {                                               \
-    SINGLE_TOKEN(STR, NAME);                                                   \
+    SINGLE_NOTEXT_TOKEN(STR, NAME);                                            \
   }
 #include "parsing/tokens.def"
 }
