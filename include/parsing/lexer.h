@@ -13,7 +13,7 @@
 namespace parsing {
 
 enum class token_type {
-#define TOKEN_TYPE(NAME) NAME,
+#define TOKEN_TYPE(NAME, STR) NAME,
 #include "parsing/tokens.def"
 };
 enum class keyword_type {
@@ -68,7 +68,6 @@ private:
   result lex_id_keyword();
   result lex_line_comment();
   result lex_block_comment();
-  result lex_regex();
   result lex_hex_int();
   result lex_bin_int();
   result lex_oct_int();

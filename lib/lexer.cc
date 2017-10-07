@@ -8,7 +8,7 @@ using unit = lexer_base::unit;
 using result = lexer_base::result;
 
 std::ostream &operator<<(std::ostream &stream, const token_type ty) {
-#define TOKEN_TYPE(NAME)                                                       \
+#define TOKEN_TYPE(NAME, STR)                                                  \
   if (ty == token_type::NAME)                                                  \
     stream << #NAME;
 #include "parsing/tokens.def"
@@ -95,7 +95,8 @@ result lexer_base::lex_punct() {
     if (next_unit() && *next_unit() == '.') {
       advance();
       if (!next_unit() || *next_unit() != '.') {
-        return lexer_error{"Unexpected char after '..'. Expected third dot.", loc};
+        return lexer_error{"Unexpected char after '..'. Expected third dot.",
+                           loc};
       }
       advance();
       return token{token_type::DOTDOTDOT, {}, {}};
