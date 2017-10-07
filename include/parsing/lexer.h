@@ -46,7 +46,7 @@ public:
   using eof_t = std::monostate;
   using read_t = std::optional<unit>;
   using result = std::variant<eof_t, lexer_error, token>;
-  using window_t = std::array<read_t, 3>;
+  using window_t = std::array<read_t, 2>;
 
 private:
   source_location loc;
@@ -54,6 +54,7 @@ private:
   string_table str_table;
   window_t window;
   unit current() { return *window[0]; }
+  read_t next_unit() { return window[1]; }
   std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
@@ -73,10 +74,10 @@ private:
   result lex_oct_int();
 
 public:
-  lexer_base() : window({' ', ' ', '\n'}) {}
+  lexer_base() : window({' ', '\n'}) {}
   result next();
   void reset() {
-    window = {' ', ' ', '\n'};
+    window = {' ', '\n'};
     loc = {};
   }
 };
