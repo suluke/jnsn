@@ -108,6 +108,11 @@ TEST_F(lexer_test, operators) {
 #include "parsing/tokens.def"
 }
 
+TEST_F(lexer_test, strings) {
+  INPUT_IS_TOKEN_TEXT("\"ABCDE\"", STRING_LITERAL);
+  INPUT_IS_TOKEN_TEXT("'ABCDE'", STRING_LITERAL);
+}
+
 TEST_F(lexer_test, big1) {
   const auto prog = R"delim(
     /* Test */
@@ -117,6 +122,7 @@ TEST_F(lexer_test, big1) {
       }
     }
     test();
+    // END
   )delim";
   TOKEN_SEQUENCE(prog,
     TOKEN(BLOCK_COMMENT, "/* Test */"), TOKEN(KEYWORD, "function"),
@@ -131,6 +137,6 @@ TEST_F(lexer_test, big1) {
     TOKEN(PAREN_CLOSE, ""), TOKEN(ASTERISK, ""), TOKEN(INT_LITERAL, "1e1"),
     TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, ""), TOKEN(BRACE_CLOSE, ""),
     TOKEN(BRACE_CLOSE, ""), TOKEN(IDENTIFIER, "test"), TOKEN(PAREN_OPEN, ""),
-    TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, "")
+    TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, ""), TOKEN(LINE_COMMENT, "// END")
   );
 }
