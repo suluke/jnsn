@@ -35,6 +35,18 @@ protected:
     ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;         \
     auto tok = std::get<token>(res);                                           \
     ASSERT_EQ(tok.type, token_type::TYPE);                                     \
+    res = lexer.next();                                                        \
+    ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res))                \
+        << "was: " << res;                                                     \
+  } while (false)
+
+#define INPUT_IS_TOKEN_TEXT(INPUT, TYPE)                                       \
+  do {                                                                         \
+    lexer.set_text(INPUT);                                                     \
+    auto res = lexer.next();                                                   \
+    ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;         \
+    auto tok = std::get<token>(res);                                           \
+    ASSERT_EQ(tok.type, token_type::TYPE);                                     \
     ASSERT_EQ(tok.text, INPUT);                                                \
     res = lexer.next();                                                        \
     ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res))                \
@@ -49,16 +61,16 @@ protected:
   } while (false)
 
 TEST_F(lexer_test, numbers) {
-  SINGLE_TOKEN("123", INT_LITERAL);
-  SINGLE_TOKEN("123.", FLOAT_LITERAL);
-  SINGLE_TOKEN("123.e1", FLOAT_LITERAL);
-  SINGLE_TOKEN("123e1", INT_LITERAL);
-  SINGLE_TOKEN("123e+1", INT_LITERAL);
-  SINGLE_TOKEN("123e-1", FLOAT_LITERAL);
-  SINGLE_TOKEN(".123", FLOAT_LITERAL);
-  SINGLE_TOKEN("0x123", HEX_LITERAL);
-  SINGLE_TOKEN("0o123", OCT_LITERAL);
-  SINGLE_TOKEN("0b010", BIN_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123", INT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123.", FLOAT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123.e1", FLOAT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123e1", INT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123e+1", INT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("123e-1", FLOAT_LITERAL);
+  INPUT_IS_TOKEN_TEXT(".123", FLOAT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("0x123", HEX_LITERAL);
+  INPUT_IS_TOKEN_TEXT("0o123", OCT_LITERAL);
+  INPUT_IS_TOKEN_TEXT("0b010", BIN_LITERAL);
 
   LEXER_ERROR("00");
   LEXER_ERROR("01");
@@ -68,4 +80,12 @@ TEST_F(lexer_test, numbers) {
   LEXER_ERROR("1e-");
   // Dots not preceded by an identifier are interpreted as the start of a number
   LEXER_ERROR(".");
+}
+
+TEST_F(lexer_test, operators) {
+#define TOKEN_TYPE(NAME, STR)                                                  \
+  if (STR != "" && STR != ".") {                                               \
+    SINGLE_TOKEN(STR, NAME);                                                   \
+  }
+#include "parsing/tokens.def"
 }
