@@ -20,3 +20,5 @@ include_directories(include/)
 add_executable(parsing
   ${SOURCES}
 )
+
+add_subdirectory(unittest)
