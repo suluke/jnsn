@@ -21,6 +21,19 @@ std::ostream &operator<<(std::ostream &stream, const token &tok) {
   }
   return stream;
 }
+std::ostream &operator<<(std::ostream &stream, const lexer_error &e) {
+  stream << "ERROR: " << e.msg << " (at " << e.loc << ")";
+  return stream;
+}
+template <class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template <class... Ts> overloaded(Ts...)->overloaded<Ts...>;
+std::ostream &operator<<(std::ostream &stream, const lexer_base::result &res) {
+  std::visit(overloaded{[&stream](lexer_base::eof_t) { stream << "EOF"; },
+                        [&stream](lexer_error e) { stream << e; },
+                        [&stream](token t) { stream << t; }},
+             res);
+  return stream;
+}
 
 bool lexer_base::eof() { return !window[0]; }
 
@@ -32,6 +45,9 @@ void lexer_base::advance() {
 }
 
 result lexer_base::next() {
+  if (!window[1]) {
+    return eof_t{};
+  }
   // Skip whitespace
   unit u;
   do {
@@ -77,7 +93,7 @@ result lexer_base::lex_alnum() {
 result lexer_base::lex_punct() {
   if (current() == '.') {
     if (!prev || prev->type != token_type::IDENTIFIER) {
-      return lex_float();
+      return lex_number();
     } else {
       return token{token_type::DOT, {}, {}};
     }
@@ -85,14 +101,12 @@ result lexer_base::lex_punct() {
   return lexer_error{"Not implemented", loc};
 }
 
-result lexer_base::lex_float() { return lexer_error{"Not implemented", loc}; }
-
 /// This macro helps implementing binary, octal and hex literals with
 /// minimal code duplication
 #define LEX_SPECIAL_BASE_INT(NAME, PREFIX, TYPE, IS_DIGIT)                     \
-  do {                                                                         \
+  do { /* idiomatic do-while-false-wrapper */                                  \
     text << PREFIX;                                                            \
-    advance();                                                                 \
+    advance(); /* now points to second char of prefix */                       \
     auto next = window[1];                                                     \
     if (!next || !IS_DIGIT(*next)) {                                           \
       return lexer_error{NAME " literal must have digits after " PREFIX, loc}; \
@@ -118,38 +132,52 @@ result lexer_base::lex_oct_int() {
 }
 
 result lexer_base::lex_number() {
-  if (!window[1]) {
-    text << current();
-    return token{token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
-  }
+  // this method can be entered either by having a leading digit or a
+  // leading dot
   auto next = window[1];
-  if (current() == '0') {
-    if (*next == '.') {
-      return lex_float();
-    } else if (*next == 'x' || *next == 'X') {
-      return lex_hex_int();
-    } else if (*next == 'b' || *next == 'B') {
-      return lex_bin_int();
-    } else if (*next == 'o' || *next == 'O') {
-      return lex_oct_int();
-    }
-    // token that starts with 0 and isn't one of the above must end here
-    text << current();
-    return token{token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
-  }
-  text << current();
-  // consume leading digits
-  while (next && std::isdigit(*next)) {
-    advance();
-    text << current();
-    next = window[1];
-  }
   token_type ty = token_type::INT_LITERAL;
-  if (next && *next == '.') {
-    ty = token_type::FLOAT_LITERAL;
-    advance(); // consume '.'
+  if (current() != '.') { // we got a digit
+    if (!next) {
+      text << current();
+      return token{
+          token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
+    }
+    if (current() == '0') {
+      if (*next == '.') {
+        // fall through
+      } else if (*next == 'x' || *next == 'X') {
+        return lex_hex_int();
+      } else if (*next == 'b' || *next == 'B') {
+        return lex_bin_int();
+      } else if (*next == 'o' || *next == 'O') {
+        return lex_oct_int();
+      } else {
+        // token that starts with '0' and isn't one of the above must end here
+        text << current();
+        return token{
+            token_type::INT_LITERAL, str_table.get_handle(text.str()), {}};
+      }
+    }
     text << current();
-    next = window[1];
+    // consume remaining leading digits
+    while (next && std::isdigit(*next)) {
+      advance();
+      text << current();
+      next = window[1];
+    }
+    // a dot will also be part of the number
+    if (next && *next == '.') {
+      advance();
+      next = window[1];
+    }
+  } else if (!next || !std::isdigit(*next)) {
+    return lexer_error{"Expected number, but no digits after leading dot ('.')",
+                       loc};
+  }
+  // now we're looking at a leading dot (if it exists)
+  if (current() == '.') {
+    ty = token_type::FLOAT_LITERAL;
+    text << current();
     // consume decimal places
     while (next && std::isdigit(*next)) {
       advance();
@@ -157,11 +185,14 @@ result lexer_base::lex_number() {
       next = window[1];
     }
   }
-  if (next && *next == 'e' || *next == 'E') {
-    advance(); // consume 'e'/'E'
+  if (!next) {
+    return token{ty, str_table.get_handle(text.str()), {}};
+  }
+  if (*next == 'e' || *next == 'E') {
+    advance();
     text << current();
     next = window[1];
-    if (!next) {
+    if (!next || (!std::isdigit(*next) && *next != '+' && *next != '-')) {
       return lexer_error{"Missing digits after exponent part of number literal",
                          loc};
     }
@@ -172,6 +203,10 @@ result lexer_base::lex_number() {
       advance(); // consume sign
       text << current();
       next = window[1];
+    }
+    if (!next || !std::isdigit(*next)) {
+      return lexer_error{
+          "Missing digits after exponent part's sign of number literal", loc};
     }
     // consume exponent
     while (next && std::isdigit(*next)) {

@@ -35,6 +35,7 @@ struct token {
 struct lexer_error {
   std::string msg;
   source_location loc;
+  friend std::ostream &operator<<(std::ostream &stream, const lexer_error &e);
 };
 
 ///
@@ -42,8 +43,9 @@ struct lexer_error {
 class lexer_base {
 public:
   using unit = char;
+  using eof_t = std::monostate;
   using read_t = std::optional<unit>;
-  using result = std::variant<std::monostate, lexer_error, token>;
+  using result = std::variant<eof_t, lexer_error, token>;
   using window_t = std::array<read_t, 3>;
 
 private:
@@ -66,7 +68,6 @@ private:
   result lex_line_comment();
   result lex_block_comment();
   result lex_regex();
-  result lex_float();
   result lex_hex_int();
   result lex_bin_int();
   result lex_oct_int();
@@ -74,7 +75,13 @@ private:
 public:
   lexer_base() : window({' ', ' ', '\n'}) {}
   result next();
+  void reset() {
+    window = {' ', ' ', '\n'};
+    loc = {};
+  }
 };
+
+std::ostream &operator<<(std::ostream &stream, const lexer_base::result &res);
 
 ///
 ///
