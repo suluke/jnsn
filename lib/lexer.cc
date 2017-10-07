@@ -124,11 +124,20 @@ result lexer_base::lex_punct() {
     return token{token_type::SEMICOLON, {}, {}};
   } else if (current() == '=') {
     return lex_eq();
+  } else if (current() == '+') {
+    return lex_plus();
+  } else if (current() == '-') {
+    return lex_minus();
+  } else if (current() == '*') {
+    return lex_asterisk();
+  } else if (current() == '/') {
+    return lex_slash();
   }
-  return lexer_error{"Not implemented", loc};
+  return lexer_error{"Not implemented (lex_punct)", loc};
 }
 
 result lexer_base::lex_eq() {
+  assert(current() == '=');
   if (!peek()) {
     return token{token_type::EQ, {}, {}};
   }
@@ -146,10 +155,28 @@ result lexer_base::lex_eq() {
     advance(); // move onto third '='
     return token{token_type::EQEQEQ, {}, {}};
   }
-  return lexer_error{"Not implemented", loc};
+  return token{token_type::EQ, {}, {}};
+}
+
+result lexer_base::lex_plus() {
+  assert(current() == '+');
+  return lexer_error{"Not implemented (lex_plus)", loc};
+}
+result lexer_base::lex_minus() {
+  assert(current() == '-');
+  return lexer_error{"Not implemented (lex_minus)", loc};
+}
+result lexer_base::lex_asterisk() {
+  assert(current() == '*');
+  return lexer_error{"Not implemented (lex_asterisk)", loc};
+}
+result lexer_base::lex_slash() {
+  assert(current() == '/');
+  return lexer_error{"Not implemented (lex_slash)", loc};
 }
 
 result lexer_base::lex_line_comment() {
+  assert(current() == '/' && *peek() == '/');
   text << current();
   do {
     advance();
@@ -159,6 +186,7 @@ result lexer_base::lex_line_comment() {
 }
 
 result lexer_base::lex_block_comment() {
+  assert(current() == '/' && *peek() == '*');
   auto start = loc;
   text << "/*";
   advance(); // now pointing on *
@@ -183,15 +211,16 @@ result lexer_base::lex_block_comment() {
 /// minimal code duplication
 #define LEX_SPECIAL_BASE_INT(NAME, PREFIX, TYPE, IS_DIGIT)                     \
   do { /* idiomatic do-while-false-wrapper */                                  \
+    assert(current() == PREFIX[0] && *peek() == PREFIX[1]);                    \
     text << PREFIX;                                                            \
     advance(); /* now points to second char of prefix */                       \
-    if (!peek() || !IS_DIGIT(*peek())) {                             \
+    if (!peek() || !IS_DIGIT(*peek())) {                                       \
       return lexer_error{NAME " literal must have digits after " PREFIX, loc}; \
     }                                                                          \
     do {                                                                       \
       advance();                                                               \
       text << current();                                                       \
-    } while (peek() && IS_DIGIT(*peek()));                           \
+    } while (peek() && IS_DIGIT(*peek()));                                     \
     return token{token_type::TYPE, str_table.get_handle(text.str()), {}};      \
   } while (false)
 
@@ -209,8 +238,7 @@ result lexer_base::lex_oct_int() {
 #undef LEX_SPECIAL_BASE_INT
 
 result lexer_base::lex_number() {
-  // this method can be entered either by having a leading digit or a
-  // leading dot
+  assert(std::isdigit(current()) || current() == '.');
   token_type ty = token_type::INT_LITERAL;
   if (current() != '.') { // we got a digit
     if (!peek()) {
@@ -263,8 +291,8 @@ result lexer_base::lex_number() {
   if (*peek() == 'e' || *peek() == 'E') {
     advance();
     text << current();
-    if (!peek() || (!std::isdigit(*peek()) && *peek() != '+' &&
-                         *peek() != '-')) {
+    if (!peek() ||
+        (!std::isdigit(*peek()) && *peek() != '+' && *peek() != '-')) {
       return lexer_error{"Missing digits after exponent part of number literal",
                          loc};
     }
@@ -297,9 +325,10 @@ static bool is_keyword(string_table::entry word) {
 }
 
 result lexer_base::lex_id_keyword() {
+  assert(std::isalpha(current()) || current() == '_' || current() == '$');
   text << current();
-  while (peek() && (std::isalnum(*peek()) || *peek() == '_' ||
-                         *peek() == '$' || *peek() == '\\')) {
+  while (peek() && (std::isalnum(*peek()) || *peek() == '_' || *peek() == '$' ||
+                    *peek() == '\\')) {
     // TODO backslash may be used to start unicode id sequence, so we
     // should dispatch to some method that can handle that correctly
     advance();

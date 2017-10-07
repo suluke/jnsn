@@ -73,6 +73,10 @@ private:
   result lex_bin_int();
   result lex_oct_int();
   result lex_eq();
+  result lex_plus();
+  result lex_minus();
+  result lex_asterisk();
+  result lex_slash();
 
 public:
   lexer_base() : window({' ', '\n'}) {}
