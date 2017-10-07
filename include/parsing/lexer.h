@@ -56,7 +56,6 @@ private:
   window_t window;
   unit current() { return *window[0]; }
   read_t peek() { return window[1]; }
-  std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
 
@@ -67,6 +66,7 @@ private:
   result lex_punct();
   result lex_number();
   result lex_id_keyword();
+  result lex_dot();
   result lex_line_comment();
   result lex_block_comment();
   result lex_hex_int();
@@ -77,6 +77,15 @@ private:
   result lex_minus();
   result lex_asterisk();
   result lex_slash();
+  result lex_percent();
+  result lex_exclamation();
+  result lex_caret();
+  result lex_lt();
+  result lex_gt();
+  result lex_ampersand();
+  result lex_vert_bar();
+  result lex_str();
+  result lex_template();
 
 public:
   lexer_base() : window({' ', '\n'}) {}

@@ -78,7 +78,6 @@ result lexer_base::next() {
   }
   if (auto *T = std::get_if<token>(&res)) {
     T->loc = start_loc;
-    prev = *T;
   }
   return res;
 }
@@ -92,32 +91,9 @@ result lexer_base::lex_alnum() {
 }
 result lexer_base::lex_punct() {
   if (current() == '.') {
-    if (peek() && *peek() == '.') {
-      advance();
-      if (!peek() || *peek() != '.') {
-        return lexer_error{"Unexpected char after '..'. Expected third dot.",
-                           loc};
-      }
-      advance();
-      return token{token_type::DOTDOTDOT, {}, {}};
-    } else if (!prev || prev->type != token_type::IDENTIFIER) {
-      return lex_number();
-    } else {
-      return token{token_type::DOT, {}, {}};
-    }
+    return lex_dot();
   } else if (current() == '/') {
-    if (!peek()) {
-      return token{token_type::SLASH, {}, {}};
-    }
-    if (*peek() == '/') {
-      return lex_line_comment();
-    } else if (*peek() == '*') {
-      return lex_block_comment();
-    } else if (*peek() == '=') {
-      advance();
-      return token{token_type::DIV_EQ, {}, {}};
-    }
-    return token{token_type::SLASH, {}, {}};
+    return lex_slash();
   } else if (current() == ',') {
     return token{token_type::COMMA, {}, {}};
   } else if (current() == ';') {
@@ -132,8 +108,64 @@ result lexer_base::lex_punct() {
     return lex_asterisk();
   } else if (current() == '/') {
     return lex_slash();
+  } else if (current() == '%') {
+    return lex_percent();
+  } else if (current() == '!') {
+    return lex_exclamation();
+  } else if (current() == '?') {
+    return token{token_type::QMARK, {}, {}};
+  } else if (current() == ':') {
+    return token{token_type::COLON, {}, {}};
+  } else if (current() == '~') {
+    return token{token_type::TILDE, {}, {}};
+  } else if (current() == '^') {
+    return lex_caret();
+  } else if (current() == '<') {
+    return lex_lt();
+  } else if (current() == '>') {
+    return lex_gt();
+  } else if (current() == '&') {
+    return lex_ampersand();
+  } else if (current() == '|') {
+    return lex_vert_bar();
+  } else if (current() == '(') {
+    return token{token_type::PAREN_OPEN, {}, {}};
+  } else if (current() == ')') {
+    return token{token_type::PAREN_CLOSE, {}, {}};
+  } else if (current() == '{') {
+    return token{token_type::BRACE_OPEN, {}, {}};
+  } else if (current() == '}') {
+    return token{token_type::BRACE_CLOSE, {}, {}};
+  } else if (current() == '[') {
+    return token{token_type::BRACKET_OPEN, {}, {}};
+  } else if (current() == ']') {
+    return token{token_type::BRACKET_CLOSE, {}, {}};
+  } else if (current() == '\'' || current() == '"') {
+    return lex_str();
+  } else if (current() == '`') {
+    return lex_template();
   }
-  return lexer_error{"Not implemented (lex_punct)", loc};
+  return lexer_error{"Unknown punctuation character", loc};
+}
+
+result lexer_base::lex_dot() {
+  if (!peek()) {
+    return token{token_type::DOT, {}, {}};
+  }
+  if (*peek() == '.') {
+    advance();
+    if (!peek() || *peek() != '.') {
+      // Not sure if it makes sense to catch this here. We might also just
+      // lex two DOT tokens instead, causing a syntax error later
+      return lexer_error{"Unexpected char after '..'. Expected third dot.",
+                         loc};
+    }
+    advance();
+    return token{token_type::DOTDOTDOT, {}, {}};
+  } else if (std::isdigit(*peek())) {
+    return lex_number();
+  }
+  return token{token_type::DOT, {}, {}};
 }
 
 result lexer_base::lex_eq() {
@@ -160,19 +192,191 @@ result lexer_base::lex_eq() {
 
 result lexer_base::lex_plus() {
   assert(current() == '+');
-  return lexer_error{"Not implemented (lex_plus)", loc};
+  if (!peek()) {
+    return token{token_type::PLUS, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::PLUS_EQ, {}, {}};
+  } else if (*peek() == '+') {
+    advance();
+    return token{token_type::INCR, {}, {}};
+  }
+  return token{token_type::PLUS, {}, {}};
 }
 result lexer_base::lex_minus() {
   assert(current() == '-');
-  return lexer_error{"Not implemented (lex_minus)", loc};
+  if (!peek()) {
+    return token{token_type::MINUS, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::MINUS_EQ, {}, {}};
+  } else if (*peek() == '-') {
+    advance();
+    return token{token_type::DECR, {}, {}};
+  }
+  return token{token_type::MINUS, {}, {}};
 }
 result lexer_base::lex_asterisk() {
   assert(current() == '*');
-  return lexer_error{"Not implemented (lex_asterisk)", loc};
+  if (!peek()) {
+    return token{token_type::ASTERISK, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::MUL_EQ, {}, {}};
+  } else if (*peek() == '*') {
+    advance();
+    if (!peek()) {
+      return token{token_type::POW, {}, {}};
+    }
+    if (*peek() == '=') {
+      advance();
+      return token{token_type::POW_EQ, {}, {}};
+    }
+    return token{token_type::POW, {}, {}};
+  }
+  return token{token_type::ASTERISK, {}, {}};
 }
 result lexer_base::lex_slash() {
   assert(current() == '/');
-  return lexer_error{"Not implemented (lex_slash)", loc};
+  if (!peek()) {
+    return token{token_type::SLASH, {}, {}};
+  }
+  if (*peek() == '/') {
+    return lex_line_comment();
+  } else if (*peek() == '*') {
+    return lex_block_comment();
+  } else if (*peek() == '=') {
+    advance();
+    return token{token_type::DIV_EQ, {}, {}};
+  }
+  return token{token_type::SLASH, {}, {}};
+}
+
+result lexer_base::lex_percent() {
+  assert(current() == '%');
+  if (!peek()) {
+    return token{token_type::PERCENT, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::MOD_EQ, {}, {}};
+  }
+  return token{token_type::PERCENT, {}, {}};
+}
+
+result lexer_base::lex_exclamation() {
+  assert(current() == '!');
+  if (!peek()) {
+    return token{token_type::EXMARK, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    if (!peek() || *peek() != '=') {
+      return token{token_type::NEQ, {}, {}};
+    }
+    advance();
+    return token{token_type::NEQEQ, {}, {}};
+  }
+  return token{token_type::EXMARK, {}, {}};
+}
+
+result lexer_base::lex_caret() {
+  assert(current() == '^');
+  if (!peek()) {
+    return token{token_type::CARET, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::CARET_EQ, {}, {}};
+  }
+  return token{token_type::CARET, {}, {}};
+}
+
+result lexer_base::lex_lt() {
+  assert(current() == '<');
+  if (!peek()) {
+    return token{token_type::LT, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::LT_EQ, {}, {}};
+  } else if (*peek() == '<') {
+    advance();
+    if (!peek()) {
+      return token{token_type::LSHIFT, {}, {}};
+    }
+    if (*peek() == '=') {
+      advance();
+      return token{token_type::LSH_EQ, {}, {}};
+    }
+    return token{token_type::LSHIFT};
+  }
+  return token{token_type::LT, {}, {}};
+}
+
+result lexer_base::lex_gt() {
+  assert(current() == '>');
+  if (!peek()) {
+    return token{token_type::GT, {}, {}};
+  }
+  if (*peek() == '=') {
+    advance();
+    return token{token_type::GT_EQ, {}, {}};
+  } else if (*peek() == '>') {
+    advance();
+    if (!peek()) {
+      return token{token_type::RSHIFT, {}, {}};
+    }
+    if (*peek() == '=') {
+      advance();
+      return token{token_type::RSH_EQ, {}, {}};
+    } else if (*peek() == '>') {
+      advance();
+      if (!peek()) {
+        return token{token_type::LOG_RSHIFT, {}, {}};
+      }
+      if (*peek() == '=') {
+        advance();
+        return token{token_type::LOG_RSH_EQ, {}, {}};
+      }
+      return token{token_type::LOG_RSHIFT, {}, {}};
+    }
+    return token{token_type::RSHIFT};
+  }
+  return token{token_type::LT, {}, {}};
+}
+
+result lexer_base::lex_ampersand() {
+  assert(current() == '&');
+  if (!peek()) {
+    return token{token_type::AMPERSAND, {}, {}};
+  }
+  if (*peek() == '&') {
+    advance();
+    return token{token_type::LOG_AND, {}, {}};
+  } else if (*peek() == '=') {
+    advance();
+    return token{token_type::AND_EQ, {}, {}};
+  }
+  return token{token_type::AMPERSAND, {}, {}};
+}
+
+result lexer_base::lex_vert_bar() {
+  assert(current() == '|');
+  if (!peek()) {
+    return token{token_type::VERT_BAR, {}, {}};
+  }
+  if (*peek() == '|') {
+    advance();
+    return token{token_type::LOG_OR, {}, {}};
+  } else if (*peek() == '=') {
+    advance();
+    return token{token_type::OR_EQ, {}, {}};
+  }
+  return token{token_type::VERT_BAR, {}, {}};
 }
 
 result lexer_base::lex_line_comment() {
@@ -205,6 +409,14 @@ result lexer_base::lex_block_comment() {
     return lexer_error{"Reached end of file while lexing block comment", start};
   }
   return token{token_type::BLOCK_COMMENT, str_table.get_handle(text.str()), {}};
+}
+
+result lexer_base::lex_str() {
+  return lexer_error{"Not implemented (lex_str)", {}};
+}
+
+result lexer_base::lex_template() {
+  return lexer_error{"Not implemented (lex_template)", {}};
 }
 
 /// This macro helps implementing binary, octal and hex literals with
@@ -255,9 +467,9 @@ result lexer_base::lex_number() {
         return lex_bin_int();
       } else if (*peek() == 'o' || *peek() == 'O') {
         return lex_oct_int();
-      } else if (!std::isspace(*peek())) {
-        return lexer_error{"Tokens beginning with '0' must be followed by '.', "
-                           "'x', 'b', 'o' or spaces",
+      } else if (std::isdigit(*peek())) {
+        return lexer_error{"Number literals mustn't have more than the first "
+                           "digit when starting with '0'",
                            loc};
       }
     }
