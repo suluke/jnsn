@@ -28,20 +28,27 @@ protected:
   constant_string_lexer lexer;
 };
 
-TEST_F(lexer_test, numbers) {
-#define SINGLE_TOKEN(TEXT, TYPE)                                               \
+#define SINGLE_TOKEN(INPUT, TYPE)                                              \
   do {                                                                         \
-    lexer.set_text(TEXT);                                                      \
+    lexer.set_text(INPUT);                                                     \
     auto res = lexer.next();                                                   \
     ASSERT_TRUE(std::holds_alternative<token>(res)) << "was: " << res;         \
     auto tok = std::get<token>(res);                                           \
     ASSERT_EQ(tok.type, token_type::TYPE);                                     \
-    ASSERT_EQ(tok.text, TEXT);                                                 \
+    ASSERT_EQ(tok.text, INPUT);                                                \
     res = lexer.next();                                                        \
     ASSERT_TRUE(std::holds_alternative<lexer_base::eof_t>(res))                \
         << "was: " << res;                                                     \
   } while (false)
 
+#define LEXER_ERROR(INPUT)                                                     \
+  do {                                                                         \
+    lexer.set_text(INPUT);                                                     \
+    auto res = lexer.next();                                                   \
+    ASSERT_TRUE(std::holds_alternative<lexer_error>(res)) << "was: " << res;   \
+  } while (false)
+
+TEST_F(lexer_test, numbers) {
   SINGLE_TOKEN("123", INT_LITERAL);
   SINGLE_TOKEN("123.", FLOAT_LITERAL);
   SINGLE_TOKEN("123.e1", FLOAT_LITERAL);
@@ -52,4 +59,13 @@ TEST_F(lexer_test, numbers) {
   SINGLE_TOKEN("0x123", HEX_LITERAL);
   SINGLE_TOKEN("0o123", OCT_LITERAL);
   SINGLE_TOKEN("0b010", BIN_LITERAL);
+
+  LEXER_ERROR("00");
+  LEXER_ERROR("01");
+  LEXER_ERROR("01.2");
+  LEXER_ERROR("1e");
+  LEXER_ERROR("1e+");
+  LEXER_ERROR("1e-");
+  // Dots not preceded by an identifier are interpreted as the start of a number
+  LEXER_ERROR(".");
 }
