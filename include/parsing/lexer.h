@@ -72,6 +72,7 @@ private:
   result lex_hex_int();
   result lex_bin_int();
   result lex_oct_int();
+  result lex_eq();
 
 public:
   lexer_base() : window({' ', '\n'}) {}

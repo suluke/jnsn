@@ -118,6 +118,33 @@ result lexer_base::lex_punct() {
       return token{token_type::DIV_EQ, {}, {}};
     }
     return token{token_type::SLASH, {}, {}};
+  } else if (current() == ',') {
+    return token{token_type::COMMA, {}, {}};
+  } else if (current() == ';') {
+    return token{token_type::SEMICOLON, {}, {}};
+  } else if (current() == '=') {
+    return lex_eq();
+  }
+  return lexer_error{"Not implemented", loc};
+}
+
+result lexer_base::lex_eq() {
+  if (!peek()) {
+    return token{token_type::EQ, {}, {}};
+  }
+  if (peek() == '>') {
+    advance();
+    return token{token_type::ARROW, {}, {}};
+  } else if (peek() == '=') {
+    advance();
+    if (!peek()) {
+      return token{token_type::EQEQ, {}, {}};
+    }
+    if (*peek() != '=') {
+      return token{token_type::EQEQ};
+    }
+    advance(); // move onto third '='
+    return token{token_type::EQEQEQ, {}, {}};
   }
   return lexer_error{"Not implemented", loc};
 }
