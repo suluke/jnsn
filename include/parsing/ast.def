@@ -1,0 +1,31 @@
+#ifndef NODE
+#define NODE(NAME, CHILD_NODES)
+#endif
+#ifndef DERIVED
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES)
+#endif
+#ifndef EXTENDS
+#define EXTENDS(BASE)
+#endif
+#ifndef CHILDREN
+#define CHILDREN(...)
+#endif
+#ifndef ONE
+#define ONE(OF, NAME)
+#endif
+#ifndef MANY
+#define MANY(OF, NAME)
+#endif
+
+NODE(expression, CHILDREN())
+NODE(param_list, CHILDREN(MANY(IDENTIFIER, names)))
+NODE(function_body, CHILDREN())
+DERIVED(function, EXTENDS(expression), CHILDREN(ONE(param_list, params) ONE(function_body, body)))
+NODE(module, CHILDREN(MANY(expression, exprs)))
+
+#undef MANY
+#undef ONE
+#undef EXTENDS
+#undef CHILDREN
+#undef DERIVED
+#undef NODE
