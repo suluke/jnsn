@@ -124,4 +124,4 @@ public:
 };
 } // namespace parsing
 
-#endif
+#endif // PARSING_LEXER_H

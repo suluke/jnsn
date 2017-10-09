@@ -45,4 +45,4 @@ public:
 
 } // namespace parsing
 
-#endif
+#endif // PARSING_SOURCE_LOCATION_H

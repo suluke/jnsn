@@ -18,4 +18,4 @@ public:
 
 } // namespace parsing
 
-#endif
+#endif // PARSING_STRING_TABLE_H
