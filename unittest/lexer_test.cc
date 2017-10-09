@@ -116,6 +116,11 @@ TEST_F(lexer_test, strings) {
   INPUT_IS_TOKEN_TEXT("\"\'\"", STRING_LITERAL);
 }
 
+TEST_F(lexer_test, regex) {
+  INPUT_IS_TOKEN_TEXT("/abc/", REGEX_LITERAL);
+  TOKEN_SEQUENCE("1/23/4", TOKEN(INT_LITERAL, "1"), TOKEN(SLASH, ""), TOKEN(INT_LITERAL, "23"), TOKEN(SLASH, ""), TOKEN(INT_LITERAL, "4"));
+}
+
 TEST_F(lexer_test, big1) {
   const auto prog = R"delim(
     /* Test */

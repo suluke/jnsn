@@ -90,6 +90,7 @@ result lexer_base::next() {
   }
   if (auto *T = std::get_if<token>(&res)) {
     T->loc = start_loc;
+    prev = *T;
   }
   return res;
 }
@@ -260,11 +261,49 @@ result lexer_base::lex_slash() {
     return lex_line_comment();
   } else if (*peek() == '*') {
     return lex_block_comment();
+  } else if (!prev || (prev->type == token_type::KEYWORD &&
+                      prev->type == token_type::IDENTIFIER &&
+                      prev->type == token_type::INT_LITERAL &&
+                      prev->type == token_type::FLOAT_LITERAL &&
+                      prev->type == token_type::HEX_LITERAL &&
+                      prev->type == token_type::OCT_LITERAL &&
+                      prev->type == token_type::BIN_LITERAL)) {
+    return lex_regex();
   } else if (*peek() == '=') {
     advance();
     return token{token_type::DIV_EQ, {}, {}};
   }
   return token{token_type::SLASH, {}, {}};
+}
+
+result lexer_base::lex_regex() {
+  assert(current() == '/');
+  auto start = loc;
+  bool ended = false;
+  while (peek()) {
+    if (islineterminator(current())) {
+      return lexer_error{"Unexpected line end in regex literal", loc};
+    }
+    text << current();
+    if (current() == '\\') {
+      advance();
+      if (!peek()) {
+        return lexer_error{"Unexpected EOF in regex literal", loc};
+      }
+      text << current();
+    }
+    if (peek() == '/') {
+      advance();
+      text << current();
+      ended = true;
+      break;
+    }
+    advance();
+  }
+  if (!ended) {
+    return lexer_error{"Reached EOF while lexing regex literal", start};
+  }
+  return token{token_type::REGEX_LITERAL, str_table.get_handle(text.str()), start};
 }
 
 result lexer_base::lex_percent() {
@@ -446,9 +485,11 @@ result lexer_base::lex_str() {
     }
   }
   if (!ended) {
-    return lexer_error{"Reached end of file while lexing string literal", start};
+    return lexer_error{"Reached end of file while lexing string literal",
+                       start};
   }
-  return token{token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
+  return token{
+      token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
 }
 
 result lexer_base::lex_template() {
@@ -458,7 +499,8 @@ result lexer_base::lex_template() {
 std::optional<lexer_error> lexer_base::consume_escape_seq() {
   assert(current() == '\\');
   if (!peek()) {
-    return lexer_error{"Unexpected EOF after begin of escape sequence ('\\')", loc};
+    return lexer_error{"Unexpected EOF after begin of escape sequence ('\\')",
+                       loc};
   }
   text << '\\';
   advance();

@@ -56,6 +56,7 @@ private:
   window_t window;
   unit current() { return *window[0]; }
   read_t peek() { return window[1]; }
+  std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
 
@@ -86,6 +87,7 @@ private:
   result lex_vert_bar();
   result lex_str();
   result lex_template();
+  result lex_regex();
 
   std::optional<lexer_error> consume_escape_seq();
 
