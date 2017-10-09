@@ -87,6 +87,8 @@ private:
   result lex_str();
   result lex_template();
 
+  std::optional<lexer_error> consume_escape_seq();
+
 public:
   lexer_base() : window({' ', '\n'}) {}
   result next();

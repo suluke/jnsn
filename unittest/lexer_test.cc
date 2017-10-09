@@ -111,6 +111,9 @@ TEST_F(lexer_test, operators) {
 TEST_F(lexer_test, strings) {
   INPUT_IS_TOKEN_TEXT("\"ABCDE\"", STRING_LITERAL);
   INPUT_IS_TOKEN_TEXT("'ABCDE'", STRING_LITERAL);
+  INPUT_IS_TOKEN_TEXT("'ABCDE\\'\\\\'", STRING_LITERAL);
+  INPUT_IS_TOKEN_TEXT("'\"'", STRING_LITERAL);
+  INPUT_IS_TOKEN_TEXT("\"\'\"", STRING_LITERAL);
 }
 
 TEST_F(lexer_test, big1) {

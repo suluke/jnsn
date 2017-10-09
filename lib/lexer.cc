@@ -35,6 +35,18 @@ std::ostream &operator<<(std::ostream &stream, const lexer_base::result &res) {
   return stream;
 }
 
+static constexpr bool one_of(unit u, const unit *alternatives) {
+  if (*alternatives == '\0') {
+    return false;
+  } else if (*alternatives == u) {
+    return true;
+  }
+  return one_of(u, alternatives + 1);
+}
+static constexpr bool islineterminator(unit u) {
+  return one_of(u, "\r\n"); // FIXME the spec has two more...
+}
+
 bool lexer_base::eof() { return !window[0]; }
 
 void lexer_base::advance() {
@@ -412,11 +424,66 @@ result lexer_base::lex_block_comment() {
 }
 
 result lexer_base::lex_str() {
-  return lexer_error{"Not implemented (lex_str)", {}};
+  assert(current() == '"' || current() == '\'');
+  auto start = loc;
+  auto first = current();
+  bool ended = false;
+  while (peek()) {
+    if (current() == '\\') {
+      if (auto maybe_error = consume_escape_seq()) {
+        return *maybe_error;
+      }
+    } else if (islineterminator(current())) {
+      return lexer_error{"Unexpected end of line in string literal", loc};
+    } else {
+      text << current();
+    }
+    advance();
+    if (current() == first) {
+      text << current();
+      ended = true;
+      break;
+    }
+  }
+  if (!ended) {
+    return lexer_error{"Reached end of file while lexing string literal", start};
+  }
+  return token{token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
 }
 
 result lexer_base::lex_template() {
   return lexer_error{"Not implemented (lex_template)", {}};
+}
+
+std::optional<lexer_error> lexer_base::consume_escape_seq() {
+  assert(current() == '\\');
+  if (!peek()) {
+    return lexer_error{"Unexpected EOF after begin of escape sequence ('\\')", loc};
+  }
+  text << '\\';
+  advance();
+  // see SingleEscapeCharacter in ECMA spec
+  if (current() == 'x') {
+    // hex escape sequence
+    // TODO
+    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+  } else if (current() == 'u') {
+    // unicode escape sequence
+    // TODO
+    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+  } else if (islineterminator(current())) {
+    // line continuation
+    // TODO
+    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+  } else if (current() == '0') {
+    // TODO no idea what this is supposed to do
+    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+  } else if (one_of(current(), "'\"\\bfnrtv")) {
+    // single escape characters
+    // it seems like they're just regular SourceCharacters (?)
+  }
+  text << current();
+  return std::nullopt;
 }
 
 /// This macro helps implementing binary, octal and hex literals with
