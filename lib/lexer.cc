@@ -262,12 +262,12 @@ result lexer_base::lex_slash() {
   } else if (*peek() == '*') {
     return lex_block_comment();
   } else if (!prev || (prev->type == token_type::KEYWORD &&
-                      prev->type == token_type::IDENTIFIER &&
-                      prev->type == token_type::INT_LITERAL &&
-                      prev->type == token_type::FLOAT_LITERAL &&
-                      prev->type == token_type::HEX_LITERAL &&
-                      prev->type == token_type::OCT_LITERAL &&
-                      prev->type == token_type::BIN_LITERAL)) {
+                       prev->type == token_type::IDENTIFIER &&
+                       prev->type == token_type::INT_LITERAL &&
+                       prev->type == token_type::FLOAT_LITERAL &&
+                       prev->type == token_type::HEX_LITERAL &&
+                       prev->type == token_type::OCT_LITERAL &&
+                       prev->type == token_type::BIN_LITERAL)) {
     return lex_regex();
   } else if (*peek() == '=') {
     advance();
@@ -303,7 +303,8 @@ result lexer_base::lex_regex() {
   if (!ended) {
     return lexer_error{"Reached EOF while lexing regex literal", start};
   }
-  return token{token_type::REGEX_LITERAL, str_table.get_handle(text.str()), start};
+  return token{token_type::REGEX_LITERAL, str_table.get_handle(text.str()),
+               start};
 }
 
 result lexer_base::lex_percent() {
@@ -505,14 +506,65 @@ std::optional<lexer_error> lexer_base::consume_escape_seq() {
   text << '\\';
   advance();
   // see SingleEscapeCharacter in ECMA spec
-  if (current() == 'x') {
-    // hex escape sequence
-    // TODO
-    return lexer_error{"Not implemented (consume_escape_seq)", loc};
-  } else if (current() == 'u') {
-    // unicode escape sequence
-    // TODO
-    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+  if (current() == 'u' || current() == 'x') {
+    text << current();
+    auto prefix = current();
+    if (!peek()) {
+      return lexer_error{"Unexpected EOF after begin of escape sequence", loc};
+    }
+    advance();
+    if (!peek()) {
+      return lexer_error{"Unexpected EOF within escape sequence", loc};
+    }
+    if (prefix == 'x') {
+      // hex escape sequence
+      if (!std::isxdigit(current())) {
+        return lexer_error{
+            "Unexpected non-hex-digit after begin of hex escape sequence", loc};
+      }
+      text << current();
+      advance();
+      if (!std::isxdigit(current())) {
+        return lexer_error{
+            "Unexpected non-hex-digit as second digit in hex escape sequence",
+            loc};
+      }
+      text << current();
+    } else /* if (prefix == 'u') */ {
+      // unicode escape sequence
+      if (current() == '{') {
+        text << current();
+        bool ended = false;
+        do {
+          advance();
+          if (!std::isxdigit(current())) {
+            return lexer_error{
+                "Unexpected non-hex-digit in unicode escape sequence", loc};
+          }
+          text << current();
+          if (peek() && *peek() == '}') {
+            advance();
+            text << '}';
+            ended = true;
+            break;
+          }
+        } while (peek());
+      } else {
+        for (int i = 0; i < 4; ++i) {
+          if (!std::isxdigit(current())) {
+            return lexer_error{
+                "Unexpected non-hex-digit in unicode escape sequence", loc};
+          }
+          text << current();
+          if (i < 3 && peek()) {
+            advance();
+          } else if (i < 3 && !peek()) {
+            return lexer_error{"Unexpected EOF in unicode escape sequence",
+                               loc};
+          }
+        }
+      }
+    }
   } else if (islineterminator(current())) {
     // line continuation
     // TODO
@@ -523,8 +575,11 @@ std::optional<lexer_error> lexer_base::consume_escape_seq() {
   } else if (one_of(current(), "'\"\\bfnrtv")) {
     // single escape characters
     // it seems like they're just regular SourceCharacters (?)
+    text << current();
+  } else {
+    // Single SourceCodeCharacter after a backslash
+    text << current();
   }
-  text << current();
   return std::nullopt;
 }
 
