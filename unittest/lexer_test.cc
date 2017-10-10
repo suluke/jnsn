@@ -32,12 +32,18 @@ protected:
 #define INPUT_IS_TOKEN_TEXT(INPUT, TYPE)                                       \
   TOKEN_SEQUENCE(INPUT, token{token_type::TYPE, INPUT, {}})
 
-#define LEXER_ERROR(INPUT)                                                     \
+#define LEXER_ERROR_AFTER(INPUT, SKIPPED)                                      \
   do {                                                                         \
     lexer.set_text(INPUT);                                                     \
+    for (int i = 0; i < SKIPPED; ++i) {                                        \
+      auto skipped = lexer.next();                                             \
+      ASSERT_FALSE(std::holds_alternative<lexer_error>(skipped));              \
+      ASSERT_FALSE(std::holds_alternative<lexer_base::eof_t>(skipped));        \
+    }                                                                          \
     auto res = lexer.next();                                                   \
     ASSERT_TRUE(std::holds_alternative<lexer_error>(res)) << "was: " << res;   \
   } while (false)
+#define LEXER_ERROR(INPUT) LEXER_ERROR_AFTER(INPUT, 0)
 
 #define TOKEN(TYPE, TEXT)                                                      \
   token {                                                                      \
@@ -101,6 +107,7 @@ TEST_F(lexer_test, strings) {
   INPUT_IS_TOKEN_TEXT("'\\u{abcde}'", STRING_LITERAL);
   INPUT_IS_TOKEN_TEXT("'\\u{aBcDe}'", STRING_LITERAL);
   INPUT_IS_TOKEN_TEXT("'\\u{abc}\\uabcd\\xababc'", STRING_LITERAL);
+  LEXER_ERROR("'\\xff");
   LEXER_ERROR("'\\x'");
   LEXER_ERROR("'\\xa'");
   LEXER_ERROR("'\\u'");
@@ -115,7 +122,19 @@ TEST_F(lexer_test, strings) {
 }
 
 TEST_F(lexer_test, templates) {
-  INPUT_IS_TOKEN_TEXT("`${'A' + `${B}`}`", TEMPLATE_LITERAL);
+  TOKEN_SEQUENCE("`\\\n`", TOKEN(STRING_LITERAL, "``")); // This is a weird one
+  INPUT_IS_TOKEN_TEXT("`\\u{abc}\\uabcd\\xababc`", STRING_LITERAL);
+  LEXER_ERROR("`");
+  LEXER_ERROR_AFTER("`${", 1);
+  TOKEN_SEQUENCE("`${A}`", TOKEN(TEMPLATE_HEAD, "`${"), TOKEN(IDENTIFIER, "A"),
+                 TOKEN(TEMPLATE_END, "}`"));
+  TOKEN_SEQUENCE("`${A}${B}`", TOKEN(TEMPLATE_HEAD, "`${"),
+                 TOKEN(IDENTIFIER, "A"), TOKEN(TEMPLATE_MIDDLE, "}${"),
+                 TOKEN(IDENTIFIER, "B"), TOKEN(TEMPLATE_END, "}`"));
+  TOKEN_SEQUENCE("`${'A' + `${B}`}`", TOKEN(TEMPLATE_HEAD, "`${"),
+                 TOKEN(STRING_LITERAL, "'A'"), TOKEN(PLUS, ""),
+                 TOKEN(TEMPLATE_HEAD, "`${"), TOKEN(IDENTIFIER, "B"),
+                 TOKEN(TEMPLATE_END, "}`"), TOKEN(TEMPLATE_END, "}`"));
 }
 
 TEST_F(lexer_test, regex) {

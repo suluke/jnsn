@@ -57,7 +57,10 @@ void lexer_base::advance() {
 }
 
 result lexer_base::next() {
-  if (!window[1]) {
+  if (!peek()) {
+    if (template_depth != 0) {
+      return lexer_error{"Unexpected EOF in template literal", loc};
+    }
     return eof_t{};
   }
   // Skip whitespace
@@ -148,7 +151,7 @@ result lexer_base::lex_punct() {
   } else if (current() == '{') {
     return token{token_type::BRACE_OPEN, {}, {}};
   } else if (current() == '}') {
-    return token{token_type::BRACE_CLOSE, {}, {}};
+    return lex_closing_brace();
   } else if (current() == '[') {
     return token{token_type::BRACKET_OPEN, {}, {}};
   } else if (current() == ']') {
@@ -156,7 +159,7 @@ result lexer_base::lex_punct() {
   } else if (current() == '\'' || current() == '"') {
     return lex_str();
   } else if (current() == '`') {
-    return lex_template();
+    return lex_backtick();
   }
   return lexer_error{"Unknown punctuation character", loc};
 }
@@ -493,20 +496,94 @@ result lexer_base::lex_str() {
       token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
 }
 
-result lexer_base::lex_template() {
-  return lexer_error{"Not implemented (lex_template)", {}};
+result lexer_base::lex_backtick() {
+  assert(current() == '`');
+  text << '`';
+  auto start = loc;
+  if (!peek()) {
+    return lexer_error{"Unexpected EOF in template literal", loc};
+  }
+  advance();
+  bool ended = false;
+  while (peek()) {
+    if (current() == '$' && *peek() == '{') {
+      advance();
+      text << "${";
+      ++template_depth;
+      return token{
+          token_type::TEMPLATE_HEAD, str_table.get_handle(text.str()), {}};
+    } else if (current() == '\\') {
+      if (auto err = consume_escape_seq()) {
+        return *err;
+      }
+    } else {
+      text << current();
+    }
+    advance();
+    if (current() == '`') {
+      ended = true;
+      text << '`';
+      break;
+    }
+  }
+  if (!ended) {
+    return lexer_error{"Unexpected EOF in template literal", loc};
+  }
+  return token{
+      token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
 }
 
+result lexer_base::lex_closing_brace() {
+  assert(current() == '}');
+  if (template_depth == 0) {
+    return token{token_type::BRACE_CLOSE, {}, {}};
+  }
+  if (!peek()) {
+    return lexer_error{"Unexpected EOF in template literal", loc};
+  }
+  text << '}';
+  advance();
+  bool ended = false;
+  do {
+    if (current() == '`') {
+      ended = true;
+      text << '`';
+      break;
+    } else if (current() == '$' && *peek() == '{') {
+      advance();
+      text << "${";
+      return token{
+          token_type::TEMPLATE_MIDDLE, str_table.get_handle(text.str()), {}};
+    } else if (current() == '\\') {
+      if (auto err = consume_escape_seq()) {
+        return *err;
+      }
+    } else {
+      text << current();
+    }
+    advance();
+  } while (peek());
+  if (!ended) {
+    return lexer_error{"Unexpected EOF in template literal", loc};
+  }
+  --template_depth;
+  return token{token_type::TEMPLATE_END, str_table.get_handle(text.str()), {}};
+}
+
+/// Post condition: Since escape sequences can only occur in string/template
+/// literals, this function will also guarantee that peek() isn't EOF after
+/// an escape sequence
 std::optional<lexer_error> lexer_base::consume_escape_seq() {
   assert(current() == '\\');
   if (!peek()) {
     return lexer_error{"Unexpected EOF after begin of escape sequence ('\\')",
                        loc};
   }
-  text << '\\';
-  advance();
+  advance(); // definitely consume, but line continuations may cause the
+             // backslash to be dropped entirely
   // see SingleEscapeCharacter in ECMA spec
   if (current() == 'u' || current() == 'x') {
+    text << '\\';
     text << current();
     auto prefix = current();
     if (!peek()) {
@@ -567,18 +644,25 @@ std::optional<lexer_error> lexer_base::consume_escape_seq() {
     }
   } else if (islineterminator(current())) {
     // line continuation
-    // TODO
-    return lexer_error{"Not implemented (consume_escape_seq)", loc};
+    // TODO actually we have to consume a line terminator *sequence*, not just a
+    // single char
+
+    // do nothing -- just drop the line break
   } else if (current() == '0') {
     // TODO no idea what this is supposed to do
     return lexer_error{"Not implemented (consume_escape_seq)", loc};
   } else if (one_of(current(), "'\"\\bfnrtv")) {
     // single escape characters
     // it seems like they're just regular SourceCharacters (?)
+    text << '\\';
     text << current();
   } else {
     // Single SourceCodeCharacter after a backslash
+    text << '\\';
     text << current();
+  }
+  if (!peek()) {
+    return lexer_error{"Unexpected EOF after escape sequence", loc};
   }
   return std::nullopt;
 }

@@ -54,9 +54,11 @@ private:
   std::stringstream text;
   string_table str_table;
   window_t window;
+  std::optional<token> prev;
+  size_t template_depth = 0;
+
   unit current() { return *window[0]; }
   read_t peek() { return window[1]; }
-  std::optional<token> prev;
 
   virtual read_t read_unit() = 0;
 
@@ -86,8 +88,9 @@ private:
   result lex_ampersand();
   result lex_vert_bar();
   result lex_str();
-  result lex_template();
+  result lex_backtick();
   result lex_regex();
+  result lex_closing_brace();
 
   std::optional<lexer_error> consume_escape_seq();
 
@@ -97,6 +100,7 @@ public:
   void reset() {
     window = {' ', '\n'};
     loc = {};
+    template_depth = 0;
   }
 };
 
