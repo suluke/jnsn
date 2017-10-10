@@ -18,13 +18,13 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory("${PROJECT_BINARY_DIR}/googletest/src"
                  "${PROJECT_BINARY_DIR}/googletest/build")
 
-add_custom_target(unittests)
-
-function(add_unittest test_name)
+set(UNITTEST_RUNS)
+macro(add_unittest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
   target_link_libraries(${test_name} gtest_main gtest)
-  add_dependencies(unittests ${test_name})
-endfunction()
+  add_custom_target(run_${test_name} DEPENDS ${test_name} COMMAND ${test_name})
+  list(APPEND UNITTEST_RUNS run_${test_name})
+endmacro()
 
 add_unittest(lexer_test
   lexer_test.cc
@@ -39,3 +39,8 @@ add_unittest(ast_test
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
 )
+
+add_custom_target(unittests
+  DEPENDS ${UNITTEST_RUNS}
+)
+message(STATUS "Unittests: ${UNITTEST_RUNS}")
