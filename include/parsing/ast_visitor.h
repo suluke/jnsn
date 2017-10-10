@@ -6,7 +6,7 @@ namespace parsing {
 class ast_node_visitor_base;
 /// Base class of all ast nodes (for visitor)
 struct ast_node {
-  virtual void accept(ast_node_visitor_base &v);
+  virtual void accept(ast_node_visitor_base &v) = 0;
 };
 /// forward declaration of all ast nodes
 #define NODE(NAME, CHILD_NODES) class NAME ## _node;
@@ -14,6 +14,7 @@ struct ast_node {
 #include "parsing/ast.def"
 
 class ast_node_visitor_base {
+  /// make ast nodes friend classes
 #define NODE(NAME, CHILD_NODES) friend class NAME ## _node;
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) friend class NAME ## _node;
 #include "parsing/ast.def"
@@ -36,7 +37,7 @@ class ast_node_visitor : public ast_node_visitor_base {
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) virtual RET_TY accept(NAME ## _node &) = 0;
 #include "parsing/ast.def"
 public:
-  RET_TY visit(ast_node &n) final {
+  RET_TY visit(ast_node &n) {
     dispatch(n);
     return result;
   }

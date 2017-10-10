@@ -22,11 +22,20 @@ add_custom_target(unittests)
 
 function(add_unittest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
-  target_link_libraries(lexer_test gtest_main gtest)
+  target_link_libraries(${test_name} gtest_main gtest)
   add_dependencies(unittests ${test_name})
 endfunction()
 
 add_unittest(lexer_test
   lexer_test.cc
   ../lib/lexer.cc
+  ../include/parsing/lexer.h
+  ../include/parsing/tokens.def
+  ../include/parsing/keywords.def
+)
+add_unittest(ast_test
+  ast_test.cc
+  ../include/parsing/ast.h
+  ../include/parsing/ast.def
+  ../include/parsing/ast_visitor.h
 )
