@@ -1,28 +1,8 @@
-#include "parsing/lexer.h"
+#include "lex_utils.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
 
 using namespace parsing;
-
-///
-///
-class constant_string_lexer : public lexer_base {
-  const char *it;
-  read_t read_unit() override {
-    read_t res;
-    if (*it != '\0') {
-      res = {*it};
-      ++it;
-    }
-    return res;
-  }
-
-public:
-  void set_text(const char *text) {
-    reset();
-    it = text;
-  }
-};
 
 class lexer_test : public ::testing::Test {
 protected:
