@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(SOURCES
   lib/main.cc
   lib/lexer.cc
+  lib/ast.cc
+  lib/parser.cc
   include/parsing/lexer.h
   include/parsing/source_location.h
   include/parsing/string_table.h

@@ -3,12 +3,14 @@
 
 using namespace parsing;
 
-TEST(ast_test, visitor) {
-  struct name_checker : public ast_node_visitor<const char *> {
+struct name_checker : public ast_node_visitor<const char *> {
 #define NODE(NAME, CHILD_NODES) const char *accept(NAME ## _node &) override { return #NAME; }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) const char *accept(NAME ## _node &) override { return #NAME; }
 #include "parsing/ast.def"
-  } checker;
+};
+
+TEST(ast_test, visitor) {
+  name_checker checker;
   #define NODE_CHECK(NAME) {\
     NAME ## _node node;\
     ast_node &as_base = node;\
@@ -19,4 +21,12 @@ TEST(ast_test, visitor) {
   #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE_CHECK(NAME)
   #include "parsing/ast.def"
   #undef NODE_CHECK
+}
+
+TEST(ast_test, node_store) {
+  ast_node_store store;
+  auto node = store.make_module();
+  name_checker checker;
+  auto res = checker.visit(*node);
+  ASSERT_STREQ(res, "module");
 }
