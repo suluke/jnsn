@@ -3,7 +3,7 @@
 using namespace std;
 using namespace parsing;
 
-int main(int argc, char **argv) {
+static void lexer_cli() {
   struct lex_visitor {
     void operator()(lexer_error err) {
       cout << err.msg << ' ' << '(' << err.loc << ')' << '\n';
@@ -27,7 +27,28 @@ int main(int argc, char **argv) {
         error = true;
         break;
       }
-    } while (!std::holds_alternative<std::monostate>(res));
+    } while (!std::holds_alternative<lexer_base::eof_t>(res));
   } while(!error);
+}
+
+static void parser_cli() {
+  bool error = false;
+  do {
+    cout << "Enter text:\n";
+    cin_line_parser parser;
+    parser_base::result res = parser.parse();
+    if (std::holds_alternative<module_node *>(res)) {
+      auto *mod = std::get<module_node *>(res);
+      cout << mod << '\n';
+    } else if (std::holds_alternative<parser_error>(res)) {
+      auto err = std::get<parser_error>(res);
+      cout << err.msg << '\n';
+      error = true;
+    }
+  } while(!error);
+}
+
+int main(int argc, char **argv) {
+  parser_cli();
   return 0;
 }
