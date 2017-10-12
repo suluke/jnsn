@@ -28,7 +28,9 @@ public:
   ast_node_ref &operator=(const ast_node_ref &) = default;
   ast_node &operator*();
   ast_node *operator->();
-  operator bool() { return store; }
+  const ast_node &operator*() const;
+  const ast_node *operator->() const;
+  operator bool() const { return store; }
 };
 
 /// Setting up node structs
@@ -36,6 +38,7 @@ public:
 #define CHILDREN(...) {\
   __VA_ARGS__ \
   void accept(ast_node_visitor_base &v) override { v.gen_result(*this); }\
+  void accept(const_ast_node_visitor_base &v) const override { v.gen_result(*this); }\
 }
 #define EXTENDS(BASE) public BASE ## _node
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) struct NAME ## _node : ANCESTORS CHILD_NODES;
@@ -58,6 +61,9 @@ public:
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) ast_node_ref make_ ## NAME() { NAME ## _vec.emplace_back(); return { *this, ast_node_type::NAME ## _ty, NAME ## _vec.size() - 1 }; }
 #include "parsing/ast.def"
 };
+
+std::ostream &operator<<(std::ostream &, const ast_node_ref &);
+std::ostream &operator<<(std::ostream &, const ast_node &);
 
 } // namespace parsing
 

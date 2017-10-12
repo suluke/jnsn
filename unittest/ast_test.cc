@@ -1,5 +1,6 @@
 #include "parsing/ast.h"
 #include "gtest/gtest.h"
+#include <sstream>
 
 using namespace parsing;
 
@@ -29,4 +30,12 @@ TEST(ast_test, node_store) {
   name_checker checker;
   auto res = checker.visit(*node);
   ASSERT_STREQ(res, "module");
+}
+
+TEST(ast_test, printing) {
+  ast_node_store store;
+  auto node = store.make_module();
+  std::stringstream ss;
+  ss << node;
+  ASSERT_EQ(ss.str(), "module {\n}\n");
 }
