@@ -28,6 +28,7 @@ protected:
       : store(&store), ty(ty), id(id) {}
   ast_node &get();
   const ast_node &get() const;
+
 public:
   ast_node_ref() = default;
   ast_node_ref(const ast_node_ref &) = default;
@@ -41,10 +42,11 @@ public:
   operator bool() const { return store; }
 };
 template <class Ty> class typed_ast_node_ref : public ast_node_ref {
-  bool is_consistent() const { return Ty::has_type(ty); }
+  bool is_consistent() const { return Ty::is_extended_by(ty); }
   friend class ast_node_store;
   typed_ast_node_ref(ast_node_store &store, ast_node_type ty, size_t id)
       : ast_node_ref(store, ty, id) {}
+
 public:
   typed_ast_node_ref() = default;
   typed_ast_node_ref(const typed_ast_node_ref<Ty> &) = default;
@@ -55,8 +57,7 @@ public:
   explicit typed_ast_node_ref(const ast_node_ref &o) : ast_node_ref(o) {
     assert(is_consistent());
   }
-  explicit typed_ast_node_ref(ast_node_ref &&o)
-      : ast_node_ref(/*std::forward*/(o)) {
+  explicit typed_ast_node_ref(ast_node_ref &&o) : ast_node_ref(o) {
     assert(is_consistent());
   }
 
@@ -89,6 +90,8 @@ public:
       v.gen_result(*this);                                                     \
     }                                                                          \
     static bool has_type(ast_node_type ty);                                    \
+    static bool extends(ast_node_type ty);                                     \
+    static bool is_extended_by(ast_node_type ty);                              \
   }
 #define EXTENDS(BASE)                                                          \
 public                                                                         \
@@ -114,12 +117,12 @@ class ast_node_store {
 
 public:
 #define NODE(NAME, CHILD_NODES)                                                \
-  typed_ast_node_ref<NAME##_node> make_##NAME() {                                \
+  typed_ast_node_ref<NAME##_node> make_##NAME() {                              \
     NAME##_vec.emplace_back();                                                 \
     return {*this, ast_node_type::NAME##_ty, NAME##_vec.size() - 1};           \
   }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
-  typed_ast_node_ref<NAME##_node> make_##NAME() {                                \
+  typed_ast_node_ref<NAME##_node> make_##NAME() {                              \
     NAME##_vec.emplace_back();                                                 \
     return {*this, ast_node_type::NAME##_ty, NAME##_vec.size() - 1};           \
   }
@@ -130,8 +133,9 @@ public:
 
 std::ostream &operator<<(std::ostream &, const ast_node_ref &);
 std::ostream &operator<<(std::ostream &, const ast_node &);
-template<class Ty>
-std::ostream &operator<<(std::ostream &stream, const typed_ast_node_ref<Ty> &ref) {
+template <class Ty>
+std::ostream &operator<<(std::ostream &stream,
+                         const typed_ast_node_ref<Ty> &ref) {
   stream << static_cast<const ast_node_ref &>(ref);
 }
 } // namespace parsing

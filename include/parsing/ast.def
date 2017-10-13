@@ -27,6 +27,7 @@ NODE(expression, CHILDREN())
 NODE(param_list, CHILDREN(STRINGS(names)))
 NODE(function_body, CHILDREN())
 DERIVED(function, EXTENDS(expression), CHILDREN(ONE(param_list, params) ONE(function_body, body)))
+DERIVED(empty_expr, EXTENDS(expression), CHILDREN())
 NODE(module, CHILDREN(MANY(expression, exprs)))
 
 #undef STRINGS

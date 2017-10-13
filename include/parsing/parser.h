@@ -16,6 +16,8 @@ class parser_base {
 
   ast_node_store nodes;
   typed_ast_node_ref<module_node> module;
+
+  void parse_expression(token first);
 public:
   using result = std::variant<module_node *, parser_error>;
 

@@ -39,3 +39,9 @@ TEST(ast_test, printing) {
   ss << node;
   ASSERT_EQ(ss.str(), "module {\n}\n");
 }
+
+TEST(ast_test, reflection) {
+  ASSERT_TRUE(module_node::has_type(ast_node_type::module_ty));
+  ASSERT_TRUE(empty_expr_node::extends(ast_node_type::expression_ty));
+  ASSERT_TRUE(expression_node::is_extended_by(ast_node_type::empty_expr_ty));
+}
