@@ -15,12 +15,10 @@ class parser_base {
   virtual lexer_base::result next_token() = 0;
 
   ast_node_store nodes;
-  ast_node_ref module;
+  typed_ast_node_ref<module_node> module;
 public:
   using result = std::variant<module_node *, parser_error>;
 
-  parser_base() : nodes(), module(nodes.make_module()) {}
-  
   result parse();
 };
 

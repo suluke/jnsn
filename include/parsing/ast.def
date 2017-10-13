@@ -16,13 +16,21 @@
 #ifndef MANY
 #define MANY(OF, NAME)
 #endif
+#ifndef STRING
+#define STRING(NAME)
+#endif
+#ifndef STRINGS
+#define STRINGS(NAME)
+#endif
 
 NODE(expression, CHILDREN())
-NODE(param_list, CHILDREN(MANY(IDENTIFIER, names)))
+NODE(param_list, CHILDREN(STRINGS(names)))
 NODE(function_body, CHILDREN())
 DERIVED(function, EXTENDS(expression), CHILDREN(ONE(param_list, params) ONE(function_body, body)))
 NODE(module, CHILDREN(MANY(expression, exprs)))
 
+#undef STRINGS
+#undef STRING
 #undef MANY
 #undef ONE
 #undef EXTENDS

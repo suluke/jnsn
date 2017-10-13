@@ -4,26 +4,46 @@
 
 using namespace parsing;
 
+ast_node &ast_node_ref::get() {
+  return store->get(ty, id);
+}
+
+const ast_node &ast_node_ref::get() const {
+  return store->get(ty, id);
+}
+
 ast_node &ast_node_ref::operator*() {
   assert(*this);
-  return store->get(ty, id);
+  return get();
 }
 
 ast_node *ast_node_ref::operator->() {
   assert(*this);
-  return &store->get(ty, id);
+  return &get();
 }
 
 const ast_node &ast_node_ref::operator*() const {
   assert(*this);
-  return store->get(ty, id);
+  return get();
 }
 
 const ast_node *ast_node_ref::operator->() const {
   assert(*this);
-  return &store->get(ty, id);
+  return &get();
 }
 
+/// has_type impl
+#define NODE(NAME, CHILD_NODES)                                                \
+  bool NAME##_node::has_type(ast_node_type ty) {                               \
+    return ty == ast_node_type::NAME##_ty;                                     \
+  }
+#define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
+  bool NAME##_node::has_type(ast_node_type ty) {                               \
+    return ty == ast_node_type::NAME##_ty;                                     \
+  }
+#include "parsing/ast.def"
+
+/// ast_node_store impl
 ast_node &ast_node_store::get(ast_node_type ty, size_t id) {
   switch(ty) {
 #define NODE(NAME, CHILD_NODES) case ast_node_type::NAME ## _ty: return NAME ## _vec[id];
@@ -33,6 +53,23 @@ ast_node &ast_node_store::get(ast_node_type ty, size_t id) {
     assert(false && "Node type does not exist");
   }
   assert(false && "Node type does not exist");
+}
+
+const ast_node &ast_node_store::get(ast_node_type ty, size_t id) const {
+  switch(ty) {
+#define NODE(NAME, CHILD_NODES) case ast_node_type::NAME ## _ty: return NAME ## _vec[id];
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) case ast_node_type::NAME ## _ty: return NAME ## _vec[id];
+#include "parsing/ast.def"
+  default:
+    assert(false && "Node type does not exist");
+  }
+  assert(false && "Node type does not exist");
+}
+
+void ast_node_store::clear() {
+#define NODE(NAME, CHILD_NODES) NAME ## _vec.clear();
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NAME ## _vec.clear();
+#include "parsing/ast.def"
 }
 
 struct node_printer : public const_ast_node_visitor<void> {

@@ -9,6 +9,7 @@ class const_ast_node_visitor_base;
 struct ast_node {
   virtual void accept(ast_node_visitor_base &v) = 0;
   virtual void accept(const_ast_node_visitor_base &v) const = 0;
+  virtual ~ast_node() = default;
 };
 /// forward declaration of all ast nodes
 #define NODE(NAME, CHILD_NODES) class NAME ## _node;

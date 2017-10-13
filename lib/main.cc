@@ -39,7 +39,7 @@ static void parser_cli() {
     parser_base::result res = parser.parse();
     if (std::holds_alternative<module_node *>(res)) {
       auto *mod = std::get<module_node *>(res);
-      cout << mod << '\n';
+      cout << *mod;
     } else if (std::holds_alternative<parser_error>(res)) {
       auto err = std::get<parser_error>(res);
       cout << err.msg << '\n';

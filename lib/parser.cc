@@ -3,5 +3,8 @@
 using namespace parsing;
 
 parser_base::result parser_base::parse() {
-  return parser_error{"Not implemented", {}};
+  nodes.clear();
+  module = nodes.make_module();
+
+  return &*module;
 }
