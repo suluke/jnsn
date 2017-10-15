@@ -40,6 +40,13 @@ add_unittest(ast_test
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
 )
+add_unittest(parser_test
+  parser_test.cc
+  ../lib/parser.cc
+  ../lib/ast.cc
+  ../lib/lexer.cc
+  ../include/parsing/parser.h
+)
 
 add_custom_target(unittests
   DEPENDS ${UNITTEST_RUNS}
