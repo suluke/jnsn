@@ -40,11 +40,10 @@ protected:
   } while (false)
 // end define TOKEN_SEQUENCE(INPUT, ...)
 
-#define SINGLE_NOTEXT_TOKEN(INPUT, TYPE)                                       \
-  TOKEN_SEQUENCE(INPUT, token{token_type::TYPE, "", {}})
+#define SINGLE_NOTEXT_TOKEN(INPUT, TYPE) TOKEN_SEQUENCE(INPUT, TOKEN(TYPE, ""))
 
 #define INPUT_IS_TOKEN_TEXT(INPUT, TYPE)                                       \
-  TOKEN_SEQUENCE(INPUT, token{token_type::TYPE, INPUT, {}})
+  TOKEN_SEQUENCE(INPUT, TOKEN(TYPE, INPUT))
 
 #define LEXER_ERROR_AFTER(INPUT, SKIPPED)                                      \
   do {                                                                         \
@@ -59,10 +58,7 @@ protected:
   } while (false)
 #define LEXER_ERROR(INPUT) LEXER_ERROR_AFTER(INPUT, 0)
 
-#define TOKEN(TYPE, TEXT)                                                      \
-  token {                                                                      \
-    token_type::TYPE, TEXT, {}                                                 \
-  }
+#define TOKEN(TYPE, TEXT) lexer.make_token(token_type::TYPE, TEXT)
 
 TEST_F(lexer_test, identifiers) {
   INPUT_IS_TOKEN_TEXT("abc", IDENTIFIER);
@@ -185,4 +181,11 @@ TEST_F(lexer_test, big1) {
       TOKEN(BRACE_CLOSE, ""), TOKEN(IDENTIFIER, "test"), TOKEN(PAREN_OPEN, ""),
       TOKEN(PAREN_CLOSE, ""), TOKEN(SEMICOLON, ""),
       TOKEN(LINE_COMMENT, "// END"));
+}
+
+TEST_F(lexer_test, keyword_types) {
+#define KEYWORD(NAME)                                                          \
+  ASSERT_EQ(keyword_type::kw_##NAME,                                           \
+            lexer_base::get_keyword_type(TOKEN(KEYWORD, #NAME)));
+#include "parsing/keywords.def"
 }

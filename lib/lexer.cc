@@ -44,13 +44,13 @@ static bool is_keyword(string_table::entry word) {
   return false;
 }
 
-#define KEYWORD(NAME) static const char *NAME##_str = #NAME;
+#define KEYWORD(NAME) static const char *kw_##NAME##_str = #NAME;
 #include "parsing/keywords.def"
 
 static const char *find_kw(std::string &s) {
 #define KEYWORD(NAME)                                                          \
   if (s == #NAME)                                                              \
-    return NAME##_str;
+    return kw_##NAME##_str;
 #include "parsing/keywords.def"
   return nullptr;
 }
@@ -58,11 +58,11 @@ static const char *find_kw(std::string &s) {
 /// string_table impl
 string_table::entry string_table::get_handle(std::string s) {
   if (const char *kw = find_kw(s)) {
-    return kw;
+    return {kw};
   }
   auto it_ins = table.insert(std::move(s));
   auto it = it_ins.first;
-  return {it->data(), it->size()};
+  return std::string_view{it->data(), it->size()};
 }
 
 static constexpr bool one_of(unit u, const unit *alternatives) {
@@ -824,14 +824,18 @@ result lexer_base::lex_id_keyword() {
   }
 }
 
-keyword_type lexer_base::get_keyword_type(token &t) {
+keyword_type lexer_base::get_keyword_type(const token &t) {
   assert(t.type == token_type::KEYWORD);
 #define KEYWORD(NAME)                                                          \
-  if (t.text.data() == NAME##_str) {                                           \
+  if (t.text.data() == kw_##NAME##_str) {                                      \
     return keyword_type::kw_##NAME;                                            \
   }
 #include "parsing/keywords.def"
   assert(false && "Unknown keyword type");
+}
+
+token lexer_base::make_token(token_type ty, const char *text) {
+  return token{ty, str_table.get_handle(text), {}};
 }
 
 } // namespace parsing
