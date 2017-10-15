@@ -20,3 +20,12 @@ TEST_F(parser_test, empty) {
   str << *mod;
   ASSERT_EQ(str.str(), "module {\n}\n");
 }
+TEST_F(parser_test, decl) {
+  parser.lexer.set_text("let x;");
+  auto res = parser.parse();
+  ASSERT_TRUE(holds_alternative<module_node *>(res));
+  auto *mod = get<module_node *>(res);
+
+  str << *mod;
+  ASSERT_EQ(str.str(), "module {\nvar_decl {\n}\n}\n");
+}

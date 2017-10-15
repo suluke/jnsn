@@ -33,9 +33,11 @@ NODE(expression, CHILDREN())
 NODE(param_list, CHILDREN(STRINGS(names) MAYBE_STR(rest)))
 NODE(block, CHILDREN(MANY(expression, exprs)))
 DERIVED(function, EXTENDS(expression), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
+DERIVED(var_decl, EXTENDS(expression), CHILDREN(STRING(keyword) STRING(name) MAYBE(expression, init)))
 DERIVED(empty_expr, EXTENDS(expression), CHILDREN())
 NODE(module, CHILDREN(MANY(function, funcs) MANY(expression, exprs)))
 
+#undef MAYBE
 #undef MAYBE_STR
 #undef STRINGS
 #undef STRING

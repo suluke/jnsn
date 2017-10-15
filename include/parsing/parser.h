@@ -27,6 +27,7 @@ class parser_base {
   typed_ast_node_ref<function_node> parse_function();
   typed_ast_node_ref<param_list_node> parse_param_list();
   typed_ast_node_ref<block_node> parse_block();
+  typed_ast_node_ref<var_decl_node> parse_var_decl();
 public:
   using result = std::variant<module_node *, parser_error>;
 

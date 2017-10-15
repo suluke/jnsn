@@ -114,6 +114,7 @@ public                                                                         \
 #define STRING(NAME) string_table::entry NAME;
 #define STRINGS(NAME) std::vector<string_table::entry> NAME;
 #define MAYBE_STR(NAME) std::optional<string_table::entry> NAME;
+#define MAYBE(OF, NAME) std::optional<typed_ast_node_ref<OF##_node>> NAME;
 #include "parsing/ast.def"
 
 /// The place where different nodes live
