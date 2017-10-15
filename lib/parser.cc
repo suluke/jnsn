@@ -2,24 +2,133 @@
 
 using namespace parsing;
 
+lexer_base::result parser_base::next_token() { return get_lexer().next(); }
+
+#define ADVANCE_OR_ERROR(MESSAGE, RETURN_VAL)                                  \
+  do {                                                                         \
+    auto read_success = advance();                                             \
+    if (!read_success) {                                                       \
+      error = {MESSAGE, {}};                                                   \
+    }                                                                          \
+    if (error) {                                                               \
+      return RETURN_VAL;                                                       \
+    }                                                                          \
+  } while (false)
+
+#define EXPECT(TYPE, RETURN_VAL)                                               \
+  do {                                                                         \
+    if (current_token.type != token_type::TYPE) {                              \
+      error = {"Unexpected token. Expected: " #TYPE, current_token.loc};       \
+      return RETURN_VAL;                                                       \
+    }                                                                          \
+  } while (false)
+
+bool parser_base::advance() {
+  lexer_base::result T = next_token();
+  if (std::holds_alternative<lexer_base::eof_t>(T)) {
+    return false;
+  } else if (std::holds_alternative<lexer_error>(T)) {
+    auto err = std::get<lexer_error>(T);
+    error = parser_error{"Lexer Error: " + err.msg, err.loc};
+    return false;
+  }
+  current_token = std::get<token>(T);
+  std::cout << current_token << "\n";
+  return true;
+}
+
 parser_base::result parser_base::parse() {
   nodes.clear();
   module = nodes.make_module();
 
-  lexer_base::result T;
-  while (std::holds_alternative<token>(T = next_token())) {
-    auto tok = std::get<token>(T);
-    std::cout << tok << "\n";
-    parse_expression(tok);
+  while (!error && advance() && !error) {
+    auto expr = parse_expression();
+    if (!expr || error) {
+      break;
+    }
+    module->exprs.emplace_back(expr);
   }
 
+  if (error) {
+    return *error;
+  }
   return &*module;
 }
 
-void parser_base::parse_expression(token first) {
-  if (first.type == token_type::SEMICOLON) {
-    auto empty = nodes.make_empty_expr();
-    module->exprs.emplace_back(empty);
-    return;
+typed_ast_node_ref<expression_node> parser_base::parse_expression() {
+  if (current_token.type == token_type::SEMICOLON) {
+    return nodes.make_empty_expr();
+  } else if (current_token.type == token_type::KEYWORD) {
+    return parse_keyword_expr();
   }
+  error = {"Not implemented", current_token.loc};
+  return {};
+}
+
+typed_ast_node_ref<expression_node> parser_base::parse_keyword_expr() {
+  EXPECT(KEYWORD, {});
+  auto kw_ty = get_lexer().get_keyword_type(current_token);
+  if (kw_ty == keyword_type::kw_function) {
+    return parse_function();
+  } else {
+    error = {"Not implemented (keyword)", current_token.loc};
+    return {};
+  }
+}
+
+typed_ast_node_ref<function_node> parser_base::parse_function() {
+  EXPECT(KEYWORD, {}); // "function"
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  auto func = nodes.make_function();
+  EXPECT(IDENTIFIER, {});
+  func->name = current_token.text;
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  auto params = parse_param_list();
+  if (!params) {
+    return {};
+  }
+  func->params = params;
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  auto body = parse_block();
+  if (!body) {
+    return {};
+  }
+  func->body = body;
+  return func;
+}
+
+typed_ast_node_ref<param_list_node> parser_base::parse_param_list() {
+  EXPECT(PAREN_OPEN, {});
+  auto node = nodes.make_param_list();
+  do {
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    if (current_token.type == token_type::IDENTIFIER) {
+      node->names.emplace_back(current_token.text);
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    }
+  } while (current_token.type == token_type::COMMA);
+  if (current_token.type == token_type::DOTDOTDOT) {
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    if (current_token.type == token_type::IDENTIFIER) {
+      node->rest = current_token.text;
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    }
+  }
+  if (current_token.type == token_type::PAREN_CLOSE) {
+    return node;
+  }
+
+  error = {"Unexpected token in parameter list", current_token.loc};
+  return {};
+}
+
+typed_ast_node_ref<block_node> parser_base::parse_block() {
+  EXPECT(BRACE_OPEN, {});
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing block", {});
+  auto block = nodes.make_block();
+  while (current_token.type != token_type::BRACE_CLOSE) {
+    // TODO
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing block", {});
+  }
+  return block;
 }

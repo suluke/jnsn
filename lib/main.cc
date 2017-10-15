@@ -42,7 +42,7 @@ static void parser_cli() {
       cout << *mod;
     } else if (std::holds_alternative<parser_error>(res)) {
       auto err = std::get<parser_error>(res);
-      cout << err.msg << '\n';
+      cout << "ERROR: " << err.msg << '\n';
       error = true;
     }
   } while(!error);

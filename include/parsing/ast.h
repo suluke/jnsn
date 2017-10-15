@@ -42,7 +42,7 @@ public:
   operator bool() const { return store; }
 };
 template <class Ty> class typed_ast_node_ref : public ast_node_ref {
-  bool is_consistent() const { return Ty::is_extended_by(ty); }
+  bool is_consistent() const { return !*this || Ty::is_extended_by(ty); }
   friend class ast_node_store;
   typed_ast_node_ref(ast_node_store &store, ast_node_type ty, size_t id)
       : ast_node_ref(store, ty, id) {}
@@ -54,6 +54,13 @@ public:
   typed_ast_node_ref &operator=(typed_ast_node_ref<Ty> &&) = default;
   typed_ast_node_ref &operator=(const typed_ast_node_ref<Ty> &) = default;
 
+  template<class Derived> typed_ast_node_ref(const typed_ast_node_ref<Derived> &o) : ast_node_ref(o) {
+    assert(is_consistent());
+  }
+  template<class Derived> typed_ast_node_ref(typed_ast_node_ref<Derived> &&o) : ast_node_ref(o) {
+    assert(is_consistent());
+  }
+
   explicit typed_ast_node_ref(const ast_node_ref &o) : ast_node_ref(o) {
     assert(is_consistent());
   }
@@ -62,18 +69,22 @@ public:
   }
 
   Ty &operator*() {
+    assert(*this);
     assert(is_consistent());
     return static_cast<Ty &>(get());
   }
   Ty *operator->() {
+    assert(*this);
     assert(is_consistent());
     return static_cast<Ty *>(&get());
   }
   const Ty &operator*() const {
+    assert(*this);
     assert(is_consistent());
     return static_cast<const Ty &>(get());
   }
   const Ty *operator->() const {
+    assert(*this);
     assert(is_consistent());
     return static_cast<const Ty *>(&get());
   }
@@ -102,6 +113,7 @@ public                                                                         \
 #define ONE(OF, NAME) typed_ast_node_ref<OF##_node> NAME;
 #define STRING(NAME) string_table::entry NAME;
 #define STRINGS(NAME) std::vector<string_table::entry> NAME;
+#define MAYBE_STR(NAME) std::optional<string_table::entry> NAME;
 #include "parsing/ast.def"
 
 /// The place where different nodes live

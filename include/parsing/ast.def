@@ -16,20 +16,27 @@
 #ifndef MANY
 #define MANY(OF, NAME)
 #endif
+#ifndef MAYBE
+#define MAYBE(OF, NAME)
+#endif
 #ifndef STRING
 #define STRING(NAME)
 #endif
 #ifndef STRINGS
 #define STRINGS(NAME)
 #endif
+#ifndef MAYBE_STR
+#define MAYBE_STR(NAME)
+#endif
 
 NODE(expression, CHILDREN())
-NODE(param_list, CHILDREN(STRINGS(names)))
-NODE(function_body, CHILDREN())
-DERIVED(function, EXTENDS(expression), CHILDREN(ONE(param_list, params) ONE(function_body, body)))
+NODE(param_list, CHILDREN(STRINGS(names) MAYBE_STR(rest)))
+NODE(block, CHILDREN(MANY(expression, exprs)))
+DERIVED(function, EXTENDS(expression), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
 DERIVED(empty_expr, EXTENDS(expression), CHILDREN())
-NODE(module, CHILDREN(MANY(expression, exprs)))
+NODE(module, CHILDREN(MANY(function, funcs) MANY(expression, exprs)))
 
+#undef MAYBE_STR
 #undef STRINGS
 #undef STRING
 #undef MANY
