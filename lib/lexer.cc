@@ -35,6 +35,36 @@ std::ostream &operator<<(std::ostream &stream, const lexer_base::result &res) {
   return stream;
 }
 
+/// keywords impl
+static bool is_keyword(string_table::entry word) {
+#define KEYWORD(NAME)                                                          \
+  if (word == #NAME)                                                           \
+    return true;
+#include "parsing/keywords.def"
+  return false;
+}
+
+#define KEYWORD(NAME) static const char *NAME##_str = #NAME;
+#include "parsing/keywords.def"
+
+static const char *find_kw(std::string &s) {
+#define KEYWORD(NAME)                                                          \
+  if (s == #NAME)                                                              \
+    return NAME##_str;
+#include "parsing/keywords.def"
+  return nullptr;
+}
+
+/// string_table impl
+string_table::entry string_table::get_handle(std::string s) {
+  if (const char *kw = find_kw(s)) {
+    return kw;
+  }
+  auto it_ins = table.insert(std::move(s));
+  auto it = it_ins.first;
+  return {it->data(), it->size()};
+}
+
 static constexpr bool one_of(unit u, const unit *alternatives) {
   if (*alternatives == '\0') {
     return false;
@@ -56,7 +86,7 @@ void lexer_base::advance() {
   window.back() = read_unit();
 }
 
-result lexer_base::next() {
+const result lexer_base::next() {
   if (!peek()) {
     if (template_depth != 0) {
       return lexer_error{"Unexpected EOF in template literal", loc};
@@ -776,14 +806,6 @@ result lexer_base::lex_number() {
   return token{ty, str_table.get_handle(text.str()), {}};
 }
 
-static bool is_keyword(string_table::entry word) {
-#define KEYWORD(NAME)                                                          \
-  if (word == #NAME)                                                           \
-    return true;
-#include "parsing/keywords.def"
-  return false;
-}
-
 result lexer_base::lex_id_keyword() {
   assert(std::isalpha(current()) || current() == '_' || current() == '$');
   text << current();
@@ -801,4 +823,15 @@ result lexer_base::lex_id_keyword() {
     return token{token_type::IDENTIFIER, str, {}};
   }
 }
+
+keyword_type lexer_base::get_keyword_type(token &t) {
+  assert(t.type == token_type::KEYWORD);
+#define KEYWORD(NAME)                                                          \
+  if (t.text.data() == NAME##_str) {                                           \
+    return keyword_type::kw_##NAME;                                            \
+  }
+#include "parsing/keywords.def"
+  assert(false && "Unknown keyword type");
+}
+
 } // namespace parsing

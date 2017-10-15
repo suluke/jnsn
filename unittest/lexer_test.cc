@@ -4,6 +4,20 @@
 
 using namespace parsing;
 
+class string_table_test : public ::testing::Test {
+protected:
+  string_table str_table;
+};
+
+TEST_F(string_table_test, keywords) {
+#define KEYWORD(NAME) const auto NAME##_handle = str_table.get_handle(#NAME);
+#include "parsing/keywords.def"
+#define KEYWORD(NAME) const auto NAME##_handle2 = str_table.get_handle(#NAME);
+#include "parsing/keywords.def"
+#define KEYWORD(NAME) ASSERT_EQ(NAME##_handle.data(), NAME##_handle2.data());
+#include "parsing/keywords.def"
+}
+
 class lexer_test : public ::testing::Test {
 protected:
   constant_string_lexer lexer;

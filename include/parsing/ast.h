@@ -2,7 +2,7 @@
 #define PARSING_AST_H
 
 #include "parsing/ast_visitor.h"
-#include "parsing/string_table.h"
+#include "parsing/lexer.h"
 #include <cassert>
 #include <vector>
 

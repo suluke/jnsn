@@ -2,13 +2,13 @@
 #define PARSING_LEXER_H
 
 #include "parsing/source_location.h"
-#include "parsing/string_table.h"
 #include <cassert>
 #include <iostream>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <variant>
+#include <unordered_set>
 
 namespace parsing {
 
@@ -17,9 +17,18 @@ enum class token_type {
 #include "parsing/tokens.def"
 };
 std::ostream &operator<<(std::ostream &stream, const token_type ty);
+
 enum class keyword_type {
 #define KEYWORD(NAME) kw_##NAME,
 #include "parsing/keywords.def"
+};
+
+class string_table {
+private:
+  std::unordered_set<std::string> table;
+public:
+  using entry = std::string_view;
+  entry get_handle(std::string s);
 };
 ///
 ///
@@ -96,12 +105,13 @@ private:
 
 public:
   lexer_base() : window({' ', '\n'}) {}
-  result next();
+  const result next();
   void reset() {
     window = {' ', '\n'};
     loc = {};
     template_depth = 0;
   }
+  keyword_type get_keyword_type(token &);
 };
 
 std::ostream &operator<<(std::ostream &stream, const lexer_base::result &res);
