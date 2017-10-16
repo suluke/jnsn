@@ -117,7 +117,7 @@ void ast_node_store::clear() {
 
 namespace parsing {
 std::ostream &operator<<(std::ostream &stream, const ast_node_ref &ref) {
-  stream << ast_to_json(ref);
+  stream << ast_to_json(ref) << "\n";
   return stream;
 }
 } // namespace parsing
