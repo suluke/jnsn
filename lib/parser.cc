@@ -67,7 +67,7 @@ parser_base::result parser_base::parse() {
   if (error) {
     return *error;
   }
-  return &*module;
+  return module;
 }
 
 typed_ast_node_ref<expression_node> parser_base::parse_expression() {

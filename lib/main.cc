@@ -32,14 +32,15 @@ static void lexer_cli() {
 }
 
 static void parser_cli() {
+  using ast_root = parser_base::ast_root;
   bool error = false;
   do {
     cout << "Enter text:\n";
     cin_line_parser parser;
     parser_base::result res = parser.parse();
-    if (std::holds_alternative<module_node *>(res)) {
-      auto *mod = std::get<module_node *>(res);
-      cout << *mod;
+    if (std::holds_alternative<ast_root>(res)) {
+      auto mod = std::get<ast_root>(res);
+      cout << mod;
     } else if (std::holds_alternative<parser_error>(res)) {
       auto err = std::get<parser_error>(res);
       cout << "ERROR: " << err.msg << '\n';

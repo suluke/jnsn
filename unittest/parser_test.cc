@@ -11,21 +11,23 @@ protected:
   stringstream str;
 };
 
+using ast_root = parser_base::ast_root;
+
 TEST_F(parser_test, empty) {
   parser.lexer.set_text("");
   auto res = parser.parse();
-  ASSERT_TRUE(holds_alternative<module_node *>(res));
-  auto *mod = get<module_node *>(res);
+  ASSERT_TRUE(holds_alternative<ast_root>(res));
+  auto mod = get<ast_root>(res);
 
-  str << *mod;
+  str << mod;
   ASSERT_EQ(str.str(), "module {\n}\n");
 }
 TEST_F(parser_test, decl) {
   parser.lexer.set_text("let x;");
   auto res = parser.parse();
-  ASSERT_TRUE(holds_alternative<module_node *>(res));
-  auto *mod = get<module_node *>(res);
+  ASSERT_TRUE(holds_alternative<ast_root>(res));
+  auto mod = get<ast_root>(res);
 
-  str << *mod;
+  str << mod;
   ASSERT_EQ(str.str(), "module {\nvar_decl {\n}\n}\n");
 }

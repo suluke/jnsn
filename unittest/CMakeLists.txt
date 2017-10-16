@@ -36,6 +36,7 @@ add_unittest(lexer_test
 add_unittest(ast_test
   ast_test.cc
   ../lib/ast.cc
+  ../lib/ast_ops.cc
   ../include/parsing/ast.h
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
@@ -44,6 +45,7 @@ add_unittest(parser_test
   parser_test.cc
   ../lib/parser.cc
   ../lib/ast.cc
+  ../lib/ast_ops.cc
   ../lib/lexer.cc
   ../include/parsing/parser.h
 )

@@ -145,7 +145,6 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &, const ast_node_ref &);
-std::ostream &operator<<(std::ostream &, const ast_node &);
 template <class Ty>
 std::ostream &operator<<(std::ostream &stream,
                          const typed_ast_node_ref<Ty> &ref) {

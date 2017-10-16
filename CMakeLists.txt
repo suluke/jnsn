@@ -11,10 +11,17 @@ set(SOURCES
   lib/main.cc
   lib/lexer.cc
   lib/ast.cc
+  lib/ast_ops.cc
   lib/parser.cc
+  include/parsing/ast.def
+  include/parsing/ast.h
+  include/parsing/ast_ops.h
+  include/parsing/ast_visitor.h
+  include/parsing/keywords.def
   include/parsing/lexer.h
+  include/parsing/parser.h
   include/parsing/source_location.h
-  include/parsing/string_table.h
+  include/parsing/tokens.def
 )
 
 include_directories(include/)

@@ -12,10 +12,15 @@ struct parser_error {
 };
 
 class parser_base {
+public:
+  using ast_root = typed_ast_node_ref<module_node>;
+  using result = std::variant<ast_root, parser_error>;
+
+private:
   virtual lexer_base &get_lexer() = 0;
 
   ast_node_store nodes;
-  typed_ast_node_ref<module_node> module;
+  ast_root module;
   std::optional<parser_error> error;
   token current_token;
 
@@ -29,8 +34,6 @@ class parser_base {
   typed_ast_node_ref<block_node> parse_block();
   typed_ast_node_ref<var_decl_node> parse_var_decl();
 public:
-  using result = std::variant<module_node *, parser_error>;
-
   result parse();
 };
 
