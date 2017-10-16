@@ -37,7 +37,7 @@ TEST(ast_test, printing) {
   auto node = store.make_module();
   std::stringstream ss;
   ss << node;
-  ASSERT_EQ(ss.str(), "module {\n}\n");
+  ASSERT_EQ(ss.str(), "{\"type\": \"module\", \"exprs\": []}\n");
 }
 
 TEST(ast_test, reflection) {

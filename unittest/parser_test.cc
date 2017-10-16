@@ -20,7 +20,7 @@ TEST_F(parser_test, empty) {
   auto mod = get<ast_root>(res);
 
   str << mod;
-  ASSERT_EQ(str.str(), "module {\n}\n");
+  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"exprs\": []}\n");
 }
 TEST_F(parser_test, decl) {
   parser.lexer.set_text("let x;");
@@ -29,5 +29,7 @@ TEST_F(parser_test, decl) {
   auto mod = get<ast_root>(res);
 
   str << mod;
-  ASSERT_EQ(str.str(), "module {\nvar_decl {\n}\n}\n");
+  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"exprs\": [{\"type\": "
+                       "\"var_decl\", \"keyword\": \"let\", \"name\": \"x\", "
+                       "\"init\": null}]}\n");
 }

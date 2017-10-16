@@ -7,56 +7,71 @@ using namespace std;
 struct json_printer : public const_ast_node_visitor<void> {
   std::ostream &stream;
   json_printer(std::ostream &stream) : stream(stream) {}
-#define SEP_MEMBERS stream << ", "
+
+#define SEP_MEMBERS                                                            \
+  if (child_idx++) {                                                           \
+    stream << ", ";                                                            \
+  }
 
 #define CHILDREN(...)                                                          \
   do {                                                                         \
+    int child_idx = 0;                                                         \
     __VA_ARGS__                                                                \
   } while (false)
+
 #define MANY(OF, NAME)                                                         \
-  stream << #NAME ": [";                                                       \
-  for (auto It = node.NAME.begin(), end = node.NAME.end(); It != end; ++It) {  \
-    if (It != node.NAME.begin())                                               \
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME "\": [";                                                \
+  for (int i = 0; i < node.NAME.size(); ++i) {                                 \
+    if (i != 0) {                                                              \
       stream << ", ";                                                          \
-    (*It)->accept(*this);                                                      \
+    }                                                                          \
+    node.NAME[i]->accept(*this);                                               \
   }                                                                            \
-  stream << "]";                                                               \
-  SEP_MEMBERS;
+  stream << "]";
+
 #define ONE(OF, NAME)                                                          \
-  stream << #NAME << ": ";                                                     \
-  node.NAME->accept(*this);                                                    \
-  SEP_MEMBERS;
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME "\": ";                                                 \
+  node.NAME->accept(*this);
+
 #define MAYBE(OF, NAME)                                                        \
-  stream << #NAME ": ";                                                        \
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME "\": ";                                                 \
   if (node.NAME) {                                                             \
-    visit(**node.NAME);                                                         \
+    visit(**node.NAME);                                                        \
   } else {                                                                     \
     stream << "null";                                                          \
-  }                                                                            \
-  SEP_MEMBERS;
+  }
+
 #define MAYBE_STR(NAME)                                                        \
-  stream << #NAME << ": ";                                                     \
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME << "\": ";                                              \
   if (node.NAME) {                                                             \
     stream << "\"" << *node.NAME << "\"";                                      \
   } else {                                                                     \
     stream << "null";                                                          \
-  }                                                                            \
-  SEP_MEMBERS;
+  }
+
 #define STRINGS(NAME)                                                          \
-  stream << #NAME ": [";                                                       \
-  for (auto &s : node.NAME) {                                                  \
-    stream << s << ", ";                                                       \
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME "\": [";                                                \
+  for (int i = 0; i < node.NAME.size(); ++i) {                                 \
+    if (i != 0) {                                                              \
+      stream << ", ";                                                          \
+    }                                                                          \
+    stream << "\"" << node.NAME[i] << "\"";                                    \
   }                                                                            \
-  stream << "]";                                                               \
-  SEP_MEMBERS;
+  stream << "]";
+
 #define STRING(NAME)                                                           \
-  stream << #NAME ": \"" << node.NAME << "\"";                                 \
-  SEP_MEMBERS;
+  SEP_MEMBERS;                                                                 \
+  stream << "\"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual void accept(const NAME##_node &node) {                               \
     stream << "{";                                                             \
-    stream << "type: "                                                         \
+    stream << "\"type\": "                                                     \
            << "\"" #NAME "\", ";                                               \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
@@ -64,7 +79,7 @@ struct json_printer : public const_ast_node_visitor<void> {
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES)                                  \
   virtual void accept(const NAME##_node &node) {                               \
     stream << "{";                                                             \
-    stream << "type: "                                                         \
+    stream << "\"type\": "                                                     \
            << "\"" #NAME "\", ";                                               \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
