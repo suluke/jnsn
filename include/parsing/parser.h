@@ -33,6 +33,7 @@ private:
   typed_ast_node_ref<param_list_node> parse_param_list();
   typed_ast_node_ref<block_node> parse_block();
   typed_ast_node_ref<var_decl_node> parse_var_decl();
+  typed_ast_node_ref<bin_op_expr_node> parse_bin_op(typed_ast_node_ref<expression_node> lhs);
 public:
   result parse();
 };

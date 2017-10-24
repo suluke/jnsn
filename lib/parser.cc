@@ -70,13 +70,61 @@ parser_base::result parser_base::parse() {
   return module;
 }
 
+static typed_ast_node_ref<number_literal_node>
+make_number_expression(token t, ast_node_store &nodes) {
+  typed_ast_node_ref<number_literal_node> res;
+  if (t.type == token_type::INT_LITERAL) {
+    res = nodes.make_int_literal();
+  } else if (t.type == token_type::FLOAT_LITERAL) {
+    res = nodes.make_float_literal();
+  } else if (t.type == token_type::HEX_LITERAL) {
+    res = nodes.make_float_literal();
+  } else if (t.type == token_type::OCT_LITERAL) {
+    res = nodes.make_float_literal();
+  } else if (t.type == token_type::BIN_LITERAL) {
+    res = nodes.make_float_literal();
+  }
+  assert(res && "Token not a (known) number literal");
+  res->val = t.text;
+}
+
 typed_ast_node_ref<expression_node> parser_base::parse_expression() {
   if (current_token.type == token_type::SEMICOLON) {
     return nodes.make_empty_expr();
   } else if (current_token.type == token_type::KEYWORD) {
     return parse_keyword_expr();
+  } else if (current_token.type == token_type::IDENTIFIER) {
+    auto res = nodes.make_identifier_expr();
+    res->str = current_token.text;
+    auto read_success = advance();
+    if (!read_success || current_token.type == token_type::SEMICOLON) {
+      return res;
+    }
+    return parse_bin_op(res);
+  } else if (current_token.is_number_literal()) {
+    auto res = make_number_expression(current_token, nodes);
+    res->val = current_token.text;
+    auto read_success = advance();
+    if (!read_success || current_token.type == token_type::SEMICOLON) {
+      return res;
+    }
+    return parse_bin_op(res);
+  } else if (current_token.type == token_type::STRING_LITERAL) {
+    auto res = nodes.make_string_literal();
+    res->val = current_token.text;
+    auto read_success = advance();
+    if (!read_success || current_token.type == token_type::SEMICOLON) {
+      return res;
+    }
+    return parse_bin_op(res);
   }
-  error = {"Not implemented", current_token.loc};
+  error = {"Not implemented (parse expression)", current_token.loc};
+  return {};
+}
+
+typed_ast_node_ref<bin_op_expr_node>
+parser_base::parse_bin_op(typed_ast_node_ref<expression_node> lhs) {
+  error = {"Not implemented (binary expression)", current_token.loc};
   return {};
 }
 

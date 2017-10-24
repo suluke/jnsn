@@ -69,6 +69,13 @@ struct token {
   source_location loc;
 
   friend std::ostream &operator<<(std::ostream &stream, const token &tok);
+  bool is_number_literal() {
+    return this->type == token_type::INT_LITERAL ||
+           this->type == token_type::HEX_LITERAL ||
+           this->type == token_type::OCT_LITERAL ||
+           this->type == token_type::BIN_LITERAL ||
+           this->type == token_type::FLOAT_LITERAL;
+  }
 };
 
 ///
