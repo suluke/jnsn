@@ -529,7 +529,6 @@ result lexer_base::lex_str() {
 result lexer_base::lex_backtick() {
   assert(current() == '`');
   text << '`';
-  auto start = loc;
   if (!peek()) {
     return lexer_error{"Unexpected EOF in template literal", loc};
   }
@@ -656,6 +655,10 @@ std::optional<lexer_error> lexer_base::consume_escape_seq() {
             break;
           }
         } while (peek());
+        if (!ended) {
+          return lexer_error{"Unexpected EOF inside unicode escape sequence",
+                             loc};
+        }
       } else {
         for (int i = 0; i < 4; ++i) {
           if (!std::isxdigit(current())) {

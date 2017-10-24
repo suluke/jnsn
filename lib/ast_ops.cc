@@ -15,14 +15,14 @@ struct json_printer : public const_ast_node_visitor<void> {
 
 #define CHILDREN(...)                                                          \
   do {                                                                         \
-    int child_idx = 0;                                                         \
+    [[maybe_unused]] int child_idx = 0;                                        \
     __VA_ARGS__                                                                \
   } while (false)
 
 #define MANY(OF, NAME)                                                         \
   SEP_MEMBERS;                                                                 \
   stream << "\"" #NAME "\": [";                                                \
-  for (int i = 0; i < node.NAME.size(); ++i) {                                 \
+  for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
     }                                                                          \
@@ -56,7 +56,7 @@ struct json_printer : public const_ast_node_visitor<void> {
 #define STRINGS(NAME)                                                          \
   SEP_MEMBERS;                                                                 \
   stream << "\"" #NAME "\": [";                                                \
-  for (int i = 0; i < node.NAME.size(); ++i) {                                 \
+  for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
     }                                                                          \
