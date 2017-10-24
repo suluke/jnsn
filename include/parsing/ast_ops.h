@@ -6,10 +6,10 @@ namespace parsing {
 
 class ast_to_json {
 private:
-  const ast_node_ref ast;
+  const ast_node *ast;
 
 public:
-  ast_to_json(ast_node_ref ast) : ast(ast) {}
+  ast_to_json(const ast_node *ast) : ast(ast) {}
   friend std::ostream &operator<<(std::ostream &, const ast_to_json &);
 };
 

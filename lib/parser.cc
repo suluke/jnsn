@@ -70,9 +70,9 @@ parser_base::result parser_base::parse() {
   return module;
 }
 
-static typed_ast_node_ref<number_literal_node>
-make_number_expression(token t, ast_node_store &nodes) {
-  typed_ast_node_ref<number_literal_node> res;
+static number_literal_node
+*make_number_expression(token t, ast_node_store &nodes) {
+  number_literal_node *res = nullptr;
   if (t.type == token_type::INT_LITERAL) {
     res = nodes.make_int_literal();
   } else if (t.type == token_type::FLOAT_LITERAL) {
@@ -86,9 +86,10 @@ make_number_expression(token t, ast_node_store &nodes) {
   }
   assert(res && "Token not a (known) number literal");
   res->val = t.text;
+  return res;
 }
 
-typed_ast_node_ref<expression_node> parser_base::parse_expression() {
+expression_node *parser_base::parse_expression() {
   if (current_token.type == token_type::SEMICOLON) {
     return nodes.make_empty_expr();
   } else if (current_token.type == token_type::KEYWORD) {
@@ -122,13 +123,13 @@ typed_ast_node_ref<expression_node> parser_base::parse_expression() {
   return {};
 }
 
-typed_ast_node_ref<bin_op_expr_node>
-parser_base::parse_bin_op(typed_ast_node_ref<expression_node> lhs) {
+bin_op_expr_node
+*parser_base::parse_bin_op(expression_node *lhs) {
   error = {"Not implemented (binary expression)", current_token.loc};
   return {};
 }
 
-typed_ast_node_ref<expression_node> parser_base::parse_keyword_expr() {
+expression_node *parser_base::parse_keyword_expr() {
   EXPECT(KEYWORD, {});
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
@@ -142,7 +143,7 @@ typed_ast_node_ref<expression_node> parser_base::parse_keyword_expr() {
   }
 }
 
-typed_ast_node_ref<function_node> parser_base::parse_function() {
+function_node *parser_base::parse_function() {
   EXPECT(KEYWORD, {}); // "function"
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
   auto func = nodes.make_function();
@@ -163,7 +164,7 @@ typed_ast_node_ref<function_node> parser_base::parse_function() {
   return func;
 }
 
-typed_ast_node_ref<param_list_node> parser_base::parse_param_list() {
+param_list_node *parser_base::parse_param_list() {
   EXPECT(PAREN_OPEN, {});
   auto node = nodes.make_param_list();
   do {
@@ -188,7 +189,7 @@ typed_ast_node_ref<param_list_node> parser_base::parse_param_list() {
   return {};
 }
 
-typed_ast_node_ref<block_node> parser_base::parse_block() {
+block_node *parser_base::parse_block() {
   EXPECT(BRACE_OPEN, {});
   ADVANCE_OR_ERROR("Unexpected EOF while parsing block", {});
   auto block = nodes.make_block();
@@ -199,7 +200,7 @@ typed_ast_node_ref<block_node> parser_base::parse_block() {
   return block;
 }
 
-typed_ast_node_ref<var_decl_node> parser_base::parse_var_decl() {
+var_decl_node *parser_base::parse_var_decl() {
   EXPECT(KEYWORD, {});
   auto decl = nodes.make_var_decl();
   decl->keyword = current_token.text;

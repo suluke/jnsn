@@ -13,7 +13,7 @@ struct parser_error {
 
 class parser_base {
 public:
-  using ast_root = typed_ast_node_ref<module_node>;
+  using ast_root = module_node *;
   using result = std::variant<ast_root, parser_error>;
 
 private:
@@ -27,13 +27,13 @@ private:
   lexer_base::result next_token();
   bool advance();
 
-  typed_ast_node_ref<expression_node> parse_expression();
-  typed_ast_node_ref<expression_node> parse_keyword_expr();
-  typed_ast_node_ref<function_node> parse_function();
-  typed_ast_node_ref<param_list_node> parse_param_list();
-  typed_ast_node_ref<block_node> parse_block();
-  typed_ast_node_ref<var_decl_node> parse_var_decl();
-  typed_ast_node_ref<bin_op_expr_node> parse_bin_op(typed_ast_node_ref<expression_node> lhs);
+  expression_node *parse_expression();
+  expression_node *parse_keyword_expr();
+  function_node *parse_function();
+  param_list_node *parse_param_list();
+  block_node *parse_block();
+  var_decl_node *parse_var_decl();
+  bin_op_expr_node *parse_bin_op(expression_node *lhs);
 public:
   result parse();
 };
