@@ -3,6 +3,7 @@
 #include <initializer_list>
 
 using namespace parsing;
+using namespace std;
 
 class string_table_test : public ::testing::Test {
 protected:
@@ -98,7 +99,7 @@ TEST_F(lexer_test, comments) {
 
 TEST_F(lexer_test, operators) {
 #define TOKEN_TYPE(NAME, STR)                                                  \
-  if (STR != "" && STR != ".") {                                               \
+  if (string{STR} != "" && string{STR} != ".") {                               \
     SINGLE_NOTEXT_TOKEN(STR, NAME);                                            \
   }
 #include "parsing/tokens.def"

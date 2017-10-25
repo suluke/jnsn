@@ -13,33 +13,41 @@ protected:
 
 using ast_root = parser_base::ast_root;
 
-TEST_F(parser_test, empty) {
-  parser.lexer.set_text("");
-  auto res = parser.parse();
-  ASSERT_TRUE(holds_alternative<ast_root>(res));
-  auto mod = get<ast_root>(res);
+#define ASSERT_PARSED_MATCHES_JSON(INPUT, JSON)                                \
+  do {                                                                         \
+    str.str("");                                                               \
+    parser.lexer.set_text(INPUT);                                              \
+    auto res = parser.parse();                                                 \
+    ASSERT_TRUE(holds_alternative<ast_root>(res))                              \
+        << std::get<parser_error>(res);                                        \
+    auto mod = get<ast_root>(res);                                             \
+                                                                               \
+    str << mod;                                                                \
+    ASSERT_EQ(str.str(), JSON);                                                \
+  } while (false)
 
-  str << mod;
-  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"stmts\": []}\n");
+TEST_F(parser_test, empty) {
+  ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}\n");
 }
 TEST_F(parser_test, block) {
-  parser.lexer.set_text("{}");
-  auto res = parser.parse();
-  ASSERT_TRUE(holds_alternative<ast_root>(res));
-  auto mod = get<ast_root>(res);
-
-  str << mod;
-  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"stmts\": [{\"type\": "
-                       "\"block\", \"stmts\": []}]}\n");
+  ASSERT_PARSED_MATCHES_JSON("{}",
+                             "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                             "\"block\", \"stmts\": []}]}\n");
+}
+TEST_F(parser_test, literals) {
+  ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
+                                  "[{\"type\": \"int_literal\", \"val\": "
+                                  "\"1\"}]}\n");
 }
 TEST_F(parser_test, decl) {
-  parser.lexer.set_text("let x;");
-  auto res = parser.parse();
-  ASSERT_TRUE(holds_alternative<ast_root>(res));
-  auto mod = get<ast_root>(res);
-
-  str << mod;
-  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"stmts\": [{\"type\": "
-                       "\"var_decl\", \"keyword\": \"let\", \"name\": \"x\", "
-                       "\"init\": null}]}\n");
+  ASSERT_PARSED_MATCHES_JSON(
+      "let x;", "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                "\"var_decl\", \"keyword\": \"let\", \"name\": \"x\", "
+                "\"init\": null}]}\n");
+  ASSERT_PARSED_MATCHES_JSON(
+      "{let i = 0;}",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": "
+      "\"block\", \"stmts\": [{\"type\": "
+      "\"var_decl\", \"keyword\": \"let\", \"name\": \"i\", "
+      "\"init\": {\"type\": \"int_literal\", \"val\": \"0\"}}]}]}\n");
 }
