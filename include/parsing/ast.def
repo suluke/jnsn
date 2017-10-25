@@ -30,6 +30,7 @@
 #endif
 
 NODE(statement, CHILDREN())
+NODE(module, CHILDREN(MANY(statement, stmts)))
 DERIVED(expression, EXTENDS(statement), CHILDREN())
 NODE(param_list, CHILDREN(STRINGS(names) MAYBE_STR(rest)))
 DERIVED(block, EXTENDS(statement), CHILDREN(MANY(statement, stmts)))
@@ -44,8 +45,14 @@ DERIVED(float_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(hex_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(oct_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(bin_literal, EXTENDS(number_literal), CHILDREN())
-DERIVED(string_literal, EXTENDS(number_literal), CHILDREN(STRING(val)))
-NODE(module, CHILDREN(MANY(statement, stmts)))
+DERIVED(string_literal, EXTENDS(expression), CHILDREN(STRING(val)))
+DERIVED(array_literal, EXTENDS(expression), CHILDREN(MANY(expression, values)))
+NODE(object_entry, CHILDREN(STRING(key) ONE(expression, val)))
+DERIVED(object_literal, EXTENDS(expression), CHILDREN(MANY(object_entry, entries)))
+DERIVED(member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) ONE(identifier_expr, member)))
+DERIVED(computed_member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) ONE(expression, member)))
+NODE(argument_list, CHILDREN(MANY(expression, values)))
+DERIVED(call_expr, EXTENDS(expression), CHILDREN(ONE(expression, callee) ONE(argument_list, args)))
 
 #undef MAYBE
 #undef MAYBE_STR

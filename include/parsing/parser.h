@@ -3,12 +3,14 @@
 
 #include "parsing/ast.h"
 #include "parsing/lexer.h"
+#include <stack>
 
 namespace parsing {
 
 struct parser_error {
   std::string msg;
   source_location loc;
+  friend std::ostream &operator<<(std::ostream &, const parser_error &);
 };
 
 class parser_base {
@@ -23,11 +25,15 @@ private:
   ast_root module;
   std::optional<parser_error> error;
   token current_token;
+  std::stack<token> rewind_stack;
 
   lexer_base::result next_token();
   bool advance();
+  void rewind(token t);
+  void reset();
 
   statement_node *parse_statement();
+  statement_node *parse_block_or_obj();
   expression_node *parse_expression();
   expression_node *parse_keyword_expr();
   function_node *parse_function();
@@ -35,15 +41,19 @@ private:
   block_node *parse_block();
   var_decl_node *parse_var_decl();
   bin_op_expr_node *parse_bin_op(expression_node *lhs);
+  array_literal_node *parse_array_literal();
+  object_literal_node *parse_object_literal();
+  computed_member_access_node *parse_computed_access(expression_node *base);
+  member_access_node *parse_member_access(expression_node *base);
+  call_expr_node *parse_call(expression_node *callee);
+
 public:
   result parse();
 };
 
 class cin_line_parser : public parser_base {
   cin_line_lexer lexer;
-  lexer_base &get_lexer() {
-    return lexer;
-  }
+  lexer_base &get_lexer() { return lexer; }
 };
 
 } // namespace parsing
