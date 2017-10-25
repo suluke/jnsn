@@ -307,7 +307,7 @@ statement_node *parser_base::parse_block_or_obj() {
       return parse_object_literal();
     }
   } else if (current_token.type == token_type::BRACE_CLOSE) {
-    return nodes.make_block();
+    return nodes.make_object_literal();
   } else {
     rewind(brace);
   }

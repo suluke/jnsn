@@ -30,9 +30,9 @@ TEST_F(parser_test, empty) {
   ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}\n");
 }
 TEST_F(parser_test, block) {
-  ASSERT_PARSED_MATCHES_JSON("{}",
-                             "{\"type\": \"module\", \"stmts\": [{\"type\": "
-                             "\"block\", \"stmts\": []}]}\n");
+  ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
+                                   "[{\"type\": \"object_literal\", "
+                                   "\"entries\": []}]}\n");
 }
 TEST_F(parser_test, literals) {
   ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
