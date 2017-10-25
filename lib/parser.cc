@@ -48,7 +48,8 @@ bool parser_base::advance() {
   if (!rewind_stack.empty()) {
     current_token = rewind_stack.top();
     rewind_stack.pop();
-    std::cout << "Again: " << current_token << "\n"; // TODO Remove this after initial impl
+    //~ std::cout << "Again: " << current_token
+    //~ << "\n"; // TODO Remove this after initial impl
     return true;
   }
   do {
@@ -61,7 +62,8 @@ bool parser_base::advance() {
       return false;
     }
     current_token = std::get<token>(T);
-    std::cout << current_token << "\n"; // TODO Remove this after initial impl
+    //~ std::cout << current_token << "\n"; // TODO Remove this after initial
+    //impl
   } while (current_token.type == token_type::LINE_COMMENT ||
            current_token.type == token_type::BLOCK_COMMENT);
   return true;
@@ -127,10 +129,15 @@ expression_node *parser_base::parse_expression() {
   if (current_token.type == token_type::KEYWORD) {
     return parse_keyword_expr();
   } else if (current_token.type == token_type::IDENTIFIER) {
+    auto ident = current_token;
     auto res = nodes.make_identifier_expr();
     res->str = current_token.text;
     auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON) {
+    if (!read_success || current_token.type == token_type::SEMICOLON ||
+        current_token.type == token_type::PAREN_CLOSE) {
+      if (current_token.type == token_type::PAREN_CLOSE) {
+        rewind(ident);
+      }
       return res;
     } else if (current_token.type == token_type::PAREN_OPEN) {
       return parse_call(res);
@@ -141,18 +148,28 @@ expression_node *parser_base::parse_expression() {
     }
     return parse_bin_op(res);
   } else if (current_token.is_number_literal()) {
+    auto literal = current_token;
     auto res = make_number_expression(current_token, nodes);
     res->val = current_token.text;
     auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON) {
+    if (!read_success || current_token.type == token_type::SEMICOLON ||
+        current_token.type == token_type::PAREN_CLOSE) {
+      if (current_token.type == token_type::PAREN_CLOSE) {
+        rewind(literal);
+      }
       return res;
     }
     return parse_bin_op(res);
   } else if (current_token.type == token_type::STRING_LITERAL) {
+    auto str = current_token;
     auto res = nodes.make_string_literal();
     res->val = current_token.text;
     auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON) {
+    if (!read_success || current_token.type == token_type::SEMICOLON ||
+        current_token.type == token_type::PAREN_CLOSE) {
+      if (current_token.type == token_type::PAREN_CLOSE) {
+        rewind(str);
+      }
       return res;
     }
     return parse_bin_op(res);
@@ -160,6 +177,12 @@ expression_node *parser_base::parse_expression() {
     return parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
     return parse_object_literal();
+  } else if (current_token.type == token_type::PAREN_OPEN) {
+    ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
+    auto expr = parse_expression();
+    ADVANCE_OR_ERROR("Unexpected EOF. Expected closing brace", nullptr);
+    EXPECT(PAREN_CLOSE, nullptr);
+    return expr;
   }
   error = {"Not implemented (parse expression)", current_token.loc};
   return nullptr;
@@ -258,7 +281,9 @@ var_decl_node *parser_base::parse_var_decl() {
   if (current_token.type == token_type::SEMICOLON) {
     return decl;
   } else if (current_token.type == token_type::EQ) {
-    ADVANCE_OR_ERROR("Unecpected EOF in variable initialization. Expected expression", nullptr);
+    ADVANCE_OR_ERROR(
+        "Unecpected EOF in variable initialization. Expected expression",
+        nullptr);
     auto init = parse_expression();
     if (!init) {
       assert(error);
