@@ -22,6 +22,16 @@ TEST_F(parser_test, empty) {
   str << mod;
   ASSERT_EQ(str.str(), "{\"type\": \"module\", \"stmts\": []}\n");
 }
+TEST_F(parser_test, block) {
+  parser.lexer.set_text("{}");
+  auto res = parser.parse();
+  ASSERT_TRUE(holds_alternative<ast_root>(res));
+  auto mod = get<ast_root>(res);
+
+  str << mod;
+  ASSERT_EQ(str.str(), "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                       "\"block\", \"stmts\": []}]}\n");
+}
 TEST_F(parser_test, decl) {
   parser.lexer.set_text("let x;");
   auto res = parser.parse();
