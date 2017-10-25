@@ -57,11 +57,11 @@ parser_base::result parser_base::parse() {
   module = nodes.make_module();
 
   while (!error && advance() && !error) {
-    auto expr = parse_expression();
-    if (!expr || error) {
+    auto stmt = parse_statement();
+    if (!stmt || error) {
       break;
     }
-    module->exprs.emplace_back(expr);
+    module->stmts.emplace_back(stmt);
   }
 
   if (error) {
@@ -89,10 +89,18 @@ static number_literal_node
   return res;
 }
 
-expression_node *parser_base::parse_expression() {
+statement_node *parser_base::parse_statement() {
   if (current_token.type == token_type::SEMICOLON) {
-    return nodes.make_empty_expr();
-  } else if (current_token.type == token_type::KEYWORD) {
+    return nodes.make_empty_stmt();
+  } else if (current_token.type == token_type::BRACE_OPEN) {
+    return parse_block();
+  } else {
+    return parse_expression();
+  }
+}
+
+expression_node *parser_base::parse_expression() {
+  if (current_token.type == token_type::KEYWORD) {
     return parse_keyword_expr();
   } else if (current_token.type == token_type::IDENTIFIER) {
     auto res = nodes.make_identifier_expr();
@@ -120,17 +128,17 @@ expression_node *parser_base::parse_expression() {
     return parse_bin_op(res);
   }
   error = {"Not implemented (parse expression)", current_token.loc};
-  return {};
+  return nullptr;
 }
 
 bin_op_expr_node
 *parser_base::parse_bin_op(expression_node *lhs) {
   error = {"Not implemented (binary expression)", current_token.loc};
-  return {};
+  return nullptr;
 }
 
 expression_node *parser_base::parse_keyword_expr() {
-  EXPECT(KEYWORD, {});
+  EXPECT(KEYWORD, nullptr);
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
     return parse_function();
@@ -139,46 +147,46 @@ expression_node *parser_base::parse_keyword_expr() {
     return parse_var_decl();
   } else {
     error = {"Not implemented (keyword)", current_token.loc};
-    return {};
+    return nullptr;
   }
 }
 
 function_node *parser_base::parse_function() {
-  EXPECT(KEYWORD, {}); // "function"
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  EXPECT(KEYWORD, nullptr); // "function"
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   auto func = nodes.make_function();
-  EXPECT(IDENTIFIER, {});
+  EXPECT(IDENTIFIER, nullptr);
   func->name = current_token.text;
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   auto params = parse_param_list();
   if (!params) {
-    return {};
+    return nullptr;
   }
   func->params = params;
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", {});
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   auto body = parse_block();
   if (!body) {
-    return {};
+    return nullptr;
   }
   func->body = body;
   return func;
 }
 
 param_list_node *parser_base::parse_param_list() {
-  EXPECT(PAREN_OPEN, {});
+  EXPECT(PAREN_OPEN, nullptr);
   auto node = nodes.make_param_list();
   do {
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
     if (current_token.type == token_type::IDENTIFIER) {
       node->names.emplace_back(current_token.text);
-      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
     }
   } while (current_token.type == token_type::COMMA);
   if (current_token.type == token_type::DOTDOTDOT) {
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
     if (current_token.type == token_type::IDENTIFIER) {
       node->rest = current_token.text;
-      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", {});
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
     }
   }
   if (current_token.type == token_type::PAREN_CLOSE) {
@@ -186,41 +194,42 @@ param_list_node *parser_base::parse_param_list() {
   }
 
   error = {"Unexpected token in parameter list", current_token.loc};
-  return {};
+  return nullptr;
 }
 
 block_node *parser_base::parse_block() {
-  EXPECT(BRACE_OPEN, {});
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing block", {});
+  EXPECT(BRACE_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing block", nullptr);
   auto block = nodes.make_block();
   while (current_token.type != token_type::BRACE_CLOSE) {
-    // TODO
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing block", {});
+    auto stmt = parse_statement();
+    block->stmts.emplace_back(stmt);
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing block", nullptr);
   }
   return block;
 }
 
 var_decl_node *parser_base::parse_var_decl() {
-  EXPECT(KEYWORD, {});
+  EXPECT(KEYWORD, nullptr);
   auto decl = nodes.make_var_decl();
   decl->keyword = current_token.text;
-  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration", {});
-  EXPECT(IDENTIFIER, {});
+  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration", nullptr);
+  EXPECT(IDENTIFIER, nullptr);
   decl->name = current_token.text;
-  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration", {});
-  EXPECT_SEVERAL(TYPELIST(token_type::SEMICOLON, token_type::EQ), {});
+  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration", nullptr);
+  EXPECT_SEVERAL(TYPELIST(token_type::SEMICOLON, token_type::EQ), nullptr);
   if (current_token.type == token_type::SEMICOLON) {
     return decl;
   } else if (current_token.type == token_type::EQ) {
-    ADVANCE_OR_ERROR("TODO", {});
+    ADVANCE_OR_ERROR("TODO", nullptr);
     auto init = parse_expression();
     if (!init) {
       assert(error);
-      return {};
+      return nullptr;
     }
     decl->init = init;
     return decl;
   }
   error = {"Unecpected token", current_token.loc};
-  return {};
+  return nullptr;
 }

@@ -27,6 +27,7 @@ private:
   lexer_base::result next_token();
   bool advance();
 
+  statement_node *parse_statement();
   expression_node *parse_expression();
   expression_node *parse_keyword_expr();
   function_node *parse_function();

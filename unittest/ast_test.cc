@@ -32,23 +32,23 @@ TEST(ast_test, node_store) {
   ASSERT_STREQ(res, "module");
   // stress test container insertion
   constexpr int mod_count = 5000;
-  constexpr int expr_count = 100;
+  constexpr int stmt_count = 100;
   std::vector<module_node *> modules;
   modules.reserve(mod_count);
   for (int i = 0; i < mod_count; i++) {
     modules.emplace_back(store.make_module());
   }
-  auto *expr = store.make_empty_expr();
+  auto *stmt = store.make_empty_stmt();
   for (auto *mod : modules) {
-    for (int i = 0; i < expr_count; i++) {
-      mod->exprs.emplace_back(expr);
+    for (int i = 0; i < stmt_count; i++) {
+      mod->stmts.emplace_back(stmt);
     }
   }
   for (int i = 0; i < mod_count; i++) {
     store.make_module();
   }
   for (auto *mod : modules) {
-    ASSERT_EQ(mod->exprs.size(), (size_t) expr_count);
+    ASSERT_EQ(mod->stmts.size(), (size_t) stmt_count);
   }
 }
 
@@ -57,5 +57,5 @@ TEST(ast_test, printing) {
   auto node = store.make_module();
   std::stringstream ss;
   ss << node;
-  ASSERT_EQ(ss.str(), "{\"type\": \"module\", \"exprs\": []}\n");
+  ASSERT_EQ(ss.str(), "{\"type\": \"module\", \"stmts\": []}\n");
 }

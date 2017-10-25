@@ -29,12 +29,13 @@
 #define MAYBE_STR(NAME)
 #endif
 
-NODE(expression, CHILDREN())
+NODE(statement, CHILDREN())
+DERIVED(expression, EXTENDS(statement), CHILDREN())
 NODE(param_list, CHILDREN(STRINGS(names) MAYBE_STR(rest)))
-NODE(block, CHILDREN(MANY(expression, exprs)))
+DERIVED(block, EXTENDS(statement), CHILDREN(MANY(statement, stmts)))
 DERIVED(function, EXTENDS(expression), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
 DERIVED(var_decl, EXTENDS(expression), CHILDREN(STRING(keyword) STRING(name) MAYBE(expression, init)))
-DERIVED(empty_expr, EXTENDS(expression), CHILDREN())
+DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(identifier_expr, EXTENDS(expression), CHILDREN(STRING(str)))
 DERIVED(bin_op_expr, EXTENDS(expression), CHILDREN(ONE(expression, lhs) ONE(expression, rhs)))
 DERIVED(number_literal, EXTENDS(expression), CHILDREN(STRING(val)))
@@ -44,7 +45,7 @@ DERIVED(hex_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(oct_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(bin_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(string_literal, EXTENDS(number_literal), CHILDREN(STRING(val)))
-NODE(module, CHILDREN(MANY(expression, exprs)))
+NODE(module, CHILDREN(MANY(statement, stmts)))
 
 #undef MAYBE
 #undef MAYBE_STR
