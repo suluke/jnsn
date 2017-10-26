@@ -35,7 +35,10 @@ private:
   statement_node *parse_statement();
   statement_node *parse_block_or_obj();
   expression_node *parse_expression();
-  expression_node *parse_keyword_expr();
+  expression_node *parse_keyword();
+  expression_node *parse_identifier();
+  string_literal_node *parse_string_literal();
+  number_literal_node *parse_number_literal();
   function_node *parse_function();
   param_list_node *parse_param_list();
   block_node *parse_block();

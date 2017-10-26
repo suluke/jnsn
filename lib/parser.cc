@@ -7,6 +7,10 @@ lexer_base::result parser_base::next_token() { return get_lexer().next(); }
 
 #define ADVANCE_OR_ERROR(MESSAGE, RETURN_VAL)                                  \
   do {                                                                         \
+    /* Make sure we haven't already encountered an error */                    \
+    if (error) {                                                               \
+      return RETURN_VAL;                                                       \
+    }                                                                          \
     auto read_success = advance();                                             \
     if (!read_success) {                                                       \
       error = {MESSAGE, {}};                                                   \
@@ -48,8 +52,6 @@ bool parser_base::advance() {
   if (!rewind_stack.empty()) {
     current_token = rewind_stack.top();
     rewind_stack.pop();
-    //~ std::cout << "Again: " << current_token
-    //~ << "\n"; // TODO Remove this after initial impl
     return true;
   }
   do {
@@ -62,8 +64,6 @@ bool parser_base::advance() {
       return false;
     }
     current_token = std::get<token>(T);
-    //~ std::cout << current_token << "\n"; // TODO Remove this after initial
-    //impl
   } while (current_token.type == token_type::LINE_COMMENT ||
            current_token.type == token_type::BLOCK_COMMENT);
   return true;
@@ -121,68 +121,128 @@ statement_node *parser_base::parse_statement() {
   } else if (current_token.type == token_type::BRACE_OPEN) {
     return parse_block_or_obj();
   } else {
-    return parse_expression();
+    // parse expression statement
+    auto expr = parse_expression();
+    auto read_success = advance();
+    if (error) {
+      return nullptr;
+    }
+    if (read_success) {
+      EXPECT(SEMICOLON, nullptr);
+    }
+    return expr;
+  }
+}
+
+static bool is_follow_expression(token t) {
+  switch (t.type) {
+  case token_type::SEMICOLON:
+  case token_type::DOT:
+  case token_type::PAREN_CLOSE:
+  case token_type::BRACKET_CLOSE:
+  case token_type::BRACE_CLOSE:
+  case token_type::PLUS:
+  case token_type::MINUS:
+  case token_type::ASTERISK:
+  case token_type::POW:
+  case token_type::SLASH:
+  case token_type::PERCENT:
+  case token_type::EQ:
+  case token_type::EQEQ:
+  case token_type::EQEQEQ:
+  case token_type::NEQ:
+  case token_type::NEQEQ:
+  case token_type::GT:
+  case token_type::LT:
+  case token_type::GT_EQ:
+  case token_type::LT_EQ:
+  case token_type::RSHIFT:
+  case token_type::LOG_RSHIFT:
+  case token_type::AMPERSAND:
+  case token_type::VERT_BAR:
+  case token_type::CARET:
+  case token_type::QMARK:
+  case token_type::COLON:
+  case token_type::LOG_AND:
+  case token_type::LOG_OR:
+  case token_type::PLUS_EQ:
+  case token_type::MINUS_EQ:
+  case token_type::MOD_EQ:
+  case token_type::MUL_EQ:
+  case token_type::DIV_EQ:
+  case token_type::POW_EQ:
+  case token_type::LSH_EQ:
+  case token_type::RSH_EQ:
+  case token_type::LOG_RSH_EQ:
+  case token_type::AND_EQ:
+  case token_type::OR_EQ:
+  case token_type::CARET_EQ:
+  case token_type::TEMPLATE_MIDDLE:
+  case token_type::TEMPLATE_END:
+    return true;
+  case token_type::KEYWORD: {
+    switch (lexer_base::get_keyword_type(t)) {
+    case keyword_type::kw_typeof:
+    case keyword_type::kw_instanceof:
+    case keyword_type::kw_in:
+      return true;
+    default:
+      return false;
+    }
+  }
+  default:
+    return false;
+  }
+}
+static bool is_expression_end(token t) {
+  switch (t.type) {
+    case token_type::SEMICOLON:
+    case token_type::PAREN_CLOSE:
+    case token_type::BRACE_CLOSE:
+    case token_type::BRACKET_CLOSE:
+    case token_type::TEMPLATE_MIDDLE:
+    case token_type::TEMPLATE_END:
+      return true;
+    default: return false;
   }
 }
 
 expression_node *parser_base::parse_expression() {
+  expression_node *begin = nullptr;
   if (current_token.type == token_type::KEYWORD) {
-    return parse_keyword_expr();
+    begin = parse_keyword();
   } else if (current_token.type == token_type::IDENTIFIER) {
-    auto ident = current_token;
-    auto res = nodes.make_identifier_expr();
-    res->str = current_token.text;
-    auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON ||
-        current_token.type == token_type::PAREN_CLOSE) {
-      if (current_token.type == token_type::PAREN_CLOSE) {
-        rewind(ident);
-      }
-      return res;
-    } else if (current_token.type == token_type::PAREN_OPEN) {
-      return parse_call(res);
-    } else if (current_token.type == token_type::BRACKET_OPEN) {
-      return parse_computed_access(res);
-    } else if (current_token.type == token_type::DOT) {
-      return parse_member_access(res);
-    }
-    return parse_bin_op(res);
+    begin = parse_identifier();
   } else if (current_token.is_number_literal()) {
-    auto literal = current_token;
-    auto res = make_number_expression(current_token, nodes);
-    res->val = current_token.text;
-    auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON ||
-        current_token.type == token_type::PAREN_CLOSE) {
-      if (current_token.type == token_type::PAREN_CLOSE) {
-        rewind(literal);
-      }
-      return res;
-    }
-    return parse_bin_op(res);
+    begin = parse_number_literal();
   } else if (current_token.type == token_type::STRING_LITERAL) {
-    auto str = current_token;
-    auto res = nodes.make_string_literal();
-    res->val = current_token.text;
-    auto read_success = advance();
-    if (!read_success || current_token.type == token_type::SEMICOLON ||
-        current_token.type == token_type::PAREN_CLOSE) {
-      if (current_token.type == token_type::PAREN_CLOSE) {
-        rewind(str);
-      }
-      return res;
-    }
-    return parse_bin_op(res);
+    begin = parse_string_literal();
   } else if (current_token.type == token_type::BRACKET_OPEN) {
-    return parse_array_literal();
+    begin = parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
-    return parse_object_literal();
+    begin = parse_object_literal();
   } else if (current_token.type == token_type::PAREN_OPEN) {
     ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
-    auto expr = parse_expression();
+    auto *expr = parse_expression();
+    if (error || !expr) {
+      assert(error && !expr);
+      return nullptr;
+    }
     ADVANCE_OR_ERROR("Unexpected EOF. Expected closing brace", nullptr);
     EXPECT(PAREN_CLOSE, nullptr);
-    return expr;
+    begin = expr;
+  }
+  if (begin) {
+    auto final_token = current_token;
+    if (!advance()) {
+      return begin;
+    }
+    if (is_expression_end(current_token)) {
+      rewind(final_token);
+      return begin;
+    }
+    error = {"Not implemented (parse expression binop)", current_token.loc};
+    return nullptr;
   }
   error = {"Not implemented (parse expression)", current_token.loc};
   return nullptr;
@@ -193,7 +253,7 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
   return nullptr;
 }
 
-expression_node *parser_base::parse_keyword_expr() {
+expression_node *parser_base::parse_keyword() {
   EXPECT(KEYWORD, nullptr);
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
@@ -205,6 +265,55 @@ expression_node *parser_base::parse_keyword_expr() {
     error = {"Not implemented (keyword)", current_token.loc};
     return nullptr;
   }
+}
+
+expression_node *parser_base::parse_identifier() {
+  auto ident = current_token;
+  auto res = nodes.make_identifier_expr();
+  res->str = current_token.text;
+  auto read_success = advance();
+  if (!read_success || is_follow_expression(current_token)) {
+    if (read_success) {
+      rewind(ident);
+    }
+    return res;
+  } else if (current_token.type == token_type::PAREN_OPEN) {
+    return parse_call(res);
+  } else if (current_token.type == token_type::BRACKET_OPEN) {
+    return parse_computed_access(res);
+  }
+  error = {"Unexpected token after identifier", current_token.loc};
+  return nullptr;
+}
+
+number_literal_node *parser_base::parse_number_literal() {
+  auto literal = current_token;
+  auto res = make_number_expression(current_token, nodes);
+  res->val = current_token.text;
+  auto read_success = advance();
+  if (!read_success || is_follow_expression(current_token)) {
+    if (read_success) {
+      rewind(literal);
+    }
+    return res;
+  }
+  error = {"Unexpected token after number literal", current_token.loc};
+  return nullptr;
+}
+
+string_literal_node *parser_base::parse_string_literal() {
+  auto str = current_token;
+  auto res = nodes.make_string_literal();
+  res->val = current_token.text;
+  auto read_success = advance();
+  if (!read_success || is_follow_expression(current_token)) {
+    if (read_success) {
+      rewind(str);
+    }
+    return res;
+  }
+  error = {"Unexpected token after string literal", current_token.loc};
+  return nullptr;
 }
 
 function_node *parser_base::parse_function() {
