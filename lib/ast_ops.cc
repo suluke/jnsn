@@ -6,7 +6,10 @@ using namespace std;
 
 struct parent_json_printer : public const_ast_node_visitor<void> {
   std::ostream &stream;
-  parent_json_printer(std::ostream &stream) : stream(stream) {}
+  const_ast_node_visitor<void> &printer;
+  parent_json_printer(std::ostream &stream,
+                      const_ast_node_visitor<void> &printer)
+      : stream(stream), printer(printer) {}
 #define SEP_MEMBERS                                                            \
   if (child_idx++) {                                                           \
     stream << ", ";                                                            \
@@ -25,20 +28,20 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
     }                                                                          \
-    node.NAME[i]->accept(*this);                                               \
+    node.NAME[i]->accept(printer);                                             \
   }                                                                            \
   stream << "]";
 
 #define ONE(OF, NAME)                                                          \
   SEP_MEMBERS;                                                                 \
   stream << "\"" #NAME "\": ";                                                 \
-  node.NAME->accept(*this);
+  node.NAME->accept(printer);
 
 #define MAYBE(OF, NAME)                                                        \
   SEP_MEMBERS;                                                                 \
   stream << "\"" #NAME "\": ";                                                 \
   if (node.NAME) {                                                             \
-    visit(**node.NAME);                                                        \
+    (*node.NAME)->accept(printer);                                             \
   } else {                                                                     \
     stream << "null";                                                          \
   }
@@ -68,13 +71,11 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
   stream << "\"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  virtual void accept(const NAME##_node &node) {                               \
-    CHILD_NODES;                                                               \
-  }
+  virtual void accept(const NAME##_node &node) { CHILD_NODES; }
 #define EXTENDS(NAME) NAME##_node
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
   virtual void accept(const NAME##_node &node) {                               \
-    accept(static_cast<const ANCESTOR &>(node));                                \
+    accept(static_cast<const ANCESTOR &>(node));                               \
     CHILD_NODES;                                                               \
   }
 
@@ -84,7 +85,8 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
 struct json_printer : public const_ast_node_visitor<void> {
   std::ostream &stream;
   parent_json_printer parent_printer;
-  json_printer(std::ostream &stream) : stream(stream), parent_printer(stream) {}
+  json_printer(std::ostream &stream)
+      : stream(stream), parent_printer(stream, *this) {}
 
 #define SEP_MEMBERS                                                            \
   if (child_idx++) {                                                           \
