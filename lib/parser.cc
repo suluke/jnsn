@@ -196,31 +196,78 @@ static bool is_follow_expression(token t) {
 }
 static bool is_expression_end(token t) {
   switch (t.type) {
-    case token_type::SEMICOLON:
-    case token_type::PAREN_CLOSE:
-    case token_type::BRACE_CLOSE:
-    case token_type::BRACKET_CLOSE:
-    case token_type::TEMPLATE_MIDDLE:
-    case token_type::TEMPLATE_END:
-      return true;
-    default: return false;
+  case token_type::SEMICOLON:
+  case token_type::PAREN_CLOSE:
+  case token_type::BRACE_CLOSE:
+  case token_type::BRACKET_CLOSE:
+  case token_type::TEMPLATE_MIDDLE:
+  case token_type::TEMPLATE_END:
+    return true;
+  default:
+    return false;
   }
 }
 
+static int get_precedence(token op) {
+  switch (op.type) {
+#define INFIX_OP(TYPE, PRECEDENCE)                                             \
+  case token_type::TYPE:                                                       \
+    return PRECEDENCE;
+#include "parsing/operators.def"
+  default:
+    return -1; // FIXME more explicit error handling
+  }
+}
+
+static bool is_binary_operator(token op) {
+#define INFIX_OP(TYPE, X)                                                      \
+  if (op.type == token_type::TYPE) {                                           \
+    return true;                                                               \
+  }
+#include "parsing/operators.def"
+  return false;
+}
+
 expression_node *parser_base::parse_expression() {
-  expression_node *begin = nullptr;
+  expression_node *expr = parse_atomic_expr();
+  if (expr) {
+    auto final_token = current_token;
+    if (!advance()) {
+      return expr;
+    }
+    if (is_expression_end(current_token)) {
+      rewind(final_token);
+      return expr;
+    }
+    if (is_binary_operator(current_token)) {
+      token prev_token;
+      do {
+        expr = parse_bin_op(expr);
+        prev_token = current_token;
+        if (!advance()) {
+          break;
+        }
+      } while (is_binary_operator(current_token));
+      return expr;
+    }
+  }
+  error = {"Not implemented (parse expression)", current_token.loc};
+  return nullptr;
+}
+
+expression_node *parser_base::parse_atomic_expr() {
   if (current_token.type == token_type::KEYWORD) {
-    begin = parse_keyword();
+    return parse_keyword();
   } else if (current_token.type == token_type::IDENTIFIER) {
-    begin = parse_identifier();
+    return parse_identifier();
   } else if (current_token.is_number_literal()) {
-    begin = parse_number_literal();
+    return parse_number_literal();
   } else if (current_token.type == token_type::STRING_LITERAL) {
-    begin = parse_string_literal();
+    return parse_string_literal();
   } else if (current_token.type == token_type::BRACKET_OPEN) {
-    begin = parse_array_literal();
+    return parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
-    begin = parse_object_literal();
+    return parse_object_literal();
   } else if (current_token.type == token_type::PAREN_OPEN) {
     ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
     auto *expr = parse_expression();
@@ -230,26 +277,65 @@ expression_node *parser_base::parse_expression() {
     }
     ADVANCE_OR_ERROR("Unexpected EOF. Expected closing brace", nullptr);
     EXPECT(PAREN_CLOSE, nullptr);
-    begin = expr;
+    return expr;
   }
-  if (begin) {
-    auto final_token = current_token;
-    if (!advance()) {
-      return begin;
-    }
-    if (is_expression_end(current_token)) {
-      rewind(final_token);
-      return begin;
-    }
-    error = {"Not implemented (parse expression binop)", current_token.loc};
-    return nullptr;
-  }
-  error = {"Not implemented (parse expression)", current_token.loc};
+  error = {"Not implemented (atomic expression)", current_token.loc};
   return nullptr;
 }
 
+static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
+                                          expression_node *rhs,
+                                          ast_node_store &nodes) {
+  bin_op_expr_node *res = nullptr;
+  switch (op.type) {
+  case token_type::PLUS:
+    res = nodes.make_add();
+    break;
+  case token_type::MINUS:
+    res = nodes.make_subtract();
+    break;
+  case token_type::ASTERISK:
+    res = nodes.make_multiply();
+    break;
+  case token_type::SLASH:
+    res = nodes.make_divide();
+    break;
+  default:
+    res = nullptr;
+    break;
+  }
+  assert(res);
+  res->lhs = lhs;
+  res->rhs = rhs;
+  return res;
+}
+
 bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
-  error = {"Not implemented (binary expression)", current_token.loc};
+  auto op = current_token;
+  assert(is_binary_operator(op));
+  ADVANCE_OR_ERROR(
+      "Unexpected EOF. Expected right hand side argument of binary operation",
+      nullptr);
+  expression_node *rhs = parse_atomic_expr();
+
+  auto prev_token = current_token;
+  auto read_success = advance();
+  if (!read_success) {
+    return make_binary_expr(op, lhs, rhs, nodes);
+  }
+  if (is_expression_end(current_token)) {
+    rewind(prev_token);
+    return make_binary_expr(op, lhs, rhs, nodes);
+  }
+  if (is_binary_operator(current_token)) {
+    if (get_precedence(current_token) > get_precedence(op)) {
+      rhs = parse_bin_op(rhs);
+    }
+    // FIXME associativity...
+    return make_binary_expr(op, lhs, rhs, nodes);
+  }
+
+  error = {"Not implemented (binop expression)", current_token.loc};
   return nullptr;
 }
 
@@ -273,6 +359,12 @@ expression_node *parser_base::parse_identifier() {
   res->str = current_token.text;
   auto read_success = advance();
   if (!read_success || is_follow_expression(current_token)) {
+    // This is a special case (not parse_bin_op) because member access
+    // is the only infix binary operator with higher precedence than
+    // most of the unary operators
+    if (current_token.type == token_type::DOT) {
+      return parse_member_access(res);
+    }
     if (read_success) {
       rewind(ident);
     }
@@ -368,7 +460,6 @@ block_node *parser_base::parse_block() {
   auto block = nodes.make_block();
   while (current_token.type != token_type::BRACE_CLOSE) {
     assert(current_token.type != token_type::BRACE_OPEN);
-    std::cout << "parse_block -> parse_statement\n";
     auto stmt = parse_statement();
     block->stmts.emplace_back(stmt);
     ADVANCE_OR_ERROR("Unexpected EOF while parsing block", nullptr);
