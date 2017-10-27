@@ -34,9 +34,20 @@ private:
 
   statement_node *parse_statement();
   statement_node *parse_block_or_obj();
+  statement_node *parse_keyword_stmt();
+
+  if_stmt_node *parse_if_stmt();
+  do_while_node *parse_do_while();
+  while_stmt_node *parse_while_stmt();
+  for_stmt_node *parse_for_stmt();
+  switch_stmt_node *parse_switch_stmt();
+  return_stmt_node *parse_return_stmt();
+  throw_stmt_node *parse_throw_stmt();
+  try_stmt_node *parse_try_stmt();
+
   expression_node *parse_expression();
   expression_node *parse_atomic_expr();
-  expression_node *parse_keyword();
+  expression_node *parse_keyword_expr();
   expression_node *parse_identifier();
   string_literal_node *parse_string_literal();
   number_literal_node *parse_number_literal();

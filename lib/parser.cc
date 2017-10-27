@@ -116,22 +116,94 @@ static number_literal_node *make_number_expression(token t,
 }
 
 statement_node *parser_base::parse_statement() {
+  statement_node *stmt = nullptr;
   if (current_token.type == token_type::SEMICOLON) {
     return nodes.make_empty_stmt();
   } else if (current_token.type == token_type::BRACE_OPEN) {
     return parse_block_or_obj();
+  } else if (current_token.type == token_type::KEYWORD) {
+    stmt = parse_keyword_stmt();
   } else {
     // parse expression statement
-    auto expr = parse_expression();
-    auto read_success = advance();
-    if (error) {
-      return nullptr;
-    }
-    if (read_success) {
-      EXPECT(SEMICOLON, nullptr);
-    }
-    return expr;
+    stmt = parse_expression();
   }
+  if (error || !stmt) {
+    assert(error && !stmt);
+    return nullptr;
+  }
+  auto read_success = advance();
+  if (error) {
+    return nullptr;
+  }
+  if (read_success) {
+    EXPECT(SEMICOLON, nullptr);
+  }
+  return stmt;
+}
+
+statement_node *parser_base::parse_keyword_stmt() {
+  assert(current_token.type == token_type::KEYWORD);
+  auto kwty = lexer_base::get_keyword_type(current_token);
+  if (kwty == keyword_type::kw_if) {
+    return parse_if_stmt();
+  } else if (kwty == keyword_type::kw_do) {
+    return parse_do_while();
+  } else if (kwty == keyword_type::kw_while) {
+    return parse_while_stmt();
+  } else if (kwty == keyword_type::kw_for) {
+    return parse_for_stmt();
+  } else if (kwty == keyword_type::kw_switch) {
+    return parse_switch_stmt();
+  } else if (kwty == keyword_type::kw_break) {
+    return nodes.make_break_stmt(); // FIXME break LABEL
+  } else if (kwty == keyword_type::kw_continue) {
+    return nodes.make_continue_stmt(); // FIXME continue LABEL
+  } else if (kwty == keyword_type::kw_return) {
+    return parse_return_stmt();
+  } else if (kwty == keyword_type::kw_throw) {
+    return parse_throw_stmt();
+  } else if (kwty == keyword_type::kw_try) {
+    return parse_try_stmt();
+  } else if (kwty == keyword_type::kw_super) {
+    auto *id = nodes.make_identifier_expr();
+    id->str = current_token.text;
+    return parse_call(id);
+  } else {
+    return parse_keyword_expr();
+  }
+}
+
+if_stmt_node *parser_base::parse_if_stmt() {
+  error = {"Not implemented (parse_if)", current_token.loc};
+  return nullptr;
+}
+do_while_node *parser_base::parse_do_while() {
+  error = {"Not implemented (parse_do_while)", current_token.loc};
+  return nullptr;
+}
+while_stmt_node *parser_base::parse_while_stmt() {
+  error = {"Not implemented (parse_while)", current_token.loc};
+  return nullptr;
+}
+for_stmt_node *parser_base::parse_for_stmt() {
+  error = {"Not implemented (parse_for)", current_token.loc};
+  return nullptr;
+}
+switch_stmt_node *parser_base::parse_switch_stmt() {
+  error = {"Not implemented (parse_switch)", current_token.loc};
+  return nullptr;
+}
+return_stmt_node *parser_base::parse_return_stmt() {
+  error = {"Not implemented (parse_return)", current_token.loc};
+  return nullptr;
+}
+throw_stmt_node *parser_base::parse_throw_stmt() {
+  error = {"Not implemented (parse_throw)", current_token.loc};
+  return nullptr;
+}
+try_stmt_node *parser_base::parse_try_stmt() {
+  error = {"Not implemented (parse_try)", current_token.loc};
+  return nullptr;
 }
 
 static bool is_follow_expression(token t) {
@@ -257,7 +329,7 @@ expression_node *parser_base::parse_expression() {
 
 expression_node *parser_base::parse_atomic_expr() {
   if (current_token.type == token_type::KEYWORD) {
-    return parse_keyword();
+    return parse_keyword_expr();
   } else if (current_token.type == token_type::IDENTIFIER) {
     return parse_identifier();
   } else if (current_token.is_number_literal()) {
@@ -339,7 +411,7 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
   return nullptr;
 }
 
-expression_node *parser_base::parse_keyword() {
+expression_node *parser_base::parse_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
