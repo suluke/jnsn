@@ -221,8 +221,15 @@ switch_stmt_node *parser_base::parse_switch_stmt() {
   return nullptr;
 }
 return_stmt_node *parser_base::parse_return_stmt() {
-  error = {"Not implemented (parse_return)", current_token.loc};
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_return);
+  auto *ret = nodes.make_return_stmt();
+  if (advance() && !is_stmt_end(current_token)) {
+    auto *expr = parse_expression();
+    ret->value = expr;
+  }
+  return ret;
 }
 throw_stmt_node *parser_base::parse_throw_stmt() {
   error = {"Not implemented (parse_throw)", current_token.loc};
@@ -420,8 +427,7 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
   expression_node *rhs = parse_atomic_expr();
 
   auto prev_token = current_token;
-  auto read_success = advance();
-  if (!read_success) {
+  if (!advance()) {
     return make_binary_expr(op, lhs, rhs, nodes);
   }
   if (is_expression_end(current_token)) {

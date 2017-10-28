@@ -87,3 +87,13 @@ TEST_F(parser_test, binary_ops) {
       "{\"type\": \"int_literal\", \"val\": \"6\"}, \"rhs\": {\"type\": "
       "\"int_literal\", \"val\": \"7\"}}]}\n");
 }
+TEST_F(parser_test, function) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "function test(arg1, arg2) { return arg1 + arg2; }",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"function\", \"name\": "
+      "\"test\", \"params\": {\"type\": \"param_list\", \"names\": [\"arg1\", "
+      "\"arg2\"], \"rest\": null}, \"body\": {\"type\": \"block\", \"stmts\": "
+      "[{\"type\": \"return_stmt\", \"value\": {\"type\": \"add\", \"lhs\": "
+      "{\"type\": \"identifier_expr\", \"str\": \"arg1\"}, \"rhs\": {\"type\": "
+      "\"identifier_expr\", \"str\": \"arg2\"}}}]}}]}\n");
+}
