@@ -23,7 +23,7 @@ using ast_root = parser_base::ast_root;
     auto mod = get<ast_root>(res);                                             \
                                                                                \
     str << mod;                                                                \
-    ASSERT_EQ(str.str(), JSON);                                                \
+    ASSERT_EQ(str.str(), JSON "\n");                                                \
   } while (false)
 
 #define PARSER_ERROR(INPUT)                                                    \
@@ -35,48 +35,48 @@ using ast_root = parser_base::ast_root;
   } while (false)
 
 TEST_F(parser_test, empty) {
-  ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}\n");
+  ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}");
 }
 TEST_F(parser_test, block) {
   ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
                                    "[{\"type\": \"object_literal\", "
-                                   "\"entries\": []}]}\n");
+                                   "\"entries\": []}]}");
 }
 TEST_F(parser_test, literals) {
   ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
                                   "[{\"type\": \"int_literal\", \"val\": "
-                                  "\"1\"}]}\n");
+                                  "\"1\"}]}");
   PARSER_ERROR("1.window");
 }
 TEST_F(parser_test, parenthesis) {
   ASSERT_PARSED_MATCHES_JSON("(((1)))", "{\"type\": \"module\", \"stmts\": "
                                         "[{\"type\": \"int_literal\", \"val\": "
-                                        "\"1\"}]}\n");
+                                        "\"1\"}]}");
   PARSER_ERROR("(((1))");
 }
 TEST_F(parser_test, decl) {
   ASSERT_PARSED_MATCHES_JSON(
       "let x;", "{\"type\": \"module\", \"stmts\": [{\"type\": "
                 "\"var_decl\", \"keyword\": \"let\", \"name\": \"x\", "
-                "\"init\": null}]}\n");
+                "\"init\": null}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "{let i = 0;}",
       "{\"type\": \"module\", \"stmts\": [{\"type\": "
       "\"block\", \"stmts\": [{\"type\": "
       "\"var_decl\", \"keyword\": \"let\", \"name\": \"i\", "
-      "\"init\": {\"type\": \"int_literal\", \"val\": \"0\"}}]}]}\n");
+      "\"init\": {\"type\": \"int_literal\", \"val\": \"0\"}}]}]}");
 }
 TEST_F(parser_test, binary_ops) {
   ASSERT_PARSED_MATCHES_JSON(
       "1 + 1", "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
                "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
-               "{\"type\": \"int_literal\", \"val\": \"1\"}}]}\n");
+               "{\"type\": \"int_literal\", \"val\": \"1\"}}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "1 + 4 / 2", "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
                    "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, "
                    "\"rhs\": {\"type\": \"divide\", \"lhs\": {\"type\": "
                    "\"int_literal\", \"val\": \"4\"}, \"rhs\": {\"type\": "
-                   "\"int_literal\", \"val\": \"2\"}}}]}\n");
+                   "\"int_literal\", \"val\": \"2\"}}}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "1 + 4 / 2; 6 + 7",
       "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
@@ -85,7 +85,7 @@ TEST_F(parser_test, binary_ops) {
       "\"int_literal\", \"val\": \"4\"}, \"rhs\": {\"type\": "
       "\"int_literal\", \"val\": \"2\"}}}, {\"type\": \"add\", \"lhs\": "
       "{\"type\": \"int_literal\", \"val\": \"6\"}, \"rhs\": {\"type\": "
-      "\"int_literal\", \"val\": \"7\"}}]}\n");
+      "\"int_literal\", \"val\": \"7\"}}]}");
 }
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(
@@ -95,5 +95,5 @@ TEST_F(parser_test, function) {
       "\"arg2\"], \"rest\": null}, \"body\": {\"type\": \"block\", \"stmts\": "
       "[{\"type\": \"return_stmt\", \"value\": {\"type\": \"add\", \"lhs\": "
       "{\"type\": \"identifier_expr\", \"str\": \"arg1\"}, \"rhs\": {\"type\": "
-      "\"identifier_expr\", \"str\": \"arg2\"}}}]}}]}\n");
+      "\"identifier_expr\", \"str\": \"arg2\"}}}]}}]}");
 }
