@@ -364,27 +364,52 @@ expression_node *parser_base::parse_expression() {
 }
 
 expression_node *parser_base::parse_atomic_expr() {
+  expression_node *expr = nullptr;
   if (current_token.type == token_type::KEYWORD) {
-    return parse_keyword_expr();
+    expr = parse_keyword_expr();
   } else if (current_token.type == token_type::IDENTIFIER) {
-    return parse_identifier();
+    auto *id = nodes.make_identifier_expr();
+    id->str = current_token.text;
+    expr = id;
   } else if (current_token.is_number_literal()) {
-    return parse_number_literal();
+    expr = parse_number_literal();
   } else if (current_token.type == token_type::STRING_LITERAL) {
-    return parse_string_literal();
+    expr = parse_string_literal();
   } else if (current_token.type == token_type::BRACKET_OPEN) {
-    return parse_array_literal();
+    expr = parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
-    return parse_object_literal();
+    expr = parse_object_literal();
   } else if (current_token.type == token_type::PAREN_OPEN) {
     ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
-    auto *expr = parse_expression();
+    expr = parse_expression();
     if (error || !expr) {
       assert(error && !expr);
       return nullptr;
     }
     ADVANCE_OR_ERROR("Unexpected EOF. Expected closing brace", nullptr);
     EXPECT(PAREN_CLOSE, nullptr);
+  }
+  if (expr) {
+    do {
+      auto prev_token = current_token;
+      if (advance()) {
+        if (current_token.type == token_type::DOT) {
+          // member access
+          expr = parse_member_access(expr);
+        } else if (current_token.type == token_type::PAREN_OPEN) {
+          // call
+          expr = parse_call(expr);
+        } else if (current_token.type == token_type::BRACKET_OPEN) {
+          // computed member access
+          expr = parse_computed_access(expr);
+        } else {
+          rewind(prev_token);
+          break;
+        }
+      } else {
+        break;
+      }
+    } while(true);
     return expr;
   }
   error = {"Not implemented (atomic expression)", current_token.loc};
@@ -458,31 +483,6 @@ expression_node *parser_base::parse_keyword_expr() {
     error = {"Not implemented (keyword)", current_token.loc};
     return nullptr;
   }
-}
-
-expression_node *parser_base::parse_identifier() {
-  auto ident = current_token;
-  auto res = nodes.make_identifier_expr();
-  res->str = current_token.text;
-  auto read_success = advance();
-  if (!read_success || is_follow_expression(current_token)) {
-    // This is a special case (not parse_bin_op) because member access
-    // is the only infix binary operator with higher precedence than
-    // most of the unary operators
-    if (current_token.type == token_type::DOT) {
-      return parse_member_access(res);
-    }
-    if (read_success) {
-      rewind(ident);
-    }
-    return res;
-  } else if (current_token.type == token_type::PAREN_OPEN) {
-    return parse_call(res);
-  } else if (current_token.type == token_type::BRACKET_OPEN) {
-    return parse_computed_access(res);
-  }
-  error = {"Unexpected token after identifier", current_token.loc};
-  return nullptr;
 }
 
 number_literal_node *parser_base::parse_number_literal() {
@@ -613,16 +613,49 @@ object_literal_node *parser_base::parse_object_literal() {
 }
 computed_member_access_node *
 parser_base::parse_computed_access(expression_node *base) {
+  assert(current_token.type == token_type::BRACKET_OPEN);
   error = {"Not implemented (computed_access)", current_token.loc};
   return nullptr;
 }
 member_access_node *parser_base::parse_member_access(expression_node *base) {
-  error = {"Not implemented (member_access)", current_token.loc};
-  return nullptr;
+  assert(current_token.type == token_type::DOT);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing member access", nullptr);
+  EXPECT(IDENTIFIER, nullptr);
+  auto *node = nodes.make_member_access();
+  node->base = base;
+  node->member = current_token.text;
+  return node;
 }
 call_expr_node *parser_base::parse_call(expression_node *callee) {
-  error = {"Not implemented (call)", current_token.loc};
-  return nullptr;
+  assert(current_token.type == token_type::PAREN_OPEN);
+  auto *call = nodes.make_call_expr();
+  auto *args = nodes.make_argument_list();
+  call->callee = callee;
+  call->args = args;
+
+  ADVANCE_OR_ERROR("Unexpected EOF after begin of argument list", nullptr);
+  if (current_token.type == token_type::PAREN_CLOSE) {
+    return call;
+  }
+  do {
+    auto *arg = parse_expression(); // FIXME disallow comma operator
+    if (error || !arg) {
+      assert(error && !arg);
+      return nullptr;
+    }
+    args->values.emplace_back(arg);
+    ADVANCE_OR_ERROR("Unexpected EOF in argument list", nullptr);
+    if (current_token.type == token_type::COMMA) {
+      ADVANCE_OR_ERROR("Unexpected EOF in argument list", nullptr);
+    } else if (current_token.type == token_type::PAREN_CLOSE) {
+      break;
+    } else {
+      error = {"Unexpected token in argument list", current_token.loc};
+      return nullptr;
+    }
+  } while (true);
+  assert(current_token.type == token_type::PAREN_CLOSE);
+  return call;
 }
 statement_node *parser_base::parse_block_or_obj() {
   EXPECT(BRACE_OPEN, nullptr);

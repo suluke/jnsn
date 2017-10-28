@@ -48,7 +48,6 @@ private:
   expression_node *parse_expression();
   expression_node *parse_atomic_expr();
   expression_node *parse_keyword_expr();
-  expression_node *parse_identifier();
   string_literal_node *parse_string_literal();
   number_literal_node *parse_number_literal();
   function_node *parse_function();

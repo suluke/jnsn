@@ -23,7 +23,7 @@ using ast_root = parser_base::ast_root;
     auto mod = get<ast_root>(res);                                             \
                                                                                \
     str << mod;                                                                \
-    ASSERT_EQ(str.str(), JSON "\n");                                                \
+    ASSERT_EQ(str.str(), JSON "\n");                                           \
   } while (false)
 
 #define PARSER_ERROR(INPUT)                                                    \
@@ -96,4 +96,24 @@ TEST_F(parser_test, function) {
       "[{\"type\": \"return_stmt\", \"value\": {\"type\": \"add\", \"lhs\": "
       "{\"type\": \"identifier_expr\", \"str\": \"arg1\"}, \"rhs\": {\"type\": "
       "\"identifier_expr\", \"str\": \"arg2\"}}}]}}]}");
+}
+TEST_F(parser_test, member_access) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "a.b.c.d", "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                 "\"member_access\", \"base\": {\"type\": \"member_access\", "
+                 "\"base\": {\"type\": \"member_access\", \"base\": {\"type\": "
+                 "\"identifier_expr\", \"str\": \"a\"}, \"member\": \"b\"}, "
+                 "\"member\": \"c\"}, \"member\": \"d\"}]}");
+}
+TEST_F(parser_test, call) {
+  ASSERT_PARSED_MATCHES_JSON("console.log(1 + 2);",
+                             "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                             "\"call_expr\", \"callee\": {\"type\": "
+                             "\"member_access\", \"base\": {\"type\": "
+                             "\"identifier_expr\", \"str\": \"console\"}, "
+                             "\"member\": \"log\"}, \"args\": {\"type\": "
+                             "\"argument_list\", \"values\": [{\"type\": "
+                             "\"add\", \"lhs\": {\"type\": \"int_literal\", "
+                             "\"val\": \"1\"}, \"rhs\": {\"type\": "
+                             "\"int_literal\", \"val\": \"2\"}}]}}]}");
 }
