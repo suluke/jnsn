@@ -5,6 +5,17 @@ using namespace parsing;
 
 lexer_base::result parser_base::next_token() { return get_lexer().next(); }
 
+static std::string to_string(token_type t) {
+  switch (t) {
+#define TOKEN_TYPE(NAME, STR)                                                  \
+  case token_type::NAME:                                                       \
+    return #NAME;
+#include "parsing/tokens.def"
+  }
+  assert(false); // FIXME come up with some "unreachable" macro
+  return "";
+}
+
 #define ADVANCE_OR_ERROR(MESSAGE, RETURN_VAL)                                  \
   do {                                                                         \
     /* Make sure we haven't already encountered an error */                    \
@@ -34,7 +45,9 @@ lexer_base::result parser_base::next_token() { return get_lexer().next(); }
       }                                                                        \
     }                                                                          \
     if (!found_expected) {                                                     \
-      error = {"Unexpected token. Expected: " #TYPES, current_token.loc};      \
+      error = {"Unexpected token. Expected: " #TYPES ". Was: " +               \
+                   to_string(current_token.type),                              \
+               current_token.loc};                                             \
       return RETURN_VAL;                                                       \
     }                                                                          \
   } while (false)
@@ -70,6 +83,8 @@ bool parser_base::advance() {
 }
 
 void parser_base::rewind(token t) {
+  assert(t.type != token_type::BLOCK_COMMENT &&
+         t.type != token_type::LINE_COMMENT);
   rewind_stack.emplace(current_token);
   current_token = t;
 }
@@ -115,6 +130,16 @@ static number_literal_node *make_number_expression(token t,
   return res;
 }
 
+static bool is_stmt_end(token t) {
+  switch (t.type) {
+  case token_type::SEMICOLON:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
 statement_node *parser_base::parse_statement() {
   statement_node *stmt = nullptr;
   if (current_token.type == token_type::SEMICOLON) {
@@ -135,8 +160,10 @@ statement_node *parser_base::parse_statement() {
   if (error) {
     return nullptr;
   }
-  if (read_success) {
-    EXPECT(SEMICOLON, nullptr);
+  if (read_success && !is_stmt_end(current_token)) {
+    error = {"Unexpected token after statement: " +
+                 to_string(current_token.type),
+             current_token.loc};
   }
   return stmt;
 }
@@ -317,9 +344,11 @@ expression_node *parser_base::parse_expression() {
         expr = parse_bin_op(expr);
         prev_token = current_token;
         if (!advance()) {
-          break;
+          // note that we skip rewinding here
+          return expr;
         }
       } while (is_binary_operator(current_token));
+      rewind(prev_token);
       return expr;
     }
   }

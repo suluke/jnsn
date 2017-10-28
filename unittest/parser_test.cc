@@ -72,9 +72,18 @@ TEST_F(parser_test, binary_ops) {
                "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
                "{\"type\": \"int_literal\", \"val\": \"1\"}}]}\n");
   ASSERT_PARSED_MATCHES_JSON(
-      "1 + 2 / 2", "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
+      "1 + 4 / 2", "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
                    "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, "
                    "\"rhs\": {\"type\": \"divide\", \"lhs\": {\"type\": "
-                   "\"int_literal\", \"val\": \"2\"}, \"rhs\": {\"type\": "
+                   "\"int_literal\", \"val\": \"4\"}, \"rhs\": {\"type\": "
                    "\"int_literal\", \"val\": \"2\"}}}]}\n");
+  ASSERT_PARSED_MATCHES_JSON(
+      "1 + 4 / 2; 6 + 7",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"add\", "
+      "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, "
+      "\"rhs\": {\"type\": \"divide\", \"lhs\": {\"type\": "
+      "\"int_literal\", \"val\": \"4\"}, \"rhs\": {\"type\": "
+      "\"int_literal\", \"val\": \"2\"}}}, {\"type\": \"add\", \"lhs\": "
+      "{\"type\": \"int_literal\", \"val\": \"6\"}, \"rhs\": {\"type\": "
+      "\"int_literal\", \"val\": \"7\"}}]}\n");
 }
