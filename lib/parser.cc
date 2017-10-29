@@ -751,32 +751,47 @@ block_node *parser_base::parse_block() {
 }
 
 var_decl_node *parser_base::parse_var_decl() {
-  EXPECT(KEYWORD, nullptr);
+  assert(current_token.type == token_type::KEYWORD);
+  auto kw_ty = lexer_base::get_keyword_type(current_token);
+  assert(kw_ty == keyword_type::kw_var || kw_ty == keyword_type::kw_const ||
+         kw_ty == keyword_type::kw_let);
   auto decl = nodes.make_var_decl();
   decl->keyword = current_token.text;
   ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration",
                    nullptr);
   EXPECT(IDENTIFIER, nullptr);
-  decl->name = current_token.text;
-  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration",
-                   nullptr);
-  EXPECT_SEVERAL(TYPELIST(token_type::SEMICOLON, token_type::EQ), nullptr);
-  if (current_token.type == token_type::SEMICOLON) {
-    return decl;
-  } else if (current_token.type == token_type::EQ) {
-    ADVANCE_OR_ERROR(
-        "Unecpected EOF in variable initialization. Expected expression",
-        nullptr);
-    auto init = parse_expression(true);
-    if (!init) {
-      assert(error);
-      return nullptr;
+  auto *part = nodes.make_var_decl_part();
+  auto id = current_token;
+  part->name = id.text;
+  decl->parts.emplace_back(part);
+  do {
+    auto end_token = current_token;
+    if (advance()) {
+      if (current_token.type == token_type::EQ) {
+        ADVANCE_OR_ERROR(
+            "Unexpected EOF in variable initialization. Expected expression",
+            nullptr);
+        auto init = parse_expression(false);
+        if (error || !init) {
+          assert(error && !init);
+          return nullptr;
+        }
+        part->init = init;
+      } else if (current_token.type == token_type::COMMA) {
+        ADVANCE_OR_ERROR("Unexpected EOF in variable declaration", nullptr);
+        EXPECT(IDENTIFIER, nullptr);
+        part = nodes.make_var_decl_part();
+        part->name = current_token.text;
+        decl->parts.emplace_back(part);
+      } else {
+        rewind(end_token);
+        break;
+      }
+    } else {
+      break;
     }
-    decl->init = init;
-    return decl;
-  }
-  set_error("Unecpected token", current_token.loc);
-  return nullptr;
+  } while (true);
+  return decl;
 }
 
 array_literal_node *parser_base::parse_array_literal() {

@@ -48,12 +48,13 @@ TEST_F(parser_test, array_literals) {
   ASSERT_PARSED_MATCHES_JSON(
       "let arr = [1, ...a, 3, ...b]",
       "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
-      "\"keyword\": \"let\", \"name\": \"arr\", \"init\": {\"type\": "
+      "\"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", "
+      "\"name\": \"arr\", \"init\": {\"type\": "
       "\"array_literal\", \"values\": [{\"type\": \"int_literal\", \"val\": "
       "\"1\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
       "\"identifier_expr\", \"str\": \"a\"}}, {\"type\": \"int_literal\", "
       "\"val\": \"3\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
-      "\"identifier_expr\", \"str\": \"b\"}}]}}]}");
+      "\"identifier_expr\", \"str\": \"b\"}}]}}]}]}");
 }
 TEST_F(parser_test, object_literals) {
   ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
@@ -62,13 +63,14 @@ TEST_F(parser_test, object_literals) {
   ASSERT_PARSED_MATCHES_JSON(
       "let x = {a, b, ...c, i: 5}",
       "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
-      "\"keyword\": \"let\", \"name\": \"x\", \"init\": {\"type\": "
+      "\"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", "
+      "\"name\": \"x\", \"init\": {\"type\": "
       "\"object_literal\", \"entries\": [{\"type\": \"object_entry\", \"key\": "
       "\"i\", \"val\": {\"type\": \"int_literal\", \"val\": \"5\"}}], "
       "\"value_entries\": [{\"type\": \"identifier_expr\", \"str\": \"a\"}, "
       "{\"type\": \"identifier_expr\", \"str\": \"b\"}, {\"type\": "
       "\"spread_expr\", \"list\": {\"type\": \"identifier_expr\", \"str\": "
-      "\"c\"}}]}}]}");
+      "\"c\"}}]}}]}]}");
 }
 TEST_F(parser_test, parenthesis) {
   ASSERT_PARSED_MATCHES_JSON("(((1)))", "{\"type\": \"module\", \"stmts\": "
@@ -77,16 +79,35 @@ TEST_F(parser_test, parenthesis) {
   PARSER_ERROR("(((1))");
 }
 TEST_F(parser_test, decl) {
-  ASSERT_PARSED_MATCHES_JSON(
-      "let x;", "{\"type\": \"module\", \"stmts\": [{\"type\": "
-                "\"var_decl\", \"keyword\": \"let\", \"name\": \"x\", "
-                "\"init\": null}]}");
+  ASSERT_PARSED_MATCHES_JSON("let x;",
+                             "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                             "\"var_decl\", \"keyword\": \"let\", \"parts\": "
+                             "[{\"type\": \"var_decl_part\", \"name\": \"x\", "
+                             "\"init\": null}]}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "{let i = 0;}",
       "{\"type\": \"module\", \"stmts\": [{\"type\": "
       "\"block\", \"stmts\": [{\"type\": "
-      "\"var_decl\", \"keyword\": \"let\", \"name\": \"i\", "
-      "\"init\": {\"type\": \"int_literal\", \"val\": \"0\"}}]}]}");
+      "\"var_decl\", \"keyword\": \"let\", \"parts\": [{\"type\": "
+      "\"var_decl_part\", \"name\": \"i\", "
+      "\"init\": {\"type\": \"int_literal\", \"val\": \"0\"}}]}]}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "let i, j, k",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
+      "\"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", "
+      "\"name\": \"i\", \"init\": null}, {\"type\": \"var_decl_part\", "
+      "\"name\": \"j\", \"init\": "
+      "null}, {\"type\": "
+      "\"var_decl_part\", \"name\": \"k\", \"init\": null}]}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "let i = 0, j = 1, k = 2",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
+      "\"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", "
+      "\"name\": \"i\", \"init\": {\"type\": \"int_literal\", \"val\": "
+      "\"0\"}}, {\"type\": \"var_decl_part\", \"name\": \"j\", \"init\": "
+      "{\"type\": \"int_literal\", \"val\": \"1\"}}, {\"type\": "
+      "\"var_decl_part\", \"name\": \"k\", \"init\": {\"type\": "
+      "\"int_literal\", \"val\": \"2\"}}]}]}");
 }
 TEST_F(parser_test, binary_ops) {
   ASSERT_PARSED_MATCHES_JSON(
