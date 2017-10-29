@@ -155,3 +155,26 @@ TEST_F(parser_test, comma_operator) {
       "{\"type\": \"argument_list\", \"values\": [{\"type\": \"int_literal\", "
       "\"val\": \"4\"}]}}]}");
 }
+
+TEST_F(parser_test, arrow_function) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "() => {}", "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                  "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+                  "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+                  "\"block\", \"stmts\": []}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "(test) => console.log(test)",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": "
+      "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+      "\"names\": [\"test\"], \"rest\": null}, \"body\": {\"type\": "
+      "\"call_expr\", \"callee\": {\"type\": \"member_access\", \"base\": "
+      "{\"type\": \"identifier_expr\", \"str\": \"console\"}, \"member\": "
+      "\"log\"}, \"args\": {\"type\": \"argument_list\", \"values\": "
+      "[{\"type\": \"identifier_expr\", \"str\": \"test\"}]}}}]}");
+  //~ ASSERT_PARSED_MATCHES_JSON(
+      //~ "() => ({})",
+      //~ "{\"type\": \"module\", \"stmts\": [{\"type\": "
+      //~ "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+      //~ "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+      //~ "\"object_literal\", \"entries\": []}}]}");
+}

@@ -1,5 +1,7 @@
+#include "parsing/ast_ops.h"
 #include "parsing/parser.h"
 #include <initializer_list>
+#include <algorithm>
 
 using namespace parsing;
 
@@ -148,7 +150,7 @@ statement_node *parser_base::parse_statement() {
   if (current_token.type == token_type::SEMICOLON) {
     return nodes.make_empty_stmt();
   } else if (current_token.type == token_type::BRACE_OPEN) {
-    return parse_block_or_obj();
+    return parse_block_or_obj(false);
   } else if (current_token.type == token_type::KEYWORD) {
     stmt = parse_keyword_stmt();
   } else {
@@ -369,6 +371,8 @@ expression_node *parser_base::parse_expression(bool comma_is_operator) {
       rewind(prev_token);
       return expr;
     }
+  } else if (error) {
+    return nullptr;
   }
   set_error("Not implemented (parse expression)", current_token.loc);
   return nullptr;
@@ -391,14 +395,11 @@ expression_node *parser_base::parse_atomic_expr() {
   } else if (current_token.type == token_type::BRACE_OPEN) {
     expr = parse_object_literal();
   } else if (current_token.type == token_type::PAREN_OPEN) {
-    ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
-    expr = parse_expression(true);
-    if (error || !expr) {
-      assert(error && !expr);
-      return nullptr;
-    }
-    ADVANCE_OR_ERROR("Unexpected EOF. Expected closing brace", nullptr);
-    EXPECT(PAREN_CLOSE, nullptr);
+    expr = parse_parens_expr();
+  }
+  if (error) {
+    assert(!expr);
+    return nullptr;
   }
   if (expr) {
     do {
@@ -425,6 +426,101 @@ expression_node *parser_base::parse_atomic_expr() {
   }
   set_error("Not implemented (atomic expression)", current_token.loc);
   return nullptr;
+}
+
+expression_node *parser_base::parse_parens_expr() {
+  assert(current_token.type == token_type::PAREN_OPEN);
+  ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
+  std::optional<token> reason_no_paramlist;
+  std::optional<token> rest_param;
+  std::vector<expression_node *> exprs;
+  if (current_token.type != token_type::PAREN_CLOSE) {
+    do {
+      token begin = current_token;
+      if (current_token.type == token_type::DOTDOTDOT) {
+        ADVANCE_OR_ERROR("Unexpected EOF after rest operator", nullptr);
+        EXPECT(IDENTIFIER, nullptr);
+        rest_param = current_token;
+        rest_param->loc = begin.loc; // in case this causes an error later
+        ADVANCE_OR_ERROR("Unexpected EOF in param list", nullptr);
+        EXPECT(PAREN_CLOSE, nullptr);
+        break;
+      }
+      auto *expr = parse_expression(false);
+      if (error || !expr) {
+        assert(error && !expr);
+        return nullptr;
+      }
+      if (!reason_no_paramlist && !isa<identifier_expr_node>(expr)) {
+        reason_no_paramlist = begin;
+      }
+      exprs.emplace_back(expr);
+      ADVANCE_OR_ERROR(
+          "Unexpected EOF before closing parenthesis was encountered", nullptr);
+      EXPECT_SEVERAL(TYPELIST(token_type::PAREN_CLOSE, token_type::COMMA),
+                     nullptr);
+      if (current_token.type == token_type::PAREN_CLOSE) {
+        break;
+      } else if (current_token.type == token_type::COMMA) {
+        ADVANCE_OR_ERROR(
+            "Unexpected EOF before closing parenthesis was encountered",
+            nullptr);
+      }
+    } while (true);
+  }
+  EXPECT(PAREN_CLOSE, nullptr);
+  auto paren_close = current_token;
+  if (advance()) {
+    if (current_token.type == token_type::ARROW) {
+      if (reason_no_paramlist) {
+        set_error("Invalid entry in arrow function param list",
+                  reason_no_paramlist->loc);
+        return nullptr;
+      }
+      std::vector<string_table::entry> param_names;
+      std::transform(exprs.begin(), exprs.end(),
+                     std::back_inserter(param_names),
+                     [](expression_node *expr) {
+                       return static_cast<identifier_expr_node *>(expr)->str;
+                     });
+      auto *params = nodes.make_param_list();
+      params->names = param_names;
+      if (rest_param) {
+        params->rest = rest_param->text;
+      }
+      ADVANCE_OR_ERROR("Unexpected EOF after arrow", nullptr);
+      statement_node *body = nullptr;
+      if (current_token.type == token_type::BRACE_OPEN) {
+        body = parse_block_or_obj(true);
+      } else {
+        body = parse_expression(false);
+      }
+      if (error || !body) {
+        assert(error && !body);
+        return nullptr;
+      }
+      auto *func = nodes.make_arrow_function();
+      func->params = params;
+      func->body = body;
+      return func;
+    }
+    rewind(paren_close);
+  }
+  if (rest_param) {
+    set_error("Unexpected token", rest_param->loc);
+    return nullptr;
+  }
+  auto *expr = exprs.front();
+  auto it = exprs.begin();
+  ++it;
+  while (it != exprs.end()) {
+    auto *comma = nodes.make_comma_operator();
+    comma->lhs = expr;
+    comma->rhs = *it;
+    expr = comma;
+    ++it;
+  }
+  return expr;
 }
 
 static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
@@ -657,6 +753,7 @@ array_literal_node *parser_base::parse_array_literal() {
   return nullptr;
 }
 object_literal_node *parser_base::parse_object_literal() {
+  assert(current_token.type == token_type::BRACE_OPEN);
   set_error("Not implemented (object_literal)", current_token.loc);
   return nullptr;
 }
@@ -716,7 +813,7 @@ call_expr_node *parser_base::parse_call(expression_node *callee) {
   assert(current_token.type == token_type::PAREN_CLOSE);
   return call;
 }
-statement_node *parser_base::parse_block_or_obj() {
+statement_node *parser_base::parse_block_or_obj(bool prefer_block_over_obj) {
   EXPECT(BRACE_OPEN, nullptr);
   auto brace = current_token;
   ADVANCE_OR_ERROR("Unexpected EOF", nullptr);
@@ -731,6 +828,9 @@ statement_node *parser_base::parse_block_or_obj() {
       return parse_object_literal();
     }
   } else if (current_token.type == token_type::BRACE_CLOSE) {
+    if (prefer_block_over_obj) {
+      return nodes.make_block();
+    }
     return nodes.make_object_literal();
   } else {
     rewind(brace);

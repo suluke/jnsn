@@ -33,7 +33,7 @@ private:
   void reset();
 
   statement_node *parse_statement();
-  statement_node *parse_block_or_obj();
+  statement_node *parse_block_or_obj(bool prefer_block_over_obj);
   statement_node *parse_keyword_stmt();
   function_stmt_node *parse_function_stmt();
 
@@ -49,6 +49,7 @@ private:
   expression_node *parse_expression(bool comma_is_operator);
   expression_node *parse_atomic_expr();
   expression_node *parse_keyword_expr();
+  expression_node *parse_parens_expr();
   string_literal_node *parse_string_literal();
   number_literal_node *parse_number_literal();
   function_expr_node *parse_function_expr();
