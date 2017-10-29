@@ -12,14 +12,14 @@ struct ast_node {
   virtual ~ast_node() = default;
 };
 /// forward declaration of all ast nodes
-#define NODE(NAME, CHILD_NODES) class NAME ## _node;
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) class NAME ## _node;
+#define NODE(NAME, CHILD_NODES) struct NAME ## _node;
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "parsing/ast.def"
 
 class ast_node_visitor_base {
   /// make ast nodes friend classes
-#define NODE(NAME, CHILD_NODES) friend class NAME ## _node;
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) friend class NAME ## _node;
+#define NODE(NAME, CHILD_NODES) friend struct NAME ## _node;
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "parsing/ast.def"
 
 #define NODE(NAME, CHILD_NODES) virtual void gen_result(NAME ## _node &node) = 0;
@@ -32,8 +32,8 @@ protected:
 };
 class const_ast_node_visitor_base {
   /// make ast nodes friend classes
-#define NODE(NAME, CHILD_NODES) friend class NAME ## _node;
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) friend class NAME ## _node;
+#define NODE(NAME, CHILD_NODES) friend struct NAME ## _node;
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "parsing/ast.def"
 
 #define NODE(NAME, CHILD_NODES) virtual void gen_result(const NAME ## _node &node) = 0;
@@ -78,10 +78,10 @@ template<typename RET_TY>
 class const_ast_node_visitor : public const_ast_node_visitor_base {
   RET_TY result;
 #define NODE(NAME, CHILD_NODES) void gen_result(const NAME ## _node &node) override { result = accept(node); }
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) void gen_result(const NAME ## _node &node) override { result = accept(node); }
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "parsing/ast.def"
 #define NODE(NAME, CHILD_NODES) virtual RET_TY accept(const NAME ## _node &) = 0;
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) virtual RET_TY accept(const NAME ## _node &) = 0;
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "parsing/ast.def"
 public:
   RET_TY visit(const ast_node &n) {
