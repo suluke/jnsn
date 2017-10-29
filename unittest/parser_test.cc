@@ -172,9 +172,21 @@ TEST_F(parser_test, arrow_function) {
       "\"log\"}, \"args\": {\"type\": \"argument_list\", \"values\": "
       "[{\"type\": \"identifier_expr\", \"str\": \"test\"}]}}}]}");
   //~ ASSERT_PARSED_MATCHES_JSON(
-      //~ "() => ({})",
-      //~ "{\"type\": \"module\", \"stmts\": [{\"type\": "
-      //~ "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
-      //~ "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
-      //~ "\"object_literal\", \"entries\": []}}]}");
+  //~ "() => ({})",
+  //~ "{\"type\": \"module\", \"stmts\": [{\"type\": "
+  //~ "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+  //~ "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+  //~ "\"object_literal\", \"entries\": []}}]}");
+}
+
+TEST_F(parser_test, assignment) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "a = b = c = 1 * 3",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"assign\", \"lhs\": "
+      "{\"type\": \"identifier_expr\", \"str\": \"a\"}, \"rhs\": {\"type\": "
+      "\"assign\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"b\"}, "
+      "\"rhs\": {\"type\": \"assign\", \"lhs\": {\"type\": "
+      "\"identifier_expr\", \"str\": \"c\"}, \"rhs\": {\"type\": \"multiply\", "
+      "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
+      "{\"type\": \"int_literal\", \"val\": \"3\"}}}}}]}");
 }

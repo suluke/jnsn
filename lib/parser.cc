@@ -326,7 +326,7 @@ static bool is_expression_end(token t, bool comma_is_operator) {
 
 static int get_precedence(token op) {
   switch (op.type) {
-#define INFIX_OP(TYPE, PRECEDENCE)                                             \
+#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                                             \
   case token_type::TYPE:                                                       \
     return PRECEDENCE;
 #include "parsing/operators.def"
@@ -339,12 +339,21 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
   if (op.type == token_type::COMMA) {
     return comma_is_operator;
   }
-#define INFIX_OP(TYPE, X)                                                      \
+#define INFIX_OP(TYPE, X, Y)                                                      \
   if (op.type == token_type::TYPE) {                                           \
     return true;                                                               \
   }
 #include "parsing/operators.def"
   return false;
+}
+
+enum class associativity {
+  LEFT_TO_RIGHT, RIGHT_TO_LEFT
+};
+static associativity get_associativity(token op) {
+#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY) if (op.type == token_type::TYPE) return associativity::ASSOCIATIVITY;
+#include "parsing/operators.def"
+  assert(false); // FIXME unreachable macro
 }
 
 expression_node *parser_base::parse_expression(bool comma_is_operator) {
@@ -526,28 +535,45 @@ expression_node *parser_base::parse_parens_expr() {
 static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
                                           expression_node *rhs,
                                           ast_node_store &nodes) {
+  assert(is_binary_operator(op));
   bin_op_expr_node *res = nullptr;
-  switch (op.type) {
-  case token_type::PLUS:
+  if (op.type == token_type::PLUS)
     res = nodes.make_add();
-    break;
-  case token_type::MINUS:
+  if (op.type == token_type::MINUS)
     res = nodes.make_subtract();
-    break;
-  case token_type::ASTERISK:
+  if (op.type ==  token_type::ASTERISK)
     res = nodes.make_multiply();
-    break;
-  case token_type::SLASH:
+  if (op.type ==  token_type::SLASH)
     res = nodes.make_divide();
-    break;
-  case token_type::COMMA:
+  if (op.type ==  token_type::COMMA)
     res = nodes.make_comma_operator();
-    break;
-  default:
-    res = nullptr;
-    break;
-  }
-  assert(res);
+  if (op.type == token_type::EQ)
+    res = nodes.make_assign();
+  if (op.type == token_type::PLUS_EQ)
+    res = nodes.make_add_assign();
+  if (op.type == token_type::MINUS_EQ)
+    res = nodes.make_subtract_assign();
+  if (op.type == token_type::MUL_EQ)
+    res = nodes.make_multiply_assign();
+  if (op.type == token_type::DIV_EQ)
+    res = nodes.make_divide_assign();
+  if (op.type == token_type::MOD_EQ)
+    res = nodes.make_modulo_assign();
+  if (op.type == token_type::POW_EQ)
+    res = nodes.make_pow_assign();
+  if (op.type == token_type::LSH_EQ)
+    res = nodes.make_lshift_assign();
+  if (op.type == token_type::RSH_EQ)
+    res = nodes.make_rshift_assign();
+  if (op.type == token_type::LOG_RSH_EQ)
+    res = nodes.make_log_rshift_assign();
+  if (op.type == token_type::AND_EQ)
+    res = nodes.make_and_assign();
+  if (op.type == token_type::OR_EQ)
+    res = nodes.make_or_assign();
+  if (op.type == token_type::CARET_EQ)
+    res = nodes.make_xor_assign();
+  assert(res && "make_binary_expr not implemented for operator");
   res->lhs = lhs;
   res->rhs = rhs;
   return res;
@@ -571,10 +597,14 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
     return make_binary_expr(op, lhs, rhs, nodes);
   }
   if (is_binary_operator(current_token, comma_is_operator)) {
-    if (get_precedence(current_token) > get_precedence(op)) {
+    auto current_prec = get_precedence(op);
+    auto next_prec = get_precedence(current_token);
+    if (next_prec > current_prec) {
       rhs = parse_bin_op(rhs, comma_is_operator);
     }
-    // FIXME associativity...
+    if (next_prec == current_prec && get_associativity(op) == associativity::RIGHT_TO_LEFT) {
+      rhs = parse_bin_op(rhs, comma_is_operator);
+    }
     return make_binary_expr(op, lhs, rhs, nodes);
   }
 

@@ -79,6 +79,20 @@ DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, thrown)))
 NODE(catch, CHILDREN(ONE(expression, condition) ONE(block, body)))
 DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, caughts) MAYBE(block, finally)))
 
+DERIVED(assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(add_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(subtract_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(multiply_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(divide_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(modulo_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(pow_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(lshift_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(rshift_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(log_rshift_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(and_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(or_assign, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(xor_assign, EXTENDS(bin_op_expr), CHILDREN())
+
 #undef MAYBE
 #undef MAYBE_STR
 #undef STRINGS
