@@ -45,7 +45,7 @@ private:
   throw_stmt_node *parse_throw_stmt();
   try_stmt_node *parse_try_stmt();
 
-  expression_node *parse_expression();
+  expression_node *parse_expression(bool comma_is_operator);
   expression_node *parse_atomic_expr();
   expression_node *parse_keyword_expr();
   string_literal_node *parse_string_literal();
@@ -54,12 +54,14 @@ private:
   param_list_node *parse_param_list();
   block_node *parse_block();
   var_decl_node *parse_var_decl();
-  bin_op_expr_node *parse_bin_op(expression_node *lhs);
+  bin_op_expr_node *parse_bin_op(expression_node *lhs, bool comma_is_operator);
   array_literal_node *parse_array_literal();
   object_literal_node *parse_object_literal();
   computed_member_access_node *parse_computed_access(expression_node *base);
   member_access_node *parse_member_access(expression_node *base);
   call_expr_node *parse_call(expression_node *callee);
+
+  void set_error(std::string msg, source_location loc);
 
 public:
   result parse();

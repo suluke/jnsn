@@ -133,3 +133,17 @@ TEST_F(parser_test, computed_member_access) {
                   "{\"type\": \"int_literal\", \"val\": \"4\"}, \"rhs\": "
                   "{\"type\": \"int_literal\", \"val\": \"2\"}}}}]}");
 }
+
+TEST_F(parser_test, comma_operator) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "window[1,'console'].log(4)",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"call_expr\", "
+      "\"callee\": {\"type\": \"member_access\", \"base\": {\"type\": "
+      "\"computed_member_access\", \"base\": {\"type\": \"identifier_expr\", "
+      "\"str\": \"window\"}, \"member\": {\"type\": \"comma_operator\", "
+      "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
+      "{\"type\": \"string_literal\", \"val\": \"'console'\"}}}, \"member\": "
+      "\"log\"}, \"args\": "
+      "{\"type\": \"argument_list\", \"values\": [{\"type\": \"int_literal\", "
+      "\"val\": \"4\"}]}}]}");
+}

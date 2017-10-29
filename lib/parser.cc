@@ -4,6 +4,9 @@
 using namespace parsing;
 
 lexer_base::result parser_base::next_token() { return get_lexer().next(); }
+void parser_base::set_error(std::string msg, source_location loc) {
+  error = { msg, loc };
+}
 
 static std::string to_string(token_type t) {
   switch (t) {
@@ -24,7 +27,7 @@ static std::string to_string(token_type t) {
     }                                                                          \
     auto read_success = advance();                                             \
     if (!read_success) {                                                       \
-      error = {MESSAGE, {}};                                                   \
+      set_error(MESSAGE, {});                                                   \
     }                                                                          \
     if (error) {                                                               \
       return RETURN_VAL;                                                       \
@@ -45,9 +48,9 @@ static std::string to_string(token_type t) {
       }                                                                        \
     }                                                                          \
     if (!found_expected) {                                                     \
-      error = {"Unexpected token. Expected: " #TYPES ". Was: " +               \
+      set_error("Unexpected token. Expected: " #TYPES ". Was: " +               \
                    to_string(current_token.type),                              \
-               current_token.loc};                                             \
+               current_token.loc);                                             \
       return RETURN_VAL;                                                       \
     }                                                                          \
   } while (false)
@@ -73,7 +76,7 @@ bool parser_base::advance() {
       return false;
     } else if (std::holds_alternative<lexer_error>(T)) {
       auto err = std::get<lexer_error>(T);
-      error = parser_error{"Lexer Error: " + err.msg, err.loc};
+      set_error("Lexer Error: " + err.msg, err.loc);
       return false;
     }
     current_token = std::get<token>(T);
@@ -150,7 +153,7 @@ statement_node *parser_base::parse_statement() {
     stmt = parse_keyword_stmt();
   } else {
     // parse expression statement
-    stmt = parse_expression();
+    stmt = parse_expression(true);
   }
   if (error || !stmt) {
     assert(error && !stmt);
@@ -161,9 +164,9 @@ statement_node *parser_base::parse_statement() {
     return nullptr;
   }
   if (read_success && !is_stmt_end(current_token)) {
-    error = {"Unexpected token after statement: " +
+    set_error("Unexpected token after statement: " +
                  to_string(current_token.type),
-             current_token.loc};
+             current_token.loc);
   }
   return stmt;
 }
@@ -201,23 +204,23 @@ statement_node *parser_base::parse_keyword_stmt() {
 }
 
 if_stmt_node *parser_base::parse_if_stmt() {
-  error = {"Not implemented (parse_if)", current_token.loc};
+  set_error("Not implemented (parse_if)", current_token.loc);
   return nullptr;
 }
 do_while_node *parser_base::parse_do_while() {
-  error = {"Not implemented (parse_do_while)", current_token.loc};
+  set_error("Not implemented (parse_do_while)", current_token.loc);
   return nullptr;
 }
 while_stmt_node *parser_base::parse_while_stmt() {
-  error = {"Not implemented (parse_while)", current_token.loc};
+  set_error("Not implemented (parse_while)", current_token.loc);
   return nullptr;
 }
 for_stmt_node *parser_base::parse_for_stmt() {
-  error = {"Not implemented (parse_for)", current_token.loc};
+  set_error("Not implemented (parse_for)", current_token.loc);
   return nullptr;
 }
 switch_stmt_node *parser_base::parse_switch_stmt() {
-  error = {"Not implemented (parse_switch)", current_token.loc};
+  set_error("Not implemented (parse_switch)", current_token.loc);
   return nullptr;
 }
 return_stmt_node *parser_base::parse_return_stmt() {
@@ -226,17 +229,17 @@ return_stmt_node *parser_base::parse_return_stmt() {
              keyword_type::kw_return);
   auto *ret = nodes.make_return_stmt();
   if (advance() && !is_stmt_end(current_token)) {
-    auto *expr = parse_expression();
+    auto *expr = parse_expression(true);
     ret->value = expr;
   }
   return ret;
 }
 throw_stmt_node *parser_base::parse_throw_stmt() {
-  error = {"Not implemented (parse_throw)", current_token.loc};
+  set_error("Not implemented (parse_throw)", current_token.loc);
   return nullptr;
 }
 try_stmt_node *parser_base::parse_try_stmt() {
-  error = {"Not implemented (parse_try)", current_token.loc};
+  set_error("Not implemented (parse_try)", current_token.loc);
   return nullptr;
 }
 
@@ -244,6 +247,7 @@ static bool is_follow_expression(token t) {
   switch (t.type) {
   case token_type::SEMICOLON:
   case token_type::DOT:
+  case token_type::COMMA:
   case token_type::PAREN_CLOSE:
   case token_type::BRACKET_CLOSE:
   case token_type::BRACE_CLOSE:
@@ -300,7 +304,7 @@ static bool is_follow_expression(token t) {
     return false;
   }
 }
-static bool is_expression_end(token t) {
+static bool is_expression_end(token t, bool comma_is_operator) {
   switch (t.type) {
   case token_type::SEMICOLON:
   case token_type::PAREN_CLOSE:
@@ -309,6 +313,8 @@ static bool is_expression_end(token t) {
   case token_type::TEMPLATE_MIDDLE:
   case token_type::TEMPLATE_END:
     return true;
+  case token_type::COMMA:
+    return !comma_is_operator;
   default:
     return false;
   }
@@ -325,7 +331,10 @@ static int get_precedence(token op) {
   }
 }
 
-static bool is_binary_operator(token op) {
+static bool is_binary_operator(token op, bool comma_is_operator = true) {
+  if (op.type == token_type::COMMA) {
+    return comma_is_operator;
+  }
 #define INFIX_OP(TYPE, X)                                                      \
   if (op.type == token_type::TYPE) {                                           \
     return true;                                                               \
@@ -334,32 +343,32 @@ static bool is_binary_operator(token op) {
   return false;
 }
 
-expression_node *parser_base::parse_expression() {
+expression_node *parser_base::parse_expression(bool comma_is_operator) {
   expression_node *expr = parse_atomic_expr();
   if (expr) {
     auto final_token = current_token;
     if (!advance()) {
       return expr;
     }
-    if (is_expression_end(current_token)) {
+    if (is_expression_end(current_token, comma_is_operator)) {
       rewind(final_token);
       return expr;
     }
-    if (is_binary_operator(current_token)) {
+    if (is_binary_operator(current_token, comma_is_operator)) {
       token prev_token;
       do {
-        expr = parse_bin_op(expr);
+        expr = parse_bin_op(expr, comma_is_operator);
         prev_token = current_token;
         if (!advance()) {
           // note that we skip rewinding here
           return expr;
         }
-      } while (is_binary_operator(current_token));
+      } while (is_binary_operator(current_token, comma_is_operator));
       rewind(prev_token);
       return expr;
     }
   }
-  error = {"Not implemented (parse expression)", current_token.loc};
+  set_error("Not implemented (parse expression)", current_token.loc);
   return nullptr;
 }
 
@@ -381,7 +390,7 @@ expression_node *parser_base::parse_atomic_expr() {
     expr = parse_object_literal();
   } else if (current_token.type == token_type::PAREN_OPEN) {
     ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
-    expr = parse_expression();
+    expr = parse_expression(true);
     if (error || !expr) {
       assert(error && !expr);
       return nullptr;
@@ -412,7 +421,7 @@ expression_node *parser_base::parse_atomic_expr() {
     } while(true);
     return expr;
   }
-  error = {"Not implemented (atomic expression)", current_token.loc};
+  set_error("Not implemented (atomic expression)", current_token.loc);
   return nullptr;
 }
 
@@ -433,6 +442,9 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
   case token_type::SLASH:
     res = nodes.make_divide();
     break;
+  case token_type::COMMA:
+    res = nodes.make_comma_operator();
+    break;
   default:
     res = nullptr;
     break;
@@ -443,9 +455,9 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
   return res;
 }
 
-bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
+bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs, bool comma_is_operator) {
   auto op = current_token;
-  assert(is_binary_operator(op));
+  assert(is_binary_operator(op, comma_is_operator));
   ADVANCE_OR_ERROR(
       "Unexpected EOF. Expected right hand side argument of binary operation",
       nullptr);
@@ -455,19 +467,19 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs) {
   if (!advance()) {
     return make_binary_expr(op, lhs, rhs, nodes);
   }
-  if (is_expression_end(current_token)) {
+  if (is_expression_end(current_token, comma_is_operator)) {
     rewind(prev_token);
     return make_binary_expr(op, lhs, rhs, nodes);
   }
-  if (is_binary_operator(current_token)) {
+  if (is_binary_operator(current_token, comma_is_operator)) {
     if (get_precedence(current_token) > get_precedence(op)) {
-      rhs = parse_bin_op(rhs);
+      rhs = parse_bin_op(rhs, comma_is_operator);
     }
     // FIXME associativity...
     return make_binary_expr(op, lhs, rhs, nodes);
   }
 
-  error = {"Not implemented (binop expression)", current_token.loc};
+  set_error("Not implemented (binop expression)", current_token.loc);
   return nullptr;
 }
 
@@ -480,7 +492,7 @@ expression_node *parser_base::parse_keyword_expr() {
              kw_ty == keyword_type::kw_let) {
     return parse_var_decl();
   } else {
-    error = {"Not implemented (keyword)", current_token.loc};
+    set_error("Not implemented (keyword)", current_token.loc);
     return nullptr;
   }
 }
@@ -496,7 +508,7 @@ number_literal_node *parser_base::parse_number_literal() {
     }
     return res;
   }
-  error = {"Unexpected token after number literal", current_token.loc};
+  set_error("Unexpected token after number literal", current_token.loc);
   return nullptr;
 }
 
@@ -511,7 +523,7 @@ string_literal_node *parser_base::parse_string_literal() {
     }
     return res;
   }
-  error = {"Unexpected token after string literal", current_token.loc};
+  set_error("Unexpected token after string literal", current_token.loc);
   return nullptr;
 }
 
@@ -557,7 +569,7 @@ param_list_node *parser_base::parse_param_list() {
     return node;
   }
 
-  error = {"Unexpected token in parameter list", current_token.loc};
+  set_error("Unexpected token in parameter list", current_token.loc);
   return nullptr;
 }
 
@@ -591,7 +603,7 @@ var_decl_node *parser_base::parse_var_decl() {
     ADVANCE_OR_ERROR(
         "Unecpected EOF in variable initialization. Expected expression",
         nullptr);
-    auto init = parse_expression();
+    auto init = parse_expression(true);
     if (!init) {
       assert(error);
       return nullptr;
@@ -599,23 +611,23 @@ var_decl_node *parser_base::parse_var_decl() {
     decl->init = init;
     return decl;
   }
-  error = {"Unecpected token", current_token.loc};
+  set_error("Unecpected token", current_token.loc);
   return nullptr;
 }
 
 array_literal_node *parser_base::parse_array_literal() {
-  error = {"Not implemented (array_literal)", current_token.loc};
+  set_error("Not implemented (array_literal)", current_token.loc);
   return nullptr;
 }
 object_literal_node *parser_base::parse_object_literal() {
-  error = {"Not implemented (object_literal)", current_token.loc};
+  set_error("Not implemented (object_literal)", current_token.loc);
   return nullptr;
 }
 computed_member_access_node *
 parser_base::parse_computed_access(expression_node *base) {
   assert(current_token.type == token_type::BRACKET_OPEN);
   ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
-  auto *member = parse_expression();
+  auto *member = parse_expression(true);
   if (error || !member) {
     assert(error && !member);
     return nullptr;
@@ -648,7 +660,7 @@ call_expr_node *parser_base::parse_call(expression_node *callee) {
     return call;
   }
   do {
-    auto *arg = parse_expression(); // FIXME disallow comma operator
+    auto *arg = parse_expression(false);
     if (error || !arg) {
       assert(error && !arg);
       return nullptr;
@@ -660,7 +672,7 @@ call_expr_node *parser_base::parse_call(expression_node *callee) {
     } else if (current_token.type == token_type::PAREN_CLOSE) {
       break;
     } else {
-      error = {"Unexpected token in argument list", current_token.loc};
+      set_error("Unexpected token in argument list", current_token.loc);
       return nullptr;
     }
   } while (true);

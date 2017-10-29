@@ -38,6 +38,7 @@ DERIVED(function, EXTENDS(expression), CHILDREN(STRING(name) ONE(param_list, par
 DERIVED(var_decl, EXTENDS(expression), CHILDREN(STRING(keyword) STRING(name) MAYBE(expression, init)))
 DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(identifier_expr, EXTENDS(expression), CHILDREN(STRING(str)))
+
 DERIVED(number_literal, EXTENDS(expression), CHILDREN(STRING(val)))
 DERIVED(int_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(float_literal, EXTENDS(number_literal), CHILDREN())
@@ -48,15 +49,18 @@ DERIVED(string_literal, EXTENDS(expression), CHILDREN(STRING(val)))
 DERIVED(array_literal, EXTENDS(expression), CHILDREN(MANY(expression, values)))
 NODE(object_entry, CHILDREN(STRING(key) ONE(expression, val)))
 DERIVED(object_literal, EXTENDS(expression), CHILDREN(MANY(object_entry, entries)))
+
 DERIVED(member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) STRING(member)))
 DERIVED(computed_member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) ONE(expression, member)))
 NODE(argument_list, CHILDREN(MANY(expression, values)))
 DERIVED(call_expr, EXTENDS(expression), CHILDREN(ONE(expression, callee) ONE(argument_list, args)))
+
 DERIVED(bin_op_expr, EXTENDS(expression), CHILDREN(ONE(expression, lhs) ONE(expression, rhs)))
 DERIVED(add, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(subtract, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(multiply, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(divide, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(comma_operator, EXTENDS(bin_op_expr), CHILDREN())
 
 DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_expr)))
 DERIVED(do_while, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
