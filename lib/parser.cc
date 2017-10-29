@@ -779,8 +779,32 @@ var_decl_node *parser_base::parse_var_decl() {
 }
 
 array_literal_node *parser_base::parse_array_literal() {
-  set_error("Not implemented (array_literal)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::BRACKET_OPEN);
+  ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+  auto *array = nodes.make_array_literal();
+  if (current_token.type != token_type::BRACKET_CLOSE) {
+    do {
+      expression_node *expr = nullptr;
+      if (current_token.type == token_type::DOTDOTDOT) {
+        ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
+        auto *spread = nodes.make_spread_expr();
+        expr = parse_expression(false);
+        spread->list = expr;
+        expr = spread;
+      } else {
+        expr = parse_expression(false);
+      }
+      array->values.emplace_back(expr);
+      ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+      EXPECT_SEVERAL(TYPELIST(token_type::BRACKET_CLOSE, token_type::COMMA), nullptr);
+      if (current_token.type == token_type::BRACKET_CLOSE) {
+        break;
+      } if (current_token.type == token_type::COMMA) {
+        ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+      }
+    } while(true);
+  }
+  return array;
 }
 object_literal_node *parser_base::parse_object_literal() {
   assert(current_token.type == token_type::BRACE_OPEN);

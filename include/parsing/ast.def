@@ -56,6 +56,7 @@ DERIVED(member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) STRIN
 DERIVED(computed_member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) ONE(expression, member)))
 NODE(argument_list, CHILDREN(MANY(expression, values)))
 DERIVED(call_expr, EXTENDS(expression), CHILDREN(ONE(expression, callee) ONE(argument_list, args)))
+DERIVED(spread_expr, EXTENDS(expression), CHILDREN(ONE(expression, list)))
 
 DERIVED(bin_op_expr, EXTENDS(expression), CHILDREN(ONE(expression, lhs) ONE(expression, rhs)))
 DERIVED(add, EXTENDS(bin_op_expr), CHILDREN())

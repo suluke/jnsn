@@ -42,11 +42,22 @@ TEST_F(parser_test, block) {
                                    "[{\"type\": \"object_literal\", "
                                    "\"entries\": []}]}");
 }
-TEST_F(parser_test, literals) {
+TEST_F(parser_test, number_literals) {
   ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
                                   "[{\"type\": \"int_literal\", \"val\": "
                                   "\"1\"}]}");
   PARSER_ERROR("1.window");
+}
+TEST_F(parser_test, array_literals) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "let arr = [1, ...a, 3, ...b]",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
+      "\"keyword\": \"let\", \"name\": \"arr\", \"init\": {\"type\": "
+      "\"array_literal\", \"values\": [{\"type\": \"int_literal\", \"val\": "
+      "\"1\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
+      "\"identifier_expr\", \"str\": \"a\"}}, {\"type\": \"int_literal\", "
+      "\"val\": \"3\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
+      "\"identifier_expr\", \"str\": \"b\"}}]}}]}");
 }
 TEST_F(parser_test, parenthesis) {
   ASSERT_PARSED_MATCHES_JSON("(((1)))", "{\"type\": \"module\", \"stmts\": "
