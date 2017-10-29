@@ -37,11 +37,7 @@ using ast_root = parser_base::ast_root;
 TEST_F(parser_test, empty) {
   ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}");
 }
-TEST_F(parser_test, block) {
-  ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
-                                   "[{\"type\": \"object_literal\", "
-                                   "\"entries\": []}]}");
-}
+TEST_F(parser_test, block) {}
 TEST_F(parser_test, number_literals) {
   ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
                                   "[{\"type\": \"int_literal\", \"val\": "
@@ -58,6 +54,21 @@ TEST_F(parser_test, array_literals) {
       "\"identifier_expr\", \"str\": \"a\"}}, {\"type\": \"int_literal\", "
       "\"val\": \"3\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
       "\"identifier_expr\", \"str\": \"b\"}}]}}]}");
+}
+TEST_F(parser_test, object_literals) {
+  ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
+                                   "[{\"type\": \"object_literal\", "
+                                   "\"entries\": [], \"value_entries\": []}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "let x = {a, b, ...c, i: 5}",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
+      "\"keyword\": \"let\", \"name\": \"x\", \"init\": {\"type\": "
+      "\"object_literal\", \"entries\": [{\"type\": \"object_entry\", \"key\": "
+      "\"i\", \"val\": {\"type\": \"int_literal\", \"val\": \"5\"}}], "
+      "\"value_entries\": [{\"type\": \"identifier_expr\", \"str\": \"a\"}, "
+      "{\"type\": \"identifier_expr\", \"str\": \"b\"}, {\"type\": "
+      "\"spread_expr\", \"list\": {\"type\": \"identifier_expr\", \"str\": "
+      "\"c\"}}]}}]}");
 }
 TEST_F(parser_test, parenthesis) {
   ASSERT_PARSED_MATCHES_JSON("(((1)))", "{\"type\": \"module\", \"stmts\": "
@@ -182,12 +193,12 @@ TEST_F(parser_test, arrow_function) {
       "{\"type\": \"identifier_expr\", \"str\": \"console\"}, \"member\": "
       "\"log\"}, \"args\": {\"type\": \"argument_list\", \"values\": "
       "[{\"type\": \"identifier_expr\", \"str\": \"test\"}]}}}]}");
-  //~ ASSERT_PARSED_MATCHES_JSON(
-  //~ "() => ({})",
-  //~ "{\"type\": \"module\", \"stmts\": [{\"type\": "
-  //~ "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
-  //~ "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
-  //~ "\"object_literal\", \"entries\": []}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "() => ({})",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": "
+      "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+      "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+      "\"object_literal\", \"entries\": [], \"value_entries\": []}}]}");
 }
 
 TEST_F(parser_test, assignment) {

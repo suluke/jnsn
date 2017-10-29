@@ -1,7 +1,7 @@
 #include "parsing/ast_ops.h"
 #include "parsing/parser.h"
-#include <initializer_list>
 #include <algorithm>
+#include <initializer_list>
 
 using namespace parsing;
 
@@ -326,7 +326,7 @@ static bool is_expression_end(token t, bool comma_is_operator) {
 
 static int get_precedence(token op) {
   switch (op.type) {
-#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                                             \
+#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
   case token_type::TYPE:                                                       \
     return PRECEDENCE;
 #include "parsing/operators.def"
@@ -339,7 +339,7 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
   if (op.type == token_type::COMMA) {
     return comma_is_operator;
   }
-#define INFIX_OP(TYPE, X, Y)                                                      \
+#define INFIX_OP(TYPE, X, Y)                                                   \
   if (op.type == token_type::TYPE) {                                           \
     return true;                                                               \
   }
@@ -347,11 +347,11 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
   return false;
 }
 
-enum class associativity {
-  LEFT_TO_RIGHT, RIGHT_TO_LEFT
-};
+enum class associativity { LEFT_TO_RIGHT, RIGHT_TO_LEFT };
 static associativity get_associativity(token op) {
-#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY) if (op.type == token_type::TYPE) return associativity::ASSOCIATIVITY;
+#define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
+  if (op.type == token_type::TYPE)                                             \
+    return associativity::ASSOCIATIVITY;
 #include "parsing/operators.def"
   assert(false); // FIXME unreachable macro
 }
@@ -541,11 +541,11 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
     res = nodes.make_add();
   if (op.type == token_type::MINUS)
     res = nodes.make_subtract();
-  if (op.type ==  token_type::ASTERISK)
+  if (op.type == token_type::ASTERISK)
     res = nodes.make_multiply();
-  if (op.type ==  token_type::SLASH)
+  if (op.type == token_type::SLASH)
     res = nodes.make_divide();
-  if (op.type ==  token_type::COMMA)
+  if (op.type == token_type::COMMA)
     res = nodes.make_comma_operator();
   if (op.type == token_type::EQ)
     res = nodes.make_assign();
@@ -602,7 +602,8 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
     if (next_prec > current_prec) {
       rhs = parse_bin_op(rhs, comma_is_operator);
     }
-    if (next_prec == current_prec && get_associativity(op) == associativity::RIGHT_TO_LEFT) {
+    if (next_prec == current_prec &&
+        get_associativity(op) == associativity::RIGHT_TO_LEFT) {
       rhs = parse_bin_op(rhs, comma_is_operator);
     }
     return make_binary_expr(op, lhs, rhs, nodes);
@@ -796,20 +797,60 @@ array_literal_node *parser_base::parse_array_literal() {
       }
       array->values.emplace_back(expr);
       ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
-      EXPECT_SEVERAL(TYPELIST(token_type::BRACKET_CLOSE, token_type::COMMA), nullptr);
+      EXPECT_SEVERAL(TYPELIST(token_type::BRACKET_CLOSE, token_type::COMMA),
+                     nullptr);
       if (current_token.type == token_type::BRACKET_CLOSE) {
         break;
-      } if (current_token.type == token_type::COMMA) {
+      }
+      if (current_token.type == token_type::COMMA) {
         ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
       }
-    } while(true);
+    } while (true);
   }
   return array;
 }
 object_literal_node *parser_base::parse_object_literal() {
   assert(current_token.type == token_type::BRACE_OPEN);
-  set_error("Not implemented (object_literal)", current_token.loc);
-  return nullptr;
+  ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+  auto *object = nodes.make_object_literal();
+  if (current_token.type != token_type::BRACE_CLOSE) {
+    do {
+      if (current_token.type == token_type::DOTDOTDOT) {
+        ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
+        auto *expr = parse_expression(false);
+        auto *spread = nodes.make_spread_expr();
+        spread->list = expr;
+        object->value_entries.emplace_back(spread);
+      } else {
+        EXPECT(IDENTIFIER, nullptr);
+        auto id = current_token;
+        ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+        if (current_token.type != token_type::COLON) {
+          auto *expr = nodes.make_identifier_expr();
+          expr->str = id.text;
+          object->value_entries.emplace_back(expr);
+          rewind(id);
+        } else {
+          ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+          auto *entry = nodes.make_object_entry();
+          entry->key = id.text;
+          auto *val = parse_expression(false);
+          entry->val = val;
+          object->entries.emplace_back(entry);
+        }
+      }
+      ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+      EXPECT_SEVERAL(TYPELIST(token_type::BRACE_CLOSE, token_type::COMMA),
+                     nullptr);
+      if (current_token.type == token_type::BRACE_CLOSE) {
+        break;
+      } else if (current_token.type == token_type::COMMA) {
+        ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+      }
+    } while (true);
+  }
+  EXPECT(BRACE_CLOSE, nullptr);
+  return object;
 }
 computed_member_access_node *
 parser_base::parse_computed_access(expression_node *base) {
