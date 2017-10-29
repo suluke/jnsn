@@ -41,6 +41,15 @@ add_unittest(ast_test
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
 )
+add_unittest(ast_ops_test
+  ast_ops_test.cc
+  ../lib/ast.cc
+  ../lib/ast_ops.cc
+  ../include/parsing/ast.h
+  ../include/parsing/ast.def
+  ../include/parsing/ast_visitor.h
+  ../include/parsing/ast_ops.h
+)
 add_unittest(parser_test
   parser_test.cc
   ../lib/parser.cc

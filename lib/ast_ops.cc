@@ -1,4 +1,8 @@
+// This definition disables the "extern template isa" declarations so that we
+// can safely provide them here
+#define PARSING_AST_OPS_CC
 #include "parsing/ast_ops.h"
+#undef PARSING_AST_OPS_CC
 #include <sstream>
 
 using namespace parsing;
@@ -71,10 +75,10 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
   stream << "\"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  virtual void accept(const NAME##_node &node) { CHILD_NODES; }
+  void accept(const NAME##_node &node) override { CHILD_NODES; }
 #define EXTENDS(NAME) NAME##_node
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
-  virtual void accept(const NAME##_node &node) {                               \
+  void accept(const NAME##_node &node) override {                              \
     accept(static_cast<const ANCESTOR &>(node));                               \
     CHILD_NODES;                                                               \
   }
@@ -149,7 +153,7 @@ struct json_printer : public const_ast_node_visitor<void> {
   stream << "\"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  virtual void accept(const NAME##_node &node) {                               \
+  void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
            << "\"" #NAME "\", ";                                               \
@@ -158,7 +162,7 @@ struct json_printer : public const_ast_node_visitor<void> {
   }
 #define EXTENDS(NAME) NAME##_node
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
-  virtual void accept(const NAME##_node &node) {                               \
+  void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
            << "\"" #NAME "\", ";                                               \
@@ -175,4 +179,25 @@ std::ostream &operator<<(std::ostream &stream, const ast_to_json &wrapper) {
   printer.visit(*wrapper.ast);
   return stream;
 }
+} // namespace parsing
+
+/// isa<> impl
+template <class nodety>
+struct isa_checker : public const_ast_node_visitor<bool> {
+#define NODE(NAME, CHILDREN)                                                   \
+  bool accept(const NAME##_node &) override {                                  \
+    return std::is_same_v<NAME##_node, nodety>;                                \
+  }
+#define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
+#include "parsing/ast.def"
+};
+
+namespace parsing {
+#define NODE(NAME, CHILDREN)                                                   \
+  template <> bool isa<NAME##_node>(const ast_node *node) {                    \
+    assert(node);                                                              \
+    return isa_checker<NAME##_node>().visit(*node);                            \
+  }
+#define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
+#include "parsing/ast.def"
 } // namespace parsing
