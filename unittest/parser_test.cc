@@ -108,6 +108,7 @@ TEST_F(parser_test, decl) {
       "{\"type\": \"int_literal\", \"val\": \"1\"}}, {\"type\": "
       "\"var_decl_part\", \"name\": \"k\", \"init\": {\"type\": "
       "\"int_literal\", \"val\": \"2\"}}]}]}");
+  PARSER_ERROR("var");
 }
 TEST_F(parser_test, binary_ops) {
   ASSERT_PARSED_MATCHES_JSON(
