@@ -117,3 +117,19 @@ TEST_F(parser_test, call) {
                              "\"val\": \"1\"}, \"rhs\": {\"type\": "
                              "\"int_literal\", \"val\": \"2\"}}]}}]}");
 }
+
+TEST_F(parser_test, computed_member_access) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "a[1]", "{\"type\": \"module\", \"stmts\": [{\"type\": "
+              "\"computed_member_access\", \"base\": {\"type\": "
+              "\"identifier_expr\", \"str\": \"a\"}, \"member\": {\"type\": "
+              "\"int_literal\", \"val\": \"1\"}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "a[1+4/2]", "{\"type\": \"module\", \"stmts\": [{\"type\": "
+                  "\"computed_member_access\", \"base\": {\"type\": "
+                  "\"identifier_expr\", \"str\": \"a\"}, \"member\": "
+                  "{\"type\": \"add\", \"lhs\": {\"type\": \"int_literal\", "
+                  "\"val\": \"1\"}, \"rhs\": {\"type\": \"divide\", \"lhs\": "
+                  "{\"type\": \"int_literal\", \"val\": \"4\"}, \"rhs\": "
+                  "{\"type\": \"int_literal\", \"val\": \"2\"}}}}]}");
+}

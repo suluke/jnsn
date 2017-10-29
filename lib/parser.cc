@@ -614,8 +614,18 @@ object_literal_node *parser_base::parse_object_literal() {
 computed_member_access_node *
 parser_base::parse_computed_access(expression_node *base) {
   assert(current_token.type == token_type::BRACKET_OPEN);
-  error = {"Not implemented (computed_access)", current_token.loc};
-  return nullptr;
+  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
+  auto *member = parse_expression();
+  if (error || !member) {
+    assert(error && !member);
+    return nullptr;
+  }
+  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
+  EXPECT(BRACKET_CLOSE, nullptr);
+  auto *access = nodes.make_computed_member_access();
+  access->base = base;
+  access->member = member;
+  return access;
 }
 member_access_node *parser_base::parse_member_access(expression_node *base) {
   assert(current_token.type == token_type::DOT);
