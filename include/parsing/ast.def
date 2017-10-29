@@ -31,10 +31,11 @@
 
 NODE(statement, CHILDREN())
 NODE(module, CHILDREN(MANY(statement, stmts)))
+DERIVED(function_stmt, EXTENDS(statement), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
 DERIVED(expression, EXTENDS(statement), CHILDREN())
 NODE(param_list, CHILDREN(STRINGS(names) MAYBE_STR(rest)))
 DERIVED(block, EXTENDS(statement), CHILDREN(MANY(statement, stmts)))
-DERIVED(function, EXTENDS(expression), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
+DERIVED(function_expr, EXTENDS(expression), CHILDREN(MAYBE_STR(name) ONE(param_list, params) ONE(block, body)))
 DERIVED(var_decl, EXTENDS(expression), CHILDREN(STRING(keyword) STRING(name) MAYBE(expression, init)))
 DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(identifier_expr, EXTENDS(expression), CHILDREN(STRING(str)))

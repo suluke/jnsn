@@ -5,7 +5,7 @@ using namespace parsing;
 
 lexer_base::result parser_base::next_token() { return get_lexer().next(); }
 void parser_base::set_error(std::string msg, source_location loc) {
-  error = { msg, loc };
+  error = {msg, loc};
 }
 
 static std::string to_string(token_type t) {
@@ -27,7 +27,7 @@ static std::string to_string(token_type t) {
     }                                                                          \
     auto read_success = advance();                                             \
     if (!read_success) {                                                       \
-      set_error(MESSAGE, {});                                                   \
+      set_error(MESSAGE, {});                                                  \
     }                                                                          \
     if (error) {                                                               \
       return RETURN_VAL;                                                       \
@@ -48,9 +48,9 @@ static std::string to_string(token_type t) {
       }                                                                        \
     }                                                                          \
     if (!found_expected) {                                                     \
-      set_error("Unexpected token. Expected: " #TYPES ". Was: " +               \
-                   to_string(current_token.type),                              \
-               current_token.loc);                                             \
+      set_error("Unexpected token. Expected: " #TYPES ". Was: " +              \
+                    to_string(current_token.type),                             \
+                current_token.loc);                                            \
       return RETURN_VAL;                                                       \
     }                                                                          \
   } while (false)
@@ -165,8 +165,8 @@ statement_node *parser_base::parse_statement() {
   }
   if (read_success && !is_stmt_end(current_token)) {
     set_error("Unexpected token after statement: " +
-                 to_string(current_token.type),
-             current_token.loc);
+                  to_string(current_token.type),
+              current_token.loc);
   }
   return stmt;
 }
@@ -174,7 +174,9 @@ statement_node *parser_base::parse_statement() {
 statement_node *parser_base::parse_keyword_stmt() {
   assert(current_token.type == token_type::KEYWORD);
   auto kwty = lexer_base::get_keyword_type(current_token);
-  if (kwty == keyword_type::kw_if) {
+  if (kwty == keyword_type::kw_function) {
+    return parse_function_stmt();
+  } else if (kwty == keyword_type::kw_if) {
     return parse_if_stmt();
   } else if (kwty == keyword_type::kw_do) {
     return parse_do_while();
@@ -418,7 +420,7 @@ expression_node *parser_base::parse_atomic_expr() {
       } else {
         break;
       }
-    } while(true);
+    } while (true);
     return expr;
   }
   set_error("Not implemented (atomic expression)", current_token.loc);
@@ -455,7 +457,8 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
   return res;
 }
 
-bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs, bool comma_is_operator) {
+bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
+                                            bool comma_is_operator) {
   auto op = current_token;
   assert(is_binary_operator(op, comma_is_operator));
   ADVANCE_OR_ERROR(
@@ -487,7 +490,7 @@ expression_node *parser_base::parse_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
-    return parse_function();
+    return parse_function_expr();
   } else if (kw_ty == keyword_type::kw_var || kw_ty == keyword_type::kw_const ||
              kw_ty == keyword_type::kw_let) {
     return parse_var_decl();
@@ -527,21 +530,55 @@ string_literal_node *parser_base::parse_string_literal() {
   return nullptr;
 }
 
-function_node *parser_base::parse_function() {
-  EXPECT(KEYWORD, nullptr); // "function"
+function_stmt_node *parser_base::parse_function_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_function);
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
-  auto func = nodes.make_function();
+  auto func = nodes.make_function_stmt();
   EXPECT(IDENTIFIER, nullptr);
   func->name = current_token.text;
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
   auto params = parse_param_list();
-  if (!params) {
+  if (error || !params) {
+    assert(error && !params);
     return nullptr;
   }
   func->params = params;
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  EXPECT(BRACE_OPEN, nullptr);
   auto body = parse_block();
-  if (!body) {
+  if (error || !body) {
+    assert(error && !body);
+    return nullptr;
+  }
+  func->body = body;
+  return func;
+}
+
+function_expr_node *parser_base::parse_function_expr() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_function);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  auto func = nodes.make_function_expr();
+  if (current_token.type == token_type::IDENTIFIER) {
+    func->name = current_token.text;
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  }
+  EXPECT(PAREN_OPEN, nullptr);
+  auto params = parse_param_list();
+  if (error || !params) {
+    assert(error && !params);
+    return nullptr;
+  }
+  func->params = params;
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  EXPECT(BRACE_OPEN, nullptr);
+  auto body = parse_block();
+  if (error || !body) {
+    assert(error && !body);
     return nullptr;
   }
   func->body = body;
@@ -549,7 +586,7 @@ function_node *parser_base::parse_function() {
 }
 
 param_list_node *parser_base::parse_param_list() {
-  EXPECT(PAREN_OPEN, nullptr);
+  assert(current_token.type == token_type::PAREN_OPEN);
   auto node = nodes.make_param_list();
   do {
     ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);

@@ -90,12 +90,20 @@ TEST_F(parser_test, binary_ops) {
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(
       "function test(arg1, arg2) { return arg1 + arg2; }",
-      "{\"type\": \"module\", \"stmts\": [{\"type\": \"function\", \"name\": "
+      "{\"type\": \"module\", \"stmts\": [{\"type\": \"function_stmt\", "
+      "\"name\": "
       "\"test\", \"params\": {\"type\": \"param_list\", \"names\": [\"arg1\", "
       "\"arg2\"], \"rest\": null}, \"body\": {\"type\": \"block\", \"stmts\": "
       "[{\"type\": \"return_stmt\", \"value\": {\"type\": \"add\", \"lhs\": "
       "{\"type\": \"identifier_expr\", \"str\": \"arg1\"}, \"rhs\": {\"type\": "
       "\"identifier_expr\", \"str\": \"arg2\"}}}]}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "(function() {})",
+      "{\"type\": \"module\", \"stmts\": [{\"type\": "
+      "\"function_expr\", \"name\": null, \"params\": {\"type\": "
+      "\"param_list\", \"names\": [], \"rest\": null}, \"body\": "
+      "{\"type\": \"block\", \"stmts\": []}}]}");
+  PARSER_ERROR("function() {}");
 }
 TEST_F(parser_test, member_access) {
   ASSERT_PARSED_MATCHES_JSON(

@@ -35,6 +35,7 @@ private:
   statement_node *parse_statement();
   statement_node *parse_block_or_obj();
   statement_node *parse_keyword_stmt();
+  function_stmt_node *parse_function_stmt();
 
   if_stmt_node *parse_if_stmt();
   do_while_node *parse_do_while();
@@ -50,7 +51,7 @@ private:
   expression_node *parse_keyword_expr();
   string_literal_node *parse_string_literal();
   number_literal_node *parse_number_literal();
-  function_node *parse_function();
+  function_expr_node *parse_function_expr();
   param_list_node *parse_param_list();
   block_node *parse_block();
   var_decl_node *parse_var_decl();
