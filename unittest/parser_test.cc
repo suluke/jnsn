@@ -99,25 +99,25 @@ TEST_F(parser_test, prefix_ops) {
                       "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "+i", MOD_WRAP("{\"type\": \"prefix_plus\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                     "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "-i", MOD_WRAP("{\"type\": \"prefix_minus\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                     "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "~i", MOD_WRAP("{\"type\": \"binverse_expr\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                     "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "!i", MOD_WRAP("{\"type\": \"not_expr\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                     "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "typeof i", MOD_WRAP("{\"type\": \"typeof_expr\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                           "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "void i", MOD_WRAP("{\"type\": \"void_expr\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                         "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "delete i", MOD_WRAP("{\"type\": \"delete_expr\", \"value\": {\"type\": "
-                      "\"identifier_expr\", \"str\": \"i\"}}"));
+                           "\"identifier_expr\", \"str\": \"i\"}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "+i++", MOD_WRAP("{\"type\": \"prefix_plus\", \"value\": {\"type\": "
                        "\"postfix_increment\", \"value\": {\"type\": "
@@ -178,6 +178,15 @@ TEST_F(parser_test, binary_ops) {
       "\"int_literal\", \"val\": \"2\"}}}, {\"type\": \"add\", \"lhs\": "
       "{\"type\": \"int_literal\", \"val\": \"6\"}, \"rhs\": {\"type\": "
       "\"int_literal\", \"val\": \"7\"}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "a instanceof A",
+      MOD_WRAP("{\"type\": \"instanceof_expr\", \"lhs\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"a\"}, \"rhs\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"A\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "a in A", MOD_WRAP("{\"type\": \"in_expr\", \"lhs\": {\"type\": "
+                         "\"identifier_expr\", \"str\": \"a\"}, \"rhs\": "
+                         "{\"type\": \"identifier_expr\", \"str\": \"A\"}}"));
 }
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(

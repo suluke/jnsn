@@ -247,6 +247,13 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
     return true;                                                               \
   }
 #include "parsing/operators.def"
+  if (op.type == token_type::KEYWORD) {
+    auto kwty = lexer_base::get_keyword_type(op);
+#define INFIX_OP_KW(TYPE, X, Y)                                                \
+  if (kwty == keyword_type::kw_##TYPE)                                         \
+    return true;
+#include "parsing/operators.def"
+  }
   return false;
 }
 
@@ -365,6 +372,13 @@ static int get_precedence(token op) {
   case token_type::TYPE:                                                       \
     return PRECEDENCE;
 #include "parsing/operators.def"
+  case token_type::KEYWORD: {
+    auto kwty = lexer_base::get_keyword_type(op);
+#define INFIX_OP_KW(TYPE, PRECEDENCE, ASSOCIATIVITY)                           \
+  if (kwty == keyword_type::kw_##TYPE)                                         \
+    return PRECEDENCE;
+#include "parsing/operators.def"
+  }
   default:
     return -1; // FIXME more explicit error handling
   }
@@ -376,6 +390,13 @@ static associativity get_associativity(token op) {
   if (op.type == token_type::TYPE)                                             \
     return associativity::ASSOCIATIVITY;
 #include "parsing/operators.def"
+  if (op.type == token_type::KEYWORD) {
+    auto kwty = lexer_base::get_keyword_type(op);
+#define INFIX_OP_KW(TYPE, PRECEDENCE, ASSOCIATIVITY)                           \
+  if (kwty == keyword_type::kw_##TYPE)                                         \
+    return associativity::ASSOCIATIVITY;
+#include "parsing/operators.def"
+  }
   assert(false); // FIXME unreachable macro
 }
 
@@ -666,6 +687,13 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
     res = nodes.make_or_assign();
   if (op.type == token_type::CARET_EQ)
     res = nodes.make_xor_assign();
+  if (op.type == token_type::KEYWORD) {
+    auto kwty = lexer_base::get_keyword_type(op);
+    if (kwty == keyword_type::kw_instanceof)
+      res = nodes.make_instanceof_expr();
+    if (kwty == keyword_type::kw_in)
+      res = nodes.make_in_expr();
+  }
   assert(res && "make_binary_expr not implemented for operator");
   res->lhs = lhs;
   res->rhs = rhs;

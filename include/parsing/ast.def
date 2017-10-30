@@ -78,6 +78,8 @@ DERIVED(subtract, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(multiply, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(divide, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(comma_operator, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(in_expr, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(instanceof_expr, EXTENDS(bin_op_expr), CHILDREN())
 
 DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_expr)))
 DERIVED(do_while, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
