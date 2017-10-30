@@ -168,6 +168,7 @@ static bool is_follow_expression(token t) {
   case token_type::LT:
   case token_type::GT_EQ:
   case token_type::LT_EQ:
+  case token_type::LSHIFT:
   case token_type::RSHIFT:
   case token_type::LOG_RSHIFT:
   case token_type::AMPERSAND:
@@ -651,6 +652,7 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
                                           ast_node_store &nodes) {
   assert(is_binary_operator(op));
   bin_op_expr_node *res = nullptr;
+  // arithmetic
   if (op.type == token_type::PLUS)
     res = nodes.make_add();
   if (op.type == token_type::MINUS)
@@ -659,8 +661,45 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
     res = nodes.make_multiply();
   if (op.type == token_type::SLASH)
     res = nodes.make_divide();
-  if (op.type == token_type::COMMA)
-    res = nodes.make_comma_operator();
+  if (op.type == token_type::POW)
+    res = nodes.make_pow_expr();
+  if (op.type == token_type::PERCENT)
+    res = nodes.make_modulo_expr();
+  // comparison
+  if (op.type == token_type::LT)
+    res = nodes.make_less_expr();
+  if (op.type == token_type::LT_EQ)
+    res = nodes.make_less_eq_expr();
+  if (op.type == token_type::GT)
+    res = nodes.make_greater_expr();
+  if (op.type == token_type::GT_EQ)
+    res = nodes.make_greater_eq_expr();
+  if (op.type == token_type::EQEQ)
+    res = nodes.make_equals_expr();
+  if (op.type == token_type::EQEQEQ)
+    res = nodes.make_strong_equals_expr();
+  if (op.type == token_type::NEQ)
+    res = nodes.make_not_equals_expr();
+  if (op.type == token_type::NEQEQ)
+    res = nodes.make_strong_not_equals_expr();
+  if (op.type == token_type::LOG_AND)
+    res = nodes.make_log_and_expr();
+  if (op.type == token_type::LOG_OR)
+    res = nodes.make_log_or_expr();
+  // bitwise
+  if (op.type == token_type::LSHIFT)
+    res = nodes.make_lshift_expr();
+  if (op.type == token_type::RSHIFT)
+    res = nodes.make_rshift_expr();
+  if (op.type == token_type::LOG_RSHIFT)
+    res = nodes.make_log_rshift_expr();
+  if (op.type == token_type::AMPERSAND)
+    res = nodes.make_bitwise_and_expr();
+  if (op.type == token_type::VERT_BAR)
+    res = nodes.make_bitwise_or_expr();
+  if (op.type == token_type::CARET)
+    res = nodes.make_bitwise_xor_expr();
+  // assignments
   if (op.type == token_type::EQ)
     res = nodes.make_assign();
   if (op.type == token_type::PLUS_EQ)
@@ -687,6 +726,10 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
     res = nodes.make_or_assign();
   if (op.type == token_type::CARET_EQ)
     res = nodes.make_xor_assign();
+  // other
+  if (op.type == token_type::COMMA)
+    res = nodes.make_comma_operator();
+  // keyword operators
   if (op.type == token_type::KEYWORD) {
     auto kwty = lexer_base::get_keyword_type(op);
     if (kwty == keyword_type::kw_instanceof)

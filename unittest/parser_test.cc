@@ -28,6 +28,13 @@ using ast_root = parser_base::ast_root;
     ASSERT_EQ(str.str(), JSON "\n");                                           \
   } while (false)
 
+#define PARSER_SUCCESS(INPUT)                                                  \
+  do {                                                                         \
+    str.str("");                                                               \
+    parser.lexer.set_text(INPUT);                                              \
+    auto res = parser.parse();                                                 \
+    ASSERT_TRUE(holds_alternative<ast_root>(res));                             \
+  } while (false)
 #define PARSER_ERROR(INPUT)                                                    \
   do {                                                                         \
     str.str("");                                                               \
@@ -187,6 +194,33 @@ TEST_F(parser_test, binary_ops) {
       "a in A", MOD_WRAP("{\"type\": \"in_expr\", \"lhs\": {\"type\": "
                          "\"identifier_expr\", \"str\": \"a\"}, \"rhs\": "
                          "{\"type\": \"identifier_expr\", \"str\": \"A\"}}"));
+  PARSER_SUCCESS("1=1");
+  PARSER_SUCCESS("1==1");
+  PARSER_SUCCESS("1===1");
+  PARSER_SUCCESS("1!=1");
+  PARSER_SUCCESS("1!==1");
+  PARSER_SUCCESS("1<<1");
+  PARSER_SUCCESS("1>>1");
+  PARSER_SUCCESS("1>>>1");
+  PARSER_SUCCESS("1**1");
+  PARSER_SUCCESS("1%1");
+  PARSER_SUCCESS("1<1");
+  PARSER_SUCCESS("1<=1");
+  PARSER_SUCCESS("1>1");
+  PARSER_SUCCESS("1>=1");
+  PARSER_SUCCESS("1&1");
+  PARSER_SUCCESS("1&&1");
+  PARSER_SUCCESS("1|1");
+  PARSER_SUCCESS("1^1");
+  PARSER_SUCCESS("1+=1");
+  PARSER_SUCCESS("1-=1");
+  PARSER_SUCCESS("1*=1");
+  PARSER_SUCCESS("1/=1");
+  PARSER_SUCCESS("1%=1");
+  PARSER_SUCCESS("1|=1");
+  PARSER_SUCCESS("1&=1");
+  PARSER_SUCCESS("1^=1");
+  PARSER_SUCCESS("1,1");
 }
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(
