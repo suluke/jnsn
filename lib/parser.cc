@@ -145,6 +145,111 @@ static bool is_stmt_end(token t) {
   return false;
 }
 
+static bool is_follow_expression(token t) {
+  switch (t.type) {
+  case token_type::SEMICOLON:
+  case token_type::DOT:
+  case token_type::COMMA:
+  case token_type::PAREN_CLOSE:
+  case token_type::BRACKET_CLOSE:
+  case token_type::BRACE_CLOSE:
+  case token_type::PLUS:
+  case token_type::MINUS:
+  case token_type::ASTERISK:
+  case token_type::POW:
+  case token_type::SLASH:
+  case token_type::PERCENT:
+  case token_type::EQ:
+  case token_type::EQEQ:
+  case token_type::EQEQEQ:
+  case token_type::NEQ:
+  case token_type::NEQEQ:
+  case token_type::GT:
+  case token_type::LT:
+  case token_type::GT_EQ:
+  case token_type::LT_EQ:
+  case token_type::RSHIFT:
+  case token_type::LOG_RSHIFT:
+  case token_type::AMPERSAND:
+  case token_type::VERT_BAR:
+  case token_type::CARET:
+  case token_type::QMARK:
+  case token_type::COLON:
+  case token_type::LOG_AND:
+  case token_type::LOG_OR:
+  case token_type::PLUS_EQ:
+  case token_type::MINUS_EQ:
+  case token_type::MOD_EQ:
+  case token_type::MUL_EQ:
+  case token_type::DIV_EQ:
+  case token_type::POW_EQ:
+  case token_type::LSH_EQ:
+  case token_type::RSH_EQ:
+  case token_type::LOG_RSH_EQ:
+  case token_type::AND_EQ:
+  case token_type::OR_EQ:
+  case token_type::CARET_EQ:
+  case token_type::TEMPLATE_MIDDLE:
+  case token_type::TEMPLATE_END:
+    return true;
+  case token_type::KEYWORD: {
+    switch (lexer_base::get_keyword_type(t)) {
+    case keyword_type::kw_typeof:
+    case keyword_type::kw_instanceof:
+    case keyword_type::kw_in:
+      return true;
+    default:
+      return false;
+    }
+  }
+  default:
+    return false;
+  }
+}
+
+static bool is_expression_end(token t, bool comma_is_operator) {
+  switch (t.type) {
+  case token_type::SEMICOLON:
+  case token_type::PAREN_CLOSE:
+  case token_type::BRACE_CLOSE:
+  case token_type::BRACKET_CLOSE:
+  case token_type::TEMPLATE_MIDDLE:
+  case token_type::TEMPLATE_END:
+    return true;
+  case token_type::COMMA:
+    return !comma_is_operator;
+  default:
+    return false;
+  }
+}
+
+static bool is_unary_prefix_op(token op) {
+#define PREFIX_OP(TYPE, PRECEDENCE)                                            \
+  if (op.type == token_type::TYPE)                                             \
+    return true;
+#include "parsing/operators.def"
+  if (op.type == token_type::KEYWORD) {
+    auto kwty = lexer_base::get_keyword_type(op);
+#define PREFIX_OP_KW(TYPE, PRECEDENCE)                                         \
+  if (kwty == keyword_type::kw_##TYPE)                                         \
+    return true;
+#include "parsing/operators.def"
+  }
+  return false;
+}
+
+static bool is_binary_operator(token op, bool comma_is_operator = true) {
+  if (op.type == token_type::COMMA) {
+    return comma_is_operator;
+  }
+#define INFIX_OP(TYPE, X, Y)                                                   \
+  if (op.type == token_type::TYPE) {                                           \
+    return true;                                                               \
+  }
+#include "parsing/operators.def"
+  return false;
+}
+
 statement_node *parser_base::parse_statement() {
   statement_node *stmt = nullptr;
   if (current_token.type == token_type::SEMICOLON) {
@@ -208,7 +313,9 @@ statement_node *parser_base::parse_keyword_stmt() {
 }
 
 expression_node *parser_base::parse_keyword_expr() {
-  // TODO
+  if (is_unary_prefix_op(current_token)) {
+    return parse_unary_or_atomic_expr();
+  }
   return parse_atomic_keyword_expr();
 }
 
@@ -252,83 +359,6 @@ try_stmt_node *parser_base::parse_try_stmt() {
   return nullptr;
 }
 
-static bool is_follow_expression(token t) {
-  switch (t.type) {
-  case token_type::SEMICOLON:
-  case token_type::DOT:
-  case token_type::COMMA:
-  case token_type::PAREN_CLOSE:
-  case token_type::BRACKET_CLOSE:
-  case token_type::BRACE_CLOSE:
-  case token_type::PLUS:
-  case token_type::MINUS:
-  case token_type::ASTERISK:
-  case token_type::POW:
-  case token_type::SLASH:
-  case token_type::PERCENT:
-  case token_type::EQ:
-  case token_type::EQEQ:
-  case token_type::EQEQEQ:
-  case token_type::NEQ:
-  case token_type::NEQEQ:
-  case token_type::GT:
-  case token_type::LT:
-  case token_type::GT_EQ:
-  case token_type::LT_EQ:
-  case token_type::RSHIFT:
-  case token_type::LOG_RSHIFT:
-  case token_type::AMPERSAND:
-  case token_type::VERT_BAR:
-  case token_type::CARET:
-  case token_type::QMARK:
-  case token_type::COLON:
-  case token_type::LOG_AND:
-  case token_type::LOG_OR:
-  case token_type::PLUS_EQ:
-  case token_type::MINUS_EQ:
-  case token_type::MOD_EQ:
-  case token_type::MUL_EQ:
-  case token_type::DIV_EQ:
-  case token_type::POW_EQ:
-  case token_type::LSH_EQ:
-  case token_type::RSH_EQ:
-  case token_type::LOG_RSH_EQ:
-  case token_type::AND_EQ:
-  case token_type::OR_EQ:
-  case token_type::CARET_EQ:
-  case token_type::TEMPLATE_MIDDLE:
-  case token_type::TEMPLATE_END:
-    return true;
-  case token_type::KEYWORD: {
-    switch (lexer_base::get_keyword_type(t)) {
-    case keyword_type::kw_typeof:
-    case keyword_type::kw_instanceof:
-    case keyword_type::kw_in:
-      return true;
-    default:
-      return false;
-    }
-  }
-  default:
-    return false;
-  }
-}
-static bool is_expression_end(token t, bool comma_is_operator) {
-  switch (t.type) {
-  case token_type::SEMICOLON:
-  case token_type::PAREN_CLOSE:
-  case token_type::BRACE_CLOSE:
-  case token_type::BRACKET_CLOSE:
-  case token_type::TEMPLATE_MIDDLE:
-  case token_type::TEMPLATE_END:
-    return true;
-  case token_type::COMMA:
-    return !comma_is_operator;
-  default:
-    return false;
-  }
-}
-
 static int get_precedence(token op) {
   switch (op.type) {
 #define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
@@ -338,18 +368,6 @@ static int get_precedence(token op) {
   default:
     return -1; // FIXME more explicit error handling
   }
-}
-
-static bool is_binary_operator(token op, bool comma_is_operator = true) {
-  if (op.type == token_type::COMMA) {
-    return comma_is_operator;
-  }
-#define INFIX_OP(TYPE, X, Y)                                                   \
-  if (op.type == token_type::TYPE) {                                           \
-    return true;                                                               \
-  }
-#include "parsing/operators.def"
-  return false;
 }
 
 enum class associativity { LEFT_TO_RIGHT, RIGHT_TO_LEFT };
@@ -392,9 +410,53 @@ expression_node *parser_base::parse_expression(bool comma_is_operator) {
   return nullptr;
 }
 
+static unary_expr_node *make_unary_prefix_op(token op, expression_node *value,
+                                             ast_node_store &nodes) {
+  assert(is_unary_prefix_op(op));
+  unary_expr_node *expr = nullptr;
+  if (op.type == token_type::INCR) {
+    expr = nodes.make_prefix_increment();
+  }
+  if (op.type == token_type::DECR) {
+    expr = nodes.make_prefix_decrement();
+  } else if (op.type == token_type::PLUS) {
+    expr = nodes.make_prefix_plus();
+  } else if (op.type == token_type::MINUS) {
+    expr = nodes.make_prefix_minus();
+  } else if (op.type == token_type::EXMARK) {
+    expr = nodes.make_not_expr();
+  } else if (op.type == token_type::TILDE) {
+    expr = nodes.make_binverse_expr();
+  } else if (op.type == token_type::KEYWORD) {
+    auto kwty = lexer_base::get_keyword_type(op);
+    if (kwty == keyword_type::kw_typeof) {
+      expr = nodes.make_typeof_expr();
+    } else if (kwty == keyword_type::kw_void) {
+      expr = nodes.make_void_expr();
+    } else if (kwty == keyword_type::kw_delete) {
+      expr = nodes.make_delete_expr();
+    }
+  }
+  assert(expr && "Unary prefix operator not implemented");
+  expr->value = value;
+  return expr;
+}
+
 /// Parses everything with operator precedence >= 16
 expression_node *parser_base::parse_unary_or_atomic_expr() {
-  auto *expr = parse_atomic_expr();
+  expression_node *expr;
+  if (is_unary_prefix_op(current_token)) {
+    auto op = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after unary prefix operator", nullptr);
+    expr = parse_atomic_expr();
+    if (error || !expr) {
+      assert(error && !expr);
+      return nullptr;
+    }
+    expr = make_unary_prefix_op(op, expr, nodes);
+  } else {
+    expr = parse_atomic_expr();
+  }
   if (error || !expr) {
     assert(error && !expr);
   }
@@ -421,8 +483,12 @@ expression_node *parser_base::parse_atomic_expr() {
   } else if (current_token.type == token_type::PAREN_OPEN) {
     expr = parse_parens_expr();
   }
-  if (error || !expr) {
-    assert(error && !expr);
+  if (!expr) {
+    if (!error) {
+      set_error("Unexpected token: " + to_string(current_token.type) +
+                    ". Expected atomix expression",
+                current_token.loc);
+    }
     return nullptr;
   }
   /// parse everything up to operator precedence >= 18

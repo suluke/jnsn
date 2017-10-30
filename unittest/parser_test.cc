@@ -87,6 +87,44 @@ TEST_F(parser_test, postfix_ops) {
   ASSERT_PARSED_MATCHES_JSON(
       "i--", MOD_WRAP("{\"type\": \"postfix_decrement\", \"value\": {\"type\": "
                       "\"identifier_expr\", \"str\": \"i\"}}"));
+  PARSER_ERROR("i----");
+  PARSER_ERROR("i++++");
+}
+TEST_F(parser_test, prefix_ops) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "++i", MOD_WRAP("{\"type\": \"prefix_increment\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "--i", MOD_WRAP("{\"type\": \"prefix_decrement\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "+i", MOD_WRAP("{\"type\": \"prefix_plus\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "-i", MOD_WRAP("{\"type\": \"prefix_minus\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "~i", MOD_WRAP("{\"type\": \"binverse_expr\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "!i", MOD_WRAP("{\"type\": \"not_expr\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "typeof i", MOD_WRAP("{\"type\": \"typeof_expr\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "void i", MOD_WRAP("{\"type\": \"void_expr\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "delete i", MOD_WRAP("{\"type\": \"delete_expr\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "+i++", MOD_WRAP("{\"type\": \"prefix_plus\", \"value\": {\"type\": "
+                       "\"postfix_increment\", \"value\": {\"type\": "
+                       "\"identifier_expr\", \"str\": \"i\"}}}"));
+
+  PARSER_ERROR("----i");
+  PARSER_ERROR("++++i");
 }
 TEST_F(parser_test, decl) {
   ASSERT_PARSED_MATCHES_JSON("let x;",
