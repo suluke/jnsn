@@ -59,6 +59,12 @@ NODE(argument_list, CHILDREN(MANY(expression, values)))
 DERIVED(call_expr, EXTENDS(expression), CHILDREN(ONE(expression, callee) ONE(argument_list, args)))
 DERIVED(spread_expr, EXTENDS(expression), CHILDREN(ONE(expression, list)))
 
+DERIVED(unary_expr, EXTENDS(expression), CHILDREN(ONE(expression, value)))
+DERIVED(postfix_increment, EXTENDS(unary_expr), CHILDREN())
+DERIVED(postfix_decrement, EXTENDS(unary_expr), CHILDREN())
+DERIVED(prefix_increment, EXTENDS(unary_expr), CHILDREN())
+DERIVED(prefix_decrement, EXTENDS(unary_expr), CHILDREN())
+
 DERIVED(bin_op_expr, EXTENDS(expression), CHILDREN(ONE(expression, lhs) ONE(expression, rhs)))
 DERIVED(add, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(subtract, EXTENDS(bin_op_expr), CHILDREN())

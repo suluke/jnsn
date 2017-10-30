@@ -13,6 +13,8 @@ protected:
 
 using ast_root = parser_base::ast_root;
 
+#define MOD_WRAP(JSON) "{\"type\": \"module\", \"stmts\": [" JSON "]}"
+
 #define ASSERT_PARSED_MATCHES_JSON(INPUT, JSON)                                \
   do {                                                                         \
     str.str("");                                                               \
@@ -77,6 +79,14 @@ TEST_F(parser_test, parenthesis) {
                                         "[{\"type\": \"int_literal\", \"val\": "
                                         "\"1\"}]}");
   PARSER_ERROR("(((1))");
+}
+TEST_F(parser_test, postfix_ops) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "i++", MOD_WRAP("{\"type\": \"postfix_increment\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "i--", MOD_WRAP("{\"type\": \"postfix_decrement\", \"value\": {\"type\": "
+                      "\"identifier_expr\", \"str\": \"i\"}}"));
 }
 TEST_F(parser_test, decl) {
   ASSERT_PARSED_MATCHES_JSON("let x;",

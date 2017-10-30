@@ -207,6 +207,11 @@ statement_node *parser_base::parse_keyword_stmt() {
   }
 }
 
+expression_node *parser_base::parse_keyword_expr() {
+  // TODO
+  return parse_atomic_keyword_expr();
+}
+
 if_stmt_node *parser_base::parse_if_stmt() {
   set_error("Not implemented (parse_if)", current_token.loc);
   return nullptr;
@@ -357,7 +362,7 @@ static associativity get_associativity(token op) {
 }
 
 expression_node *parser_base::parse_expression(bool comma_is_operator) {
-  expression_node *expr = parse_atomic_expr();
+  expression_node *expr = parse_unary_or_atomic_expr();
   if (expr) {
     auto final_token = current_token;
     if (!advance()) {
@@ -387,10 +392,20 @@ expression_node *parser_base::parse_expression(bool comma_is_operator) {
   return nullptr;
 }
 
+/// Parses everything with operator precedence >= 16
+expression_node *parser_base::parse_unary_or_atomic_expr() {
+  auto *expr = parse_atomic_expr();
+  if (error || !expr) {
+    assert(error && !expr);
+  }
+  return expr;
+}
+
+/// parses everything with operator precedence >= 17
 expression_node *parser_base::parse_atomic_expr() {
   expression_node *expr = nullptr;
   if (current_token.type == token_type::KEYWORD) {
-    expr = parse_keyword_expr();
+    expr = parse_atomic_keyword_expr();
   } else if (current_token.type == token_type::IDENTIFIER) {
     auto *id = nodes.make_identifier_expr();
     id->str = current_token.text;
@@ -406,35 +421,47 @@ expression_node *parser_base::parse_atomic_expr() {
   } else if (current_token.type == token_type::PAREN_OPEN) {
     expr = parse_parens_expr();
   }
-  if (error) {
-    assert(!expr);
+  if (error || !expr) {
+    assert(error && !expr);
     return nullptr;
   }
-  if (expr) {
-    do {
-      auto prev_token = current_token;
-      if (advance()) {
-        if (current_token.type == token_type::DOT) {
-          // member access
-          expr = parse_member_access(expr);
-        } else if (current_token.type == token_type::PAREN_OPEN) {
-          // call
-          expr = parse_call(expr);
-        } else if (current_token.type == token_type::BRACKET_OPEN) {
-          // computed member access
-          expr = parse_computed_access(expr);
-        } else {
-          rewind(prev_token);
-          break;
-        }
+  /// parse everything up to operator precedence >= 18
+  do {
+    auto prev_token = current_token;
+    if (advance()) {
+      if (current_token.type == token_type::DOT) {
+        // member access
+        expr = parse_member_access(expr);
+      } else if (current_token.type == token_type::PAREN_OPEN) {
+        // call
+        expr = parse_call(expr);
+      } else if (current_token.type == token_type::BRACKET_OPEN) {
+        // computed member access
+        expr = parse_computed_access(expr);
       } else {
+        rewind(prev_token);
         break;
       }
-    } while (true);
-    return expr;
+    } else {
+      break;
+    }
+  } while (true);
+  /// parse everything up to operator precedence >= 17
+  auto prev_token = current_token;
+  if (advance()) {
+    if (current_token.type == token_type::INCR) {
+      auto *incr = nodes.make_postfix_increment();
+      incr->value = expr;
+      expr = incr;
+    } else if (current_token.type == token_type::DECR) {
+      auto *decr = nodes.make_postfix_decrement();
+      decr->value = expr;
+      expr = decr;
+    } else {
+      rewind(prev_token);
+    }
   }
-  set_error("Not implemented (atomic expression)", current_token.loc);
-  return nullptr;
+  return expr;
 }
 
 expression_node *parser_base::parse_parens_expr() {
@@ -586,7 +613,7 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
   ADVANCE_OR_ERROR(
       "Unexpected EOF. Expected right hand side argument of binary operation",
       nullptr);
-  expression_node *rhs = parse_atomic_expr();
+  expression_node *rhs = parse_unary_or_atomic_expr();
 
   auto prev_token = current_token;
   if (!advance()) {
@@ -613,7 +640,7 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
   return nullptr;
 }
 
-expression_node *parser_base::parse_keyword_expr() {
+expression_node *parser_base::parse_atomic_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
