@@ -188,7 +188,12 @@ struct isa_checker : public const_ast_node_visitor<bool> {
   bool accept(const NAME##_node &) override {                                  \
     return std::is_same_v<NAME##_node, nodety>;                                \
   }
-#define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
+#define EXTENDS(BASE) BASE##_node
+#define DERIVED(NAME, BASE, CHILDREN)                                       \
+  bool accept(const NAME##_node &node) {                                       \
+    return std::is_same_v<NAME##_node, nodety> ||                              \
+           accept(static_cast<const BASE &>(node));                  \
+  }
 #include "parsing/ast.def"
 };
 

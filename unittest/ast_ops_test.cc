@@ -15,6 +15,14 @@ TEST(ast_ops_test, isa) {
 #include "parsing/ast.def"
   {
     auto node = module_node{};
-    ASSERT_FALSE(isa<statement_node>(&node));
+    ASSERT_FALSE(isa<statement_node>(node));
+  }
+  {
+    auto node = function_expr_node{};
+    ASSERT_TRUE(isa<expression_node>(node));
+  }
+  {
+    auto node = statement_node{};
+    ASSERT_FALSE(isa<expression_node>(node));
   }
 }
