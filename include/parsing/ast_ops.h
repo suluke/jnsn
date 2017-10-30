@@ -1,6 +1,6 @@
 #ifndef PARSING_AST_OPS_H
 #define PARSING_AST_OPS_H
-#include "parsing/parser.h"
+#include "parsing/ast.h"
 
 namespace parsing {
 

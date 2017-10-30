@@ -189,10 +189,10 @@ struct isa_checker : public const_ast_node_visitor<bool> {
     return std::is_same_v<NAME##_node, nodety>;                                \
   }
 #define EXTENDS(BASE) BASE##_node
-#define DERIVED(NAME, BASE, CHILDREN)                                       \
+#define DERIVED(NAME, BASE, CHILDREN)                                          \
   bool accept(const NAME##_node &node) {                                       \
     return std::is_same_v<NAME##_node, nodety> ||                              \
-           accept(static_cast<const BASE &>(node));                  \
+           accept(static_cast<const BASE &>(node));                            \
   }
 #include "parsing/ast.def"
 };
