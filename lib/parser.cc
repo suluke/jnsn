@@ -1,5 +1,6 @@
 #include "parsing/ast_ops.h"
 #include "parsing/parser.h"
+#include "parsing/util.h"
 #include <algorithm>
 #include <initializer_list>
 
@@ -17,8 +18,7 @@ static std::string to_string(token_type t) {
     return #NAME;
 #include "parsing/tokens.def"
   }
-  assert(false); // FIXME come up with some "unreachable" macro
-  return "";
+  unreachable("Unknown token_type");
 }
 
 #define ADVANCE_OR_ERROR(MESSAGE, RETURN_VAL)                                  \
@@ -387,6 +387,7 @@ static int get_precedence(token op) {
 
 enum class associativity { LEFT_TO_RIGHT, RIGHT_TO_LEFT };
 static associativity get_associativity(token op) {
+  assert(is_binary_operator(op));
 #define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
   if (op.type == token_type::TYPE)                                             \
     return associativity::ASSOCIATIVITY;
@@ -398,7 +399,7 @@ static associativity get_associativity(token op) {
     return associativity::ASSOCIATIVITY;
 #include "parsing/operators.def"
   }
-  assert(false); // FIXME unreachable macro
+  unreachable("Unknown binary operator");
 }
 
 expression_node *parser_base::parse_expression(bool comma_is_operator) {

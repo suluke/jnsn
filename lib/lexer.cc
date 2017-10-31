@@ -1,4 +1,5 @@
 #include "parsing/lexer.h"
+#include "parsing/util.h"
 #include <algorithm>
 #include <cctype>
 
@@ -834,7 +835,7 @@ keyword_type lexer_base::get_keyword_type(const token &t) {
     return keyword_type::kw_##NAME;                                            \
   }
 #include "parsing/keywords.def"
-  assert(false && "Unknown keyword type");
+  unreachable("Unknown keyword type");
 }
 
 token lexer_base::make_token(token_type ty, const char *text) {
