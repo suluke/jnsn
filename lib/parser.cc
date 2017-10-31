@@ -60,12 +60,17 @@ static std::string to_string(token_type t) {
 #define EXPECT(TYPE, RETURN_VAL)                                               \
   EXPECT_SEVERAL(TYPELIST(token_type::TYPE), RETURN_VAL)
 
+#define ASSERT_PARSE_RESULT(VARNAME)                                           \
+  do {                                                                         \
+    if (error || !VARNAME) {                                                   \
+      assert(error && !VARNAME);                                               \
+      return nullptr;                                                          \
+    }                                                                          \
+  } while (false)
+
 #define SUBPARSE(VARNAME, PARSE_CALL)                                          \
   auto *VARNAME = PARSE_CALL;                                                  \
-  if (error || !VARNAME) {                                                     \
-    assert(error && !VARNAME);                                                 \
-    return nullptr;                                                            \
-  }
+  ASSERT_PARSE_RESULT(VARNAME);
 
 namespace parsing {
 std::ostream &operator<<(std::ostream &stream, const parser_error &err) {
@@ -278,10 +283,7 @@ statement_node *parser_base::parse_statement() {
     // parse expression statement
     stmt = parse_expression(true);
   }
-  if (error || !stmt) {
-    assert(error && !stmt);
-    return nullptr;
-  }
+  ASSERT_PARSE_RESULT(stmt);
   auto read_success = advance();
   if (error) {
     return nullptr;
@@ -450,8 +452,7 @@ static unary_expr_node *make_unary_prefix_op(token op, expression_node *value,
   unary_expr_node *expr = nullptr;
   if (op.type == token_type::INCR) {
     expr = nodes.make_prefix_increment();
-  }
-  if (op.type == token_type::DECR) {
+  } else if (op.type == token_type::DECR) {
     expr = nodes.make_prefix_decrement();
   } else if (op.type == token_type::PLUS) {
     expr = nodes.make_prefix_plus();
@@ -478,22 +479,16 @@ static unary_expr_node *make_unary_prefix_op(token op, expression_node *value,
 
 /// Parses everything with operator precedence >= 16
 expression_node *parser_base::parse_unary_or_atomic_expr() {
-  expression_node *expr;
+  expression_node *expr = nullptr;
   if (is_unary_prefix_op(current_token)) {
     auto op = current_token;
     ADVANCE_OR_ERROR("Unexpected EOF after unary prefix operator", nullptr);
-    expr = parse_atomic_expr();
-    if (error || !expr) {
-      assert(error && !expr);
-      return nullptr;
-    }
-    expr = make_unary_prefix_op(op, expr, nodes);
+    SUBPARSE(value, parse_atomic_expr());
+    expr = make_unary_prefix_op(op, value, nodes);
   } else {
     expr = parse_atomic_expr();
   }
-  if (error || !expr) {
-    assert(error && !expr);
-  }
+  ASSERT_PARSE_RESULT(expr);
   return expr;
 }
 
@@ -582,11 +577,7 @@ expression_node *parser_base::parse_parens_expr() {
         EXPECT(PAREN_CLOSE, nullptr);
         break;
       }
-      auto *expr = parse_expression(false);
-      if (error || !expr) {
-        assert(error && !expr);
-        return nullptr;
-      }
+      SUBPARSE(expr, parse_expression(false));
       if (!reason_no_paramlist && !isa<identifier_expr_node>(expr)) {
         reason_no_paramlist = begin;
       }
@@ -631,10 +622,7 @@ expression_node *parser_base::parse_parens_expr() {
       } else {
         body = parse_expression(false);
       }
-      if (error || !body) {
-        assert(error && !body);
-        return nullptr;
-      }
+      ASSERT_PARSE_RESULT(body);
       auto *func = nodes.make_arrow_function();
       func->params = params;
       func->body = body;
@@ -863,19 +851,11 @@ function_stmt_node *parser_base::parse_function_stmt() {
   func->name = current_token.text;
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   EXPECT(PAREN_OPEN, nullptr);
-  auto params = parse_param_list();
-  if (error || !params) {
-    assert(error && !params);
-    return nullptr;
-  }
+  SUBPARSE(params, parse_param_list());
   func->params = params;
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   EXPECT(BRACE_OPEN, nullptr);
-  auto body = parse_block();
-  if (error || !body) {
-    assert(error && !body);
-    return nullptr;
-  }
+  SUBPARSE(body, parse_block());
   func->body = body;
   return func;
 }
@@ -891,19 +871,11 @@ function_expr_node *parser_base::parse_function_expr() {
     ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   }
   EXPECT(PAREN_OPEN, nullptr);
-  auto params = parse_param_list();
-  if (error || !params) {
-    assert(error && !params);
-    return nullptr;
-  }
+  SUBPARSE(params, parse_param_list());
   func->params = params;
   ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
   EXPECT(BRACE_OPEN, nullptr);
-  auto body = parse_block();
-  if (error || !body) {
-    assert(error && !body);
-    return nullptr;
-  }
+  SUBPARSE(body, parse_block());
   func->body = body;
   return func;
 }
@@ -967,11 +939,7 @@ var_decl_node *parser_base::parse_var_decl() {
         ADVANCE_OR_ERROR(
             "Unexpected EOF in variable initialization. Expected expression",
             nullptr);
-        auto init = parse_expression(false);
-        if (error || !init) {
-          assert(error && !init);
-          return nullptr;
-        }
+        SUBPARSE(init, parse_expression(false));
         part->init = init;
       } else if (current_token.type == token_type::COMMA) {
         ADVANCE_OR_ERROR("Unexpected EOF in variable declaration", nullptr);
@@ -1067,11 +1035,7 @@ computed_member_access_node *
 parser_base::parse_computed_access(expression_node *base) {
   assert(current_token.type == token_type::BRACKET_OPEN);
   ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
-  auto *member = parse_expression(true);
-  if (error || !member) {
-    assert(error && !member);
-    return nullptr;
-  }
+  SUBPARSE(member, parse_expression(true));
   ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
   EXPECT(BRACKET_CLOSE, nullptr);
   auto *access = nodes.make_computed_member_access();
@@ -1100,11 +1064,7 @@ call_expr_node *parser_base::parse_call(expression_node *callee) {
     return call;
   }
   do {
-    auto *arg = parse_expression(false);
-    if (error || !arg) {
-      assert(error && !arg);
-      return nullptr;
-    }
+    SUBPARSE(arg, parse_expression(false));
     args->values.emplace_back(arg);
     ADVANCE_OR_ERROR("Unexpected EOF in argument list", nullptr);
     if (current_token.type == token_type::COMMA) {
