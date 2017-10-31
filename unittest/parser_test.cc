@@ -223,6 +223,10 @@ TEST_F(parser_test, binary_ops) {
   PARSER_SUCCESS("1^=1");
   PARSER_SUCCESS("1,1");
 }
+TEST_F(parser_test, ternary_op) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "a ? b ? c ? 1 : 2 : 3 : 4", MOD_WRAP("{\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"a\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"4\"}, \"mid\": {\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"b\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"3\"}, \"mid\": {\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"c\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"2\"}, \"mid\": {\"type\": \"int_literal\", \"val\": \"1\"}}}}"));
+}
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(
       "function test(arg1, arg2) { return arg1 + arg2; }",

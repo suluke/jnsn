@@ -60,6 +60,13 @@ static std::string to_string(token_type t) {
 #define EXPECT(TYPE, RETURN_VAL)                                               \
   EXPECT_SEVERAL(TYPELIST(token_type::TYPE), RETURN_VAL)
 
+#define SUBPARSE(VARNAME, PARSE_CALL)                                          \
+  auto *VARNAME = PARSE_CALL;                                                  \
+  if (error || !VARNAME) {                                                     \
+    assert(error && !VARNAME);                                                 \
+    return nullptr;                                                            \
+  }
+
 namespace parsing {
 std::ostream &operator<<(std::ostream &stream, const parser_error &err) {
   return stream << err.msg;
@@ -216,6 +223,7 @@ static bool is_expression_end(token t, bool comma_is_operator) {
   case token_type::BRACKET_CLOSE:
   case token_type::TEMPLATE_MIDDLE:
   case token_type::TEMPLATE_END:
+  case token_type::COLON:
     return true;
   case token_type::COMMA:
     return !comma_is_operator;
@@ -754,30 +762,53 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
   ADVANCE_OR_ERROR(
       "Unexpected EOF. Expected right hand side argument of binary operation",
       nullptr);
-  expression_node *rhs = parse_unary_or_atomic_expr();
+  bin_op_expr_node *binop = nullptr;
+  // special case for ternary operator
+  if (op.type == token_type::QMARK) {
+    SUBPARSE(mid, parse_expression(false));
+    ADVANCE_OR_ERROR("Unexpected EOF. Expected colon for ternary operator (?:)",
+                     nullptr);
+    EXPECT(COLON, nullptr);
+    ADVANCE_OR_ERROR(
+        "Unexpected EOF. Expected third argument to ternary operator (?:)",
+        nullptr);
+    SUBPARSE(rhs, parse_expression(false));
+
+    auto *ternary = nodes.make_ternary_operator();
+    ternary->lhs = lhs;
+    ternary->mid = mid;
+    ternary->rhs = rhs;
+    binop = ternary;
+  } else {
+    SUBPARSE(rhs, parse_unary_or_atomic_expr());
+    binop = make_binary_expr(op, lhs, rhs, nodes);
+  }
 
   auto prev_token = current_token;
   if (!advance()) {
-    return make_binary_expr(op, lhs, rhs, nodes);
+    return binop;
   }
   if (is_expression_end(current_token, comma_is_operator)) {
     rewind(prev_token);
-    return make_binary_expr(op, lhs, rhs, nodes);
+    return binop;
   }
+  // Extend rhs if followed by stronger-binding operator
   if (is_binary_operator(current_token, comma_is_operator)) {
     auto current_prec = get_precedence(op);
     auto next_prec = get_precedence(current_token);
     if (next_prec > current_prec) {
-      rhs = parse_bin_op(rhs, comma_is_operator);
+      SUBPARSE(new_rhs, parse_bin_op(binop->rhs, comma_is_operator));
+      binop->rhs = new_rhs;
     }
     if (next_prec == current_prec &&
         get_associativity(op) == associativity::RIGHT_TO_LEFT) {
-      rhs = parse_bin_op(rhs, comma_is_operator);
+      SUBPARSE(new_rhs, parse_bin_op(binop->rhs, comma_is_operator));
+      binop->rhs = new_rhs;
     }
-    return make_binary_expr(op, lhs, rhs, nodes);
+    return binop;
   }
 
-  set_error("Not implemented (binop expression)", current_token.loc);
+  set_error("Unexpected token after binop expression", current_token.loc);
   return nullptr;
 }
 

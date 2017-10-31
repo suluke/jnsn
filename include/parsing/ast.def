@@ -110,6 +110,7 @@ DERIVED(or_assign, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(xor_assign, EXTENDS(bin_op_expr), CHILDREN())
 // other binops
 DERIVED(comma_operator, EXTENDS(bin_op_expr), CHILDREN())
+DERIVED(ternary_operator, EXTENDS(bin_op_expr), CHILDREN(ONE(expression, mid)))
 // keyword binops
 DERIVED(in_expr, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(instanceof_expr, EXTENDS(bin_op_expr), CHILDREN())
