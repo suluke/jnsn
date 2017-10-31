@@ -315,6 +315,9 @@ statement_node *parser_base::parse_keyword_stmt() {
     auto *id = nodes.make_identifier_expr();
     id->str = current_token.text;
     return parse_call(id);
+  } else if (kwty == keyword_type::kw_var || kwty == keyword_type::kw_const ||
+             kwty == keyword_type::kw_let) {
+    return parse_var_decl();
   } else {
     return parse_keyword_expr();
   }
@@ -783,9 +786,6 @@ expression_node *parser_base::parse_atomic_keyword_expr() {
   auto kw_ty = get_lexer().get_keyword_type(current_token);
   if (kw_ty == keyword_type::kw_function) {
     return parse_function_expr();
-  } else if (kw_ty == keyword_type::kw_var || kw_ty == keyword_type::kw_const ||
-             kw_ty == keyword_type::kw_let) {
-    return parse_var_decl();
   } else {
     set_error("Not implemented (keyword)", current_token.loc);
     return nullptr;
