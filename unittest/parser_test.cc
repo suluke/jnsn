@@ -379,3 +379,10 @@ TEST_F(parser_test, if_stmt) {
                "\"val\": \"1\"}, \"else_stmt\": {\"type\": \"int_literal\", "
                "\"val\": \"2\"}}, \"else_stmt\": null}"));
 }
+TEST_F(parser_test, do_while) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "do 1; while (false);",
+      MOD_WRAP("{\"type\": \"do_while\", \"condition\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
+               "\"int_literal\", \"val\": \"1\"}}"));
+}

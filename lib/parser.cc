@@ -395,7 +395,8 @@ if_stmt_node *parser_base::parse_if_stmt() {
   if_stmt->body = body;
   auto last_token = current_token;
   if (advance()) {
-    if (current_token.type == token_type::KEYWORD && lexer_base::get_keyword_type(current_token) == keyword_type::kw_else) {
+    if (current_token.type == token_type::KEYWORD &&
+        lexer_base::get_keyword_type(current_token) == keyword_type::kw_else) {
       ADVANCE_OR_ERROR("Unexpected EOF after else", nullptr);
       SUBPARSE(else_stmt, parse_statement());
       if_stmt->else_stmt = else_stmt;
@@ -406,8 +407,26 @@ if_stmt_node *parser_base::parse_if_stmt() {
   return if_stmt;
 }
 do_while_node *parser_base::parse_do_while() {
-  set_error("Not implemented (parse_do_while)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_do);
+  ADVANCE_OR_ERROR("Unexpected EOF after do", nullptr);
+  SUBPARSE(body, parse_statement());
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected 'while'", nullptr);
+  EXPECT(KEYWORD, nullptr);
+  if (lexer_base::get_keyword_type(current_token) != keyword_type::kw_while) {
+    set_error("Expected while after do", current_token.loc);
+    return nullptr;
+  }
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while(", nullptr);
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while condition", nullptr);
+  EXPECT(PAREN_CLOSE, nullptr);
+  auto *dowhile_stmt = nodes.make_do_while();
+  dowhile_stmt->body = body;
+  dowhile_stmt->condition = condition;
+  return dowhile_stmt;
 }
 while_stmt_node *parser_base::parse_while_stmt() {
   set_error("Not implemented (parse_while)", current_token.loc);
