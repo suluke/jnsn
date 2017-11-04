@@ -386,3 +386,11 @@ TEST_F(parser_test, do_while) {
                "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
                "\"int_literal\", \"val\": \"1\"}}"));
 }
+TEST_F(parser_test, while_stmt) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "while(false) { 1; }",
+      MOD_WRAP("{\"type\": \"while_stmt\", \"condition\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
+               "\"block\", \"stmts\": [{\"type\": \"int_literal\", \"val\": "
+               "\"1\"}]}}"));
+}

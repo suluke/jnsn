@@ -429,8 +429,20 @@ do_while_node *parser_base::parse_do_while() {
   return dowhile_stmt;
 }
 while_stmt_node *parser_base::parse_while_stmt() {
-  set_error("Not implemented (parse_while)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_while);
+  ADVANCE_OR_ERROR("Unexpected EOF after while", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after while(", nullptr);
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after while condition", nullptr);
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected while body", nullptr);
+  SUBPARSE(body, parse_statement());
+  auto *while_stmt = nodes.make_while_stmt();
+  while_stmt->condition = condition;
+  while_stmt->body = body;
+  return while_stmt;
 }
 for_stmt_node *parser_base::parse_for_stmt() {
   set_error("Not implemented (parse_for)", current_token.loc);
