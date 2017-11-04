@@ -412,6 +412,7 @@ if_stmt_node *parser_base::parse_if_stmt() {
   }
   return if_stmt;
 }
+
 do_while_node *parser_base::parse_do_while() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_do);
@@ -434,6 +435,7 @@ do_while_node *parser_base::parse_do_while() {
   dowhile_stmt->condition = condition;
   return dowhile_stmt;
 }
+
 while_stmt_node *parser_base::parse_while_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_while);
@@ -450,6 +452,7 @@ while_stmt_node *parser_base::parse_while_stmt() {
   while_stmt->body = body;
   return while_stmt;
 }
+
 statement_node *parser_base::parse_for_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_for);
@@ -528,25 +531,35 @@ statement_node *parser_base::parse_for_stmt() {
   for_stmt->body = body;
   return for_stmt;
 }
+
 switch_stmt_node *parser_base::parse_switch_stmt() {
   set_error("Not implemented (parse_switch)", current_token.loc);
   return nullptr;
 }
+
 return_stmt_node *parser_base::parse_return_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_return);
   auto *ret = nodes.make_return_stmt();
   if (advance() && !is_stmt_end(current_token)) {
-    auto *expr = parse_expression(true);
+    SUBPARSE(expr, parse_expression(true));
     ret->value = expr;
   }
   return ret;
 }
+
 throw_stmt_node *parser_base::parse_throw_stmt() {
-  set_error("Not implemented (parse_throw)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_throw);
+  ADVANCE_OR_ERROR("Unexpected EOF after throw", nullptr);
+  auto *thro = nodes.make_throw_stmt();
+  SUBPARSE(expr, parse_expression(true));
+  thro->value = expr;
+  return thro;
 }
+
 try_stmt_node *parser_base::parse_try_stmt() {
   set_error("Not implemented (parse_try)", current_token.loc);
   return nullptr;

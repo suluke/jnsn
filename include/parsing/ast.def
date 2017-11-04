@@ -136,7 +136,7 @@ DERIVED(switch_stmt, EXTENDS(statement), CHILDREN(MANY(switch_label, labels)))
 DERIVED(break_stmt, EXTENDS(statement), CHILDREN(MAYBE_STR(label)))
 DERIVED(continue_stmt, EXTENDS(statement), CHILDREN(MAYBE_STR(label)))
 DERIVED(return_stmt, EXTENDS(statement), CHILDREN(MAYBE(expression, value)))
-DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, thrown)))
+DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, value)))
 NODE(catch, CHILDREN(ONE(expression, condition) ONE(block, body)))
 DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, caughts) MAYBE(block, finally)))
 

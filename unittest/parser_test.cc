@@ -431,3 +431,9 @@ TEST_F(parser_test, for_stmts) {
                "\"val\": \"3\"}]}, \"body\": {\"type\": \"int_literal\", "
                "\"val\": \"1\"}}"));
 }
+TEST_F(parser_test, throw_stmt) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "throw {a}", MOD_WRAP("{\"type\": \"throw_stmt\", \"value\": {\"type\": "
+                            "\"object_literal\", \"entries\": [{\"type\": "
+                            "\"identifier_expr\", \"str\": \"a\"}]}}"));
+}
