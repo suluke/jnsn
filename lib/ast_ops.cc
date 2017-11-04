@@ -10,27 +10,20 @@ using namespace std;
 
 /// Returns the number of children that were printed for the top-level
 /// node
-struct parent_json_printer : public const_ast_node_visitor<unsigned> {
+struct parent_json_printer : public const_ast_node_visitor<void> {
   std::ostream &stream;
   const_ast_node_visitor<void> &printer;
   parent_json_printer(std::ostream &stream,
                       const_ast_node_visitor<void> &printer)
       : stream(stream), printer(printer) {}
-#define SEP_MEMBERS                                                            \
-  if (child_idx++) {                                                           \
-    stream << ", ";                                                            \
-  }
 
 #define CHILDREN(...)                                                          \
   do {                                                                         \
-    int child_idx = children_printed;                                          \
     __VA_ARGS__                                                                \
-    children_printed = child_idx;                                              \
   } while (false)
 
 #define MANY(OF, NAME)                                                         \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                                \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -40,13 +33,11 @@ struct parent_json_printer : public const_ast_node_visitor<unsigned> {
   stream << "]";
 
 #define ONE(OF, NAME)                                                          \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                                 \
   node.NAME->accept(printer);
 
 #define MAYBE(OF, NAME)                                                        \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                                 \
   if (node.NAME) {                                                             \
     (*node.NAME)->accept(printer);                                             \
   } else {                                                                     \
@@ -54,8 +45,7 @@ struct parent_json_printer : public const_ast_node_visitor<unsigned> {
   }
 
 #define MAYBE_STR(NAME)                                                        \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME << "\": ";                                              \
+  stream << ", \"" #NAME << "\": ";                                              \
   if (node.NAME) {                                                             \
     stream << "\"" << *node.NAME << "\"";                                      \
   } else {                                                                     \
@@ -63,8 +53,7 @@ struct parent_json_printer : public const_ast_node_visitor<unsigned> {
   }
 
 #define STRINGS(NAME)                                                          \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                                \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -74,21 +63,17 @@ struct parent_json_printer : public const_ast_node_visitor<unsigned> {
   stream << "]";
 
 #define STRING(NAME)                                                           \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": \"" << node.NAME << "\"";
+  stream << ", \"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  unsigned accept(const NAME##_node &node) override {                          \
-    unsigned children_printed = 0;                                             \
+  void accept(const NAME##_node &node) override {                          \
     CHILD_NODES;                                                               \
-    return children_printed;                                                   \
   }
 #define EXTENDS(NAME) NAME##_node
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
-  unsigned accept(const NAME##_node &node) override {                          \
-    unsigned children_printed = accept(static_cast<const ANCESTOR &>(node));   \
+  void accept(const NAME##_node &node) override {                          \
+    accept(static_cast<const ANCESTOR &>(node));   \
     CHILD_NODES;                                                               \
-    return children_printed;                                                   \
   }
 
 #include "parsing/ast.def"
@@ -102,13 +87,11 @@ struct json_printer : public const_ast_node_visitor<void> {
 
 #define CHILDREN(...)                                                          \
   do {                                                                         \
-    [[maybe_unused]] unsigned child_idx = parent_children;                     \
     __VA_ARGS__                                                                \
   } while (false)
 
 #define MANY(OF, NAME)                                                         \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                                \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -118,13 +101,11 @@ struct json_printer : public const_ast_node_visitor<void> {
   stream << "]";
 
 #define ONE(OF, NAME)                                                          \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                                 \
   node.NAME->accept(*this);
 
 #define MAYBE(OF, NAME)                                                        \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                                 \
   if (node.NAME) {                                                             \
     visit(**node.NAME);                                                        \
   } else {                                                                     \
@@ -132,8 +113,7 @@ struct json_printer : public const_ast_node_visitor<void> {
   }
 
 #define MAYBE_STR(NAME)                                                        \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME << "\": ";                                              \
+  stream << ", \"" #NAME << "\": ";                                              \
   if (node.NAME) {                                                             \
     stream << "\"" << *node.NAME << "\"";                                      \
   } else {                                                                     \
@@ -141,8 +121,7 @@ struct json_printer : public const_ast_node_visitor<void> {
   }
 
 #define STRINGS(NAME)                                                          \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                                \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -152,15 +131,13 @@ struct json_printer : public const_ast_node_visitor<void> {
   stream << "]";
 
 #define STRING(NAME)                                                           \
-  SEP_MEMBERS;                                                                 \
-  stream << "\"" #NAME "\": \"" << node.NAME << "\"";
+  stream << ", \"" #NAME "\": \"" << node.NAME << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
   void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
-           << "\"" #NAME "\", ";                                               \
-    unsigned parent_children = 0;                                              \
+           << "\"" #NAME << "\"";                                               \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
@@ -169,9 +146,8 @@ struct json_printer : public const_ast_node_visitor<void> {
   void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
-           << "\"" #NAME "\", ";                                               \
-    auto parent_children =                                                     \
-        parent_printer.accept(static_cast<const ANCESTOR &>(node));            \
+           << "\"" #NAME << "\"";                                               \
+    parent_printer.accept(static_cast<const ANCESTOR &>(node));            \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
