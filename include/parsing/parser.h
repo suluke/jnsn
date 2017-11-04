@@ -40,7 +40,7 @@ private:
   if_stmt_node *parse_if_stmt();
   do_while_node *parse_do_while();
   while_stmt_node *parse_while_stmt();
-  for_stmt_node *parse_for_stmt();
+  statement_node *parse_for_stmt();
   switch_stmt_node *parse_switch_stmt();
   return_stmt_node *parse_return_stmt();
   throw_stmt_node *parse_throw_stmt();

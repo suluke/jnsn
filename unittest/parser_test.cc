@@ -394,3 +394,40 @@ TEST_F(parser_test, while_stmt) {
                "\"block\", \"stmts\": [{\"type\": \"int_literal\", \"val\": "
                "\"1\"}]}}"));
 }
+TEST_F(parser_test, for_stmts) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "for (var i = 0; i < 10; ++i) 1;",
+      MOD_WRAP("{\"type\": \"for_stmt\", \"pre_stmt\": {\"type\": "
+               "\"var_decl\", \"keyword\": \"var\", \"parts\": [{\"type\": "
+               "\"var_decl_part\", \"name\": \"i\", \"init\": {\"type\": "
+               "\"int_literal\", \"val\": \"0\"}}]}, \"condition\": {\"type\": "
+               "\"less_expr\", \"lhs\": {\"type\": \"identifier_expr\", "
+               "\"str\": \"i\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": "
+               "\"10\"}}, \"latch_stmt\": {\"type\": \"prefix_increment\", "
+               "\"value\": {\"type\": \"identifier_expr\", \"str\": \"i\"}}, "
+               "\"body\": {\"type\": \"int_literal\", \"val\": \"1\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "for (let i in [1, 2, 3]) 1;",
+      MOD_WRAP("{\"type\": \"for_in\", \"keyword\": \"let\", \"var\": \"i\", "
+               "\"iterable\": {\"type\": \"array_literal\", \"values\": "
+               "[{\"type\": \"int_literal\", \"val\": \"1\"}, {\"type\": "
+               "\"int_literal\", \"val\": \"2\"}, {\"type\": \"int_literal\", "
+               "\"val\": \"3\"}]}, \"body\": {\"type\": \"int_literal\", "
+               "\"val\": \"1\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "for (let i of [1, 2, 3]) 1;",
+      MOD_WRAP("{\"type\": \"for_of\", \"keyword\": \"let\", \"var\": \"i\", "
+               "\"iterable\": {\"type\": \"array_literal\", \"values\": "
+               "[{\"type\": \"int_literal\", \"val\": \"1\"}, {\"type\": "
+               "\"int_literal\", \"val\": \"2\"}, {\"type\": \"int_literal\", "
+               "\"val\": \"3\"}]}, \"body\": {\"type\": \"int_literal\", "
+               "\"val\": \"1\"}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "for (i of [1, 2, 3]) 1;",
+      MOD_WRAP("{\"type\": \"for_of\", \"keyword\": null, \"var\": \"i\", "
+               "\"iterable\": {\"type\": \"array_literal\", \"values\": "
+               "[{\"type\": \"int_literal\", \"val\": \"1\"}, {\"type\": "
+               "\"int_literal\", \"val\": \"2\"}, {\"type\": \"int_literal\", "
+               "\"val\": \"3\"}]}, \"body\": {\"type\": \"int_literal\", "
+               "\"val\": \"1\"}}"));
+}

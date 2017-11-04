@@ -126,7 +126,9 @@ DERIVED(var_decl, EXTENDS(statement), CHILDREN(STRING(keyword) MANY(var_decl_par
 DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_stmt)))
 DERIVED(do_while, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
 DERIVED(while_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
-DERIVED(for_stmt, EXTENDS(statement), CHILDREN()) // FIXME incomplete definition
+DERIVED(for_stmt, EXTENDS(statement), CHILDREN(ONE(statement, pre_stmt) ONE(expression, condition) ONE(statement, latch_stmt) ONE(statement, body)))
+DERIVED(for_in, EXTENDS(statement), CHILDREN(MAYBE_STR(keyword) STRING(var) ONE(expression, iterable) ONE(statement, body)))
+DERIVED(for_of, EXTENDS(statement), CHILDREN(MAYBE_STR(keyword) STRING(var) ONE(expression, iterable) ONE(statement, body)))
 NODE(stmt_list, CHILDREN(MANY(statement, stmts)))
 NODE(switch_label, CHILDREN(ONE(stmt_list, body)))
 DERIVED(case, EXTENDS(switch_label), CHILDREN(ONE(expression, condition)))

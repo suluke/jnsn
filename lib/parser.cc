@@ -150,6 +150,7 @@ static number_literal_node *make_number_expression(token t,
 static bool is_stmt_end(token t) {
   switch (t.type) {
   case token_type::SEMICOLON:
+  case token_type::PAREN_CLOSE: // e.g. for (stmt; expr; stmt) <--
   case token_type::BRACE_CLOSE:
     return true;
   default:
@@ -288,6 +289,12 @@ static bool is_possible_object_key(token t) {
   unreachable("Token type not caught by switch default");
 }
 
+static bool is_var_decl_kw(token t) {
+  auto kwty = lexer_base::get_keyword_type(t);
+  return kwty == keyword_type::kw_var || kwty == keyword_type::kw_const ||
+         kwty == keyword_type::kw_let;
+}
+
 statement_node *parser_base::parse_statement() {
   statement_node *stmt = nullptr;
   if (current_token.type == token_type::SEMICOLON) {
@@ -364,8 +371,7 @@ statement_node *parser_base::parse_keyword_stmt() {
     auto *id = nodes.make_identifier_expr();
     id->str = current_token.text;
     return parse_call(id);
-  } else if (kwty == keyword_type::kw_var || kwty == keyword_type::kw_const ||
-             kwty == keyword_type::kw_let) {
+  } else if (is_var_decl_kw(current_token)) {
     return parse_var_decl();
   } else {
     return parse_keyword_expr();
@@ -444,9 +450,83 @@ while_stmt_node *parser_base::parse_while_stmt() {
   while_stmt->body = body;
   return while_stmt;
 }
-for_stmt_node *parser_base::parse_for_stmt() {
-  set_error("Not implemented (parse_for)", current_token.loc);
-  return nullptr;
+statement_node *parser_base::parse_for_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_for);
+  ADVANCE_OR_ERROR("Unexpected EOF after for", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for (", nullptr);
+
+  std::optional<token> keyword;
+  if (current_token.type == token_type::KEYWORD &&
+      is_var_decl_kw(current_token)) {
+    keyword = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after variable decl keyword", nullptr);
+    EXPECT(IDENTIFIER, nullptr);
+  }
+  // Try for (... in ... ) or for (... of ...)
+  if (current_token.type == token_type::IDENTIFIER) {
+    auto var = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF in for head", nullptr);
+    if (current_token.type == token_type::IDENTIFIER &&
+        current_token.text == "of") {
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of", nullptr);
+      SUBPARSE(iterable, parse_expression(true));
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>", nullptr);
+      EXPECT(PAREN_CLOSE, nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>)", nullptr);
+      SUBPARSE(body, parse_statement());
+      auto *forof = nodes.make_for_of();
+      if (keyword) {
+        forof->keyword = keyword->text;
+      }
+      forof->var = var.text;
+      forof->iterable = iterable;
+      forof->body = body;
+      return forof;
+    } else if (current_token.type == token_type::KEYWORD &&
+               lexer_base::get_keyword_type(current_token) ==
+                   keyword_type::kw_in) {
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in", nullptr);
+      SUBPARSE(iterable, parse_expression(true));
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>", nullptr);
+      EXPECT(PAREN_CLOSE, nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>)", nullptr);
+      SUBPARSE(body, parse_statement());
+      auto *forin = nodes.make_for_in();
+      if (keyword) {
+        forin->keyword = keyword->text;
+      }
+      forin->var = var.text;
+      forin->iterable = iterable;
+      forin->body = body;
+      return forin;
+    } else {
+      rewind(var);
+    }
+  }
+  if (keyword) {
+    rewind(*keyword);
+  }
+  // parse c-style for (...;...;...)
+  SUBPARSE(pre_stmt, parse_statement());
+  EXPECT(SEMICOLON, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop pre-statement", nullptr);
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition", nullptr);
+  EXPECT(SEMICOLON, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition;", nullptr);
+  SUBPARSE(latch_stmt, parse_statement());
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop latch stmt", nullptr);
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for(...)", nullptr);
+  SUBPARSE(body, parse_statement());
+  auto *for_stmt = nodes.make_for_stmt();
+  for_stmt->pre_stmt = pre_stmt;
+  for_stmt->condition = condition;
+  for_stmt->latch_stmt = latch_stmt;
+  for_stmt->body = body;
+  return for_stmt;
 }
 switch_stmt_node *parser_base::parse_switch_stmt() {
   set_error("Not implemented (parse_switch)", current_token.loc);
@@ -607,7 +687,7 @@ expression_node *parser_base::parse_atomic_expr() {
   if (!expr) {
     if (!error) {
       set_error("Unexpected token: " + to_string(current_token.type) +
-                    ". Expected atomix expression",
+                    ". Expected atomic expression",
                 current_token.loc);
     }
     return nullptr;
@@ -1011,10 +1091,7 @@ block_node *parser_base::parse_block() {
 }
 
 var_decl_node *parser_base::parse_var_decl() {
-  assert(current_token.type == token_type::KEYWORD);
-  auto kw_ty = lexer_base::get_keyword_type(current_token);
-  assert(kw_ty == keyword_type::kw_var || kw_ty == keyword_type::kw_const ||
-         kw_ty == keyword_type::kw_let);
+  assert(is_var_decl_kw(current_token));
   auto decl = nodes.make_var_decl();
   decl->keyword = current_token.text;
   ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration",
