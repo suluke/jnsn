@@ -46,7 +46,6 @@ using ast_root = parser_base::ast_root;
 TEST_F(parser_test, empty) {
   ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}");
 }
-TEST_F(parser_test, block) {}
 TEST_F(parser_test, number_literals) {
   ASSERT_PARSED_MATCHES_JSON("1", "{\"type\": \"module\", \"stmts\": "
                                   "[{\"type\": \"int_literal\", \"val\": "
@@ -66,20 +65,45 @@ TEST_F(parser_test, array_literals) {
       "\"identifier_expr\", \"str\": \"b\"}}]}}]}]}");
 }
 TEST_F(parser_test, object_literals) {
-  ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
-                                   "[{\"type\": \"object_literal\", "
-                                   "\"entries\": [], \"value_entries\": []}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "let x = {a, b, ...c, i: 5}",
       "{\"type\": \"module\", \"stmts\": [{\"type\": \"var_decl\", "
       "\"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", "
       "\"name\": \"x\", \"init\": {\"type\": "
-      "\"object_literal\", \"entries\": [{\"type\": \"object_entry\", \"key\": "
-      "\"i\", \"val\": {\"type\": \"int_literal\", \"val\": \"5\"}}], "
-      "\"value_entries\": [{\"type\": \"identifier_expr\", \"str\": \"a\"}, "
-      "{\"type\": \"identifier_expr\", \"str\": \"b\"}, {\"type\": "
-      "\"spread_expr\", \"list\": {\"type\": \"identifier_expr\", \"str\": "
-      "\"c\"}}]}}]}]}");
+      "\"object_literal\", \"entries\": [{\"type\": \"identifier_expr\", "
+      "\"str\": \"a\"}, {\"type\": \"identifier_expr\", \"str\": \"b\"}, "
+      "{\"type\": \"spread_expr\", \"list\": {\"type\": \"identifier_expr\", "
+      "\"str\": \"c\"}}, {\"type\": \"object_entry\", \"key\": "
+      "\"i\", \"val\": {\"type\": \"int_literal\", \"val\": \"5\"}}]}}]}]}");
+  // Trailing comma
+  ASSERT_PARSED_MATCHES_JSON(
+      "let x = {a,}",
+      MOD_WRAP("{\"type\": \"var_decl\", \"keyword\": \"let\", \"parts\": "
+               "[{\"type\": \"var_decl_part\", \"name\": \"x\", \"init\": "
+               "{\"type\": \"object_literal\", \"entries\": [{\"type\": "
+               "\"identifier_expr\", \"str\": \"a\"}]}}]}"));
+}
+TEST_F(parser_test, block_vs_objs) {
+  ASSERT_PARSED_MATCHES_JSON("{}", "{\"type\": \"module\", \"stmts\": "
+                                   "[{\"type\": \"block\", "
+                                   "\"stmts\": []}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "{ label: window, console }",
+      MOD_WRAP("{\"type\": \"block\", \"stmts\": [{\"type\": \"label_stmt\", "
+               "\"label\": \"label\", \"stmt\": {\"type\": \"comma_operator\", "
+               "\"lhs\": {\"type\": \"identifier_expr\", \"str\": \"window\"}, "
+               "\"rhs\": {\"type\": \"identifier_expr\", \"str\": "
+               "\"console\"}}}]}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "{ label: window, console.log(1) }",
+      MOD_WRAP("{\"type\": \"block\", \"stmts\": [{\"type\": \"label_stmt\", "
+               "\"label\": \"label\", \"stmt\": {\"type\": \"comma_operator\", "
+               "\"lhs\": {\"type\": \"identifier_expr\", \"str\": \"window\"}, "
+               "\"rhs\": {\"type\": \"call_expr\", \"callee\": {\"type\": "
+               "\"member_access\", \"base\": {\"type\": \"identifier_expr\", "
+               "\"str\": \"console\"}, \"member\": \"log\"}, \"args\": "
+               "{\"type\": \"argument_list\", \"values\": [{\"type\": "
+               "\"int_literal\", \"val\": \"1\"}]}}}}]}"));
 }
 TEST_F(parser_test, parenthesis) {
   ASSERT_PARSED_MATCHES_JSON("(((1)))", "{\"type\": \"module\", \"stmts\": "
@@ -225,7 +249,16 @@ TEST_F(parser_test, binary_ops) {
 }
 TEST_F(parser_test, ternary_op) {
   ASSERT_PARSED_MATCHES_JSON(
-      "a ? b ? c ? 1 : 2 : 3 : 4", MOD_WRAP("{\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"a\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"4\"}, \"mid\": {\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"b\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"3\"}, \"mid\": {\"type\": \"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", \"str\": \"c\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": \"2\"}, \"mid\": {\"type\": \"int_literal\", \"val\": \"1\"}}}}"));
+      "a ? b ? c ? 1 : 2 : 3 : 4",
+      MOD_WRAP("{\"type\": \"ternary_operator\", \"lhs\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"a\"}, \"rhs\": {\"type\": "
+               "\"int_literal\", \"val\": \"4\"}, \"mid\": {\"type\": "
+               "\"ternary_operator\", \"lhs\": {\"type\": \"identifier_expr\", "
+               "\"str\": \"b\"}, \"rhs\": {\"type\": \"int_literal\", \"val\": "
+               "\"3\"}, \"mid\": {\"type\": \"ternary_operator\", \"lhs\": "
+               "{\"type\": \"identifier_expr\", \"str\": \"c\"}, \"rhs\": "
+               "{\"type\": \"int_literal\", \"val\": \"2\"}, \"mid\": "
+               "{\"type\": \"int_literal\", \"val\": \"1\"}}}}"));
 }
 TEST_F(parser_test, function) {
   ASSERT_PARSED_MATCHES_JSON(
@@ -316,7 +349,7 @@ TEST_F(parser_test, arrow_function) {
       "{\"type\": \"module\", \"stmts\": [{\"type\": "
       "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
       "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
-      "\"object_literal\", \"entries\": [], \"value_entries\": []}}]}");
+      "\"object_literal\", \"entries\": []}}]}");
 }
 
 TEST_F(parser_test, assignment) {

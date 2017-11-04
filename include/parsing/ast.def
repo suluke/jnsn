@@ -46,8 +46,11 @@ DERIVED(oct_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(bin_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(string_literal, EXTENDS(expression), CHILDREN(STRING(val)))
 DERIVED(array_literal, EXTENDS(expression), CHILDREN(MANY(expression, values)))
-NODE(object_entry, CHILDREN(STRING(key) ONE(expression, val)))
-DERIVED(object_literal, EXTENDS(expression), CHILDREN(MANY(object_entry, entries) MANY(expression, value_entries)))
+// I don't like object entries being expressions, but that's the just the
+// superset of spread_expr and identifier_expr, which are all legal in
+// object literals
+DERIVED(object_entry, EXTENDS(expression), CHILDREN(STRING(key) ONE(expression, val)))
+DERIVED(object_literal, EXTENDS(expression), CHILDREN(MANY(expression, entries)))
 
 DERIVED(member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) STRING(member)))
 DERIVED(computed_member_access, EXTENDS(expression), CHILDREN(ONE(expression, base) ONE(expression, member)))
@@ -116,6 +119,7 @@ DERIVED(in_expr, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(instanceof_expr, EXTENDS(bin_op_expr), CHILDREN())
 
 DERIVED(function_stmt, EXTENDS(statement), CHILDREN(STRING(name) ONE(param_list, params) ONE(block, body)))
+DERIVED(label_stmt, EXTENDS(statement), CHILDREN(STRING(label) ONE(statement, stmt)))
 NODE(var_decl_part, CHILDREN(STRING(name) MAYBE(expression, init)))
 DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(var_decl, EXTENDS(statement), CHILDREN(STRING(keyword) MANY(var_decl_part, parts)))

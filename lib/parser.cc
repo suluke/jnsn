@@ -150,6 +150,7 @@ static number_literal_node *make_number_expression(token t,
 static bool is_stmt_end(token t) {
   switch (t.type) {
   case token_type::SEMICOLON:
+  case token_type::BRACE_CLOSE:
     return true;
   default:
     return false;
@@ -271,6 +272,21 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
   return false;
 }
 
+static bool is_possible_object_key(token t) {
+  switch (t.type) {
+  case token_type::INT_LITERAL:
+  case token_type::FLOAT_LITERAL:
+  case token_type::HEX_LITERAL:
+  case token_type::OCT_LITERAL:
+  case token_type::BIN_LITERAL:
+  case token_type::STRING_LITERAL:
+  case token_type::IDENTIFIER:
+    return true;
+  default: return false;
+  }
+  unreachable("Token type not caught by switch default");
+}
+
 statement_node *parser_base::parse_statement() {
   statement_node *stmt = nullptr;
   if (current_token.type == token_type::SEMICOLON) {
@@ -279,19 +295,41 @@ statement_node *parser_base::parse_statement() {
     return parse_block_or_obj(false);
   } else if (current_token.type == token_type::KEYWORD) {
     stmt = parse_keyword_stmt();
+  } else if (current_token.type == token_type::IDENTIFIER) {
+    auto ident = current_token;
+    if (!advance()) {
+      stmt = parse_expression(true);
+    } else if (current_token.type == token_type::COLON) {
+      auto *label = nodes.make_label_stmt();
+      label->label = ident.text;
+      ADVANCE_OR_ERROR("Unexpected EOF after label", nullptr);
+      SUBPARSE(follow, parse_statement());
+      label->stmt = follow;
+      stmt = label;
+    } else {
+      rewind(ident);
+      stmt = parse_expression(true);
+    }
   } else {
     // parse expression statement
     stmt = parse_expression(true);
   }
   ASSERT_PARSE_RESULT(stmt);
+  auto final_token = current_token;
   auto read_success = advance();
   if (error) {
     return nullptr;
   }
-  if (read_success && !is_stmt_end(current_token)) {
-    set_error("Unexpected token after statement: " +
-                  to_string(current_token.type),
-              current_token.loc);
+  if (read_success) {
+    if (!is_stmt_end(current_token)) {
+      set_error("Unexpected token after statement: " +
+                    to_string(current_token.type),
+                current_token.loc);
+      return nullptr;
+    }
+    if (current_token.type != token_type::SEMICOLON) {
+      rewind(final_token);
+    }
   }
   return stmt;
 }
@@ -992,42 +1030,42 @@ object_literal_node *parser_base::parse_object_literal() {
   assert(current_token.type == token_type::BRACE_OPEN);
   ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
   auto *object = nodes.make_object_literal();
-  if (current_token.type != token_type::BRACE_CLOSE) {
-    do {
-      if (current_token.type == token_type::DOTDOTDOT) {
-        ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
-        auto *expr = parse_expression(false);
-        auto *spread = nodes.make_spread_expr();
-        spread->list = expr;
-        object->value_entries.emplace_back(spread);
-      } else {
-        EXPECT(IDENTIFIER, nullptr);
-        auto id = current_token;
-        ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
-        if (current_token.type != token_type::COLON) {
-          auto *expr = nodes.make_identifier_expr();
-          expr->str = id.text;
-          object->value_entries.emplace_back(expr);
-          rewind(id);
-        } else {
-          ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
-          auto *entry = nodes.make_object_entry();
-          entry->key = id.text;
-          auto *val = parse_expression(false);
-          entry->val = val;
-          object->entries.emplace_back(entry);
-        }
-      }
+  do {
+    if (current_token.type == token_type::BRACE_CLOSE) {
+      break;
+    } else if (current_token.type == token_type::DOTDOTDOT) {
+      ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
+      auto *expr = parse_expression(false);
+      auto *spread = nodes.make_spread_expr();
+      spread->list = expr;
+      object->entries.emplace_back(spread);
+    } else if (is_possible_object_key(current_token)) {
+      auto id = current_token;
       ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
-      EXPECT_SEVERAL(TYPELIST(token_type::BRACE_CLOSE, token_type::COMMA),
-                     nullptr);
-      if (current_token.type == token_type::BRACE_CLOSE) {
-        break;
-      } else if (current_token.type == token_type::COMMA) {
+      if (current_token.type != token_type::COLON) {
+        auto *expr = nodes.make_identifier_expr();
+        expr->str = id.text;
+        object->entries.emplace_back(expr);
+        rewind(id);
+      } else {
         ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+        auto *entry = nodes.make_object_entry();
+        entry->key = id.text;
+        auto *val = parse_expression(false);
+        entry->val = val;
+        object->entries.emplace_back(entry);
       }
-    } while (true);
-  }
+    } else {
+      set_error("Unexpected token", current_token.loc);
+      return nullptr;
+    }
+    ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+    EXPECT_SEVERAL(TYPELIST(token_type::BRACE_CLOSE, token_type::COMMA),
+                   nullptr);
+    if (current_token.type == token_type::COMMA) {
+      ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+    }
+  } while (true);
   EXPECT(BRACE_CLOSE, nullptr);
   return object;
 }
@@ -1081,25 +1119,11 @@ call_expr_node *parser_base::parse_call(expression_node *callee) {
 }
 statement_node *parser_base::parse_block_or_obj(bool prefer_block_over_obj) {
   EXPECT(BRACE_OPEN, nullptr);
-  auto brace = current_token;
-  ADVANCE_OR_ERROR("Unexpected EOF", nullptr);
-  if (current_token.type == token_type::STRING_LITERAL ||
-      current_token.type == token_type::IDENTIFIER) {
-    auto key = current_token;
-    ADVANCE_OR_ERROR("Unexpected EOF", nullptr);
-    auto maybe_colon = current_token;
-    rewind(key);
-    rewind(brace);
-    if (maybe_colon.type == token_type::COLON) {
-      return parse_object_literal();
-    }
-  } else if (current_token.type == token_type::BRACE_CLOSE) {
-    if (prefer_block_over_obj) {
-      return nodes.make_block();
-    }
-    return nodes.make_object_literal();
-  } else {
-    rewind(brace);
-  }
+  // Originally, I thought it should be possible to discern object literals
+  // from blocks - since browsers' developer consoles can do it, too.
+  // But it turns out this is pretty much impossible using standard parsing
+  // techniques - and also not part of the spec.
+  // See stackoverflow.com/questions/8089737/javascript-object-parsing
+  // for more
   return parse_block();
 }
