@@ -346,10 +346,16 @@ TEST_F(parser_test, arrow_function) {
       "[{\"type\": \"identifier_expr\", \"str\": \"test\"}]}}}]}");
   ASSERT_PARSED_MATCHES_JSON(
       "() => ({})",
-      "{\"type\": \"module\", \"stmts\": [{\"type\": "
-      "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
-      "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
-      "\"object_literal\", \"entries\": []}}]}");
+      MOD_WRAP("{\"type\": "
+               "\"arrow_function\", \"params\": {\"type\": \"param_list\", "
+               "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+               "\"object_literal\", \"entries\": []}}"));
+  // rest
+  ASSERT_PARSED_MATCHES_JSON(
+      "(...args) => null",
+      MOD_WRAP("{\"type\": \"arrow_function\", \"params\": {\"type\": "
+               "\"param_list\", \"names\": [], \"rest\": \"args\"}, \"body\": "
+               "{\"type\": \"identifier_expr\", \"str\": \"null\"}}"));
 }
 
 TEST_F(parser_test, assignment) {
@@ -362,4 +368,14 @@ TEST_F(parser_test, assignment) {
       "\"identifier_expr\", \"str\": \"c\"}, \"rhs\": {\"type\": \"multiply\", "
       "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
       "{\"type\": \"int_literal\", \"val\": \"3\"}}}}}]}");
+}
+TEST_F(parser_test, if_stmt) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "if (false) if (false) 1; else 2;",
+      MOD_WRAP("{\"type\": \"if_stmt\", \"condition\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
+               "\"if_stmt\", \"condition\": {\"type\": \"identifier_expr\", "
+               "\"str\": \"false\"}, \"body\": {\"type\": \"int_literal\", "
+               "\"val\": \"1\"}, \"else_stmt\": {\"type\": \"int_literal\", "
+               "\"val\": \"2\"}}, \"else_stmt\": null}"));
 }

@@ -123,7 +123,7 @@ DERIVED(label_stmt, EXTENDS(statement), CHILDREN(STRING(label) ONE(statement, st
 NODE(var_decl_part, CHILDREN(STRING(name) MAYBE(expression, init)))
 DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(var_decl, EXTENDS(statement), CHILDREN(STRING(keyword) MANY(var_decl_part, parts)))
-DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_expr)))
+DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_stmt)))
 DERIVED(do_while, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
 DERIVED(while_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
 DERIVED(for_stmt, EXTENDS(statement), CHILDREN()) // FIXME incomplete definition

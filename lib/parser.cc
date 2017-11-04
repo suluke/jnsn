@@ -282,7 +282,8 @@ static bool is_possible_object_key(token t) {
   case token_type::STRING_LITERAL:
   case token_type::IDENTIFIER:
     return true;
-  default: return false;
+  default:
+    return false;
   }
   unreachable("Token type not caught by switch default");
 }
@@ -379,8 +380,30 @@ expression_node *parser_base::parse_keyword_expr() {
 }
 
 if_stmt_node *parser_base::parse_if_stmt() {
-  set_error("Not implemented (parse_if)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_if);
+  ADVANCE_OR_ERROR("Unexpected EOF after if", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after if (", nullptr);
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after if condition", nullptr);
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected if body", nullptr);
+  SUBPARSE(body, parse_statement());
+  auto *if_stmt = nodes.make_if_stmt();
+  if_stmt->condition = condition;
+  if_stmt->body = body;
+  auto last_token = current_token;
+  if (advance()) {
+    if (current_token.type == token_type::KEYWORD && lexer_base::get_keyword_type(current_token) == keyword_type::kw_else) {
+      ADVANCE_OR_ERROR("Unexpected EOF after else", nullptr);
+      SUBPARSE(else_stmt, parse_statement());
+      if_stmt->else_stmt = else_stmt;
+    } else {
+      rewind(last_token);
+    }
+  }
+  return if_stmt;
 }
 do_while_node *parser_base::parse_do_while() {
   set_error("Not implemented (parse_do_while)", current_token.loc);
