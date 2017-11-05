@@ -101,6 +101,7 @@ TEST_F(parser_test, array_literals) {
       "\"identifier_expr\", \"str\": \"a\"}}, {\"type\": \"int_literal\", "
       "\"val\": \"3\"}, {\"type\": \"spread_expr\", \"list\": {\"type\": "
       "\"identifier_expr\", \"str\": \"b\"}}]}}]}]}");
+  XFAIL("[a,b,]");
 }
 TEST_F(parser_test, object_literals) {
   ASSERT_PARSED_MATCHES_JSON(
@@ -315,6 +316,7 @@ TEST_F(parser_test, function) {
       "\"param_list\", \"names\": [], \"rest\": null}, \"body\": "
       "{\"type\": \"block\", \"stmts\": []}}]}");
   PARSER_ERROR("function() {}");
+  XFAIL("function test(arg1, arg2 = 5) {}");
 }
 TEST_F(parser_test, member_access) {
   ASSERT_PARSED_MATCHES_JSON(
