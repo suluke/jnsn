@@ -1,0 +1,19 @@
+set(SOURCES
+  lexer.cc
+  ast.cc
+  ast_ops.cc
+  parser.cc
+  ../include/parsing/ast.def
+  ../include/parsing/ast.h
+  ../include/parsing/ast_ops.h
+  ../include/parsing/ast_visitor.h
+  ../include/parsing/keywords.def
+  ../include/parsing/lexer.h
+  ../include/parsing/operators.def
+  ../include/parsing/parser.h
+  ../include/parsing/source_location.h
+  ../include/parsing/tokens.def
+  ../include/parsing/util.h)
+
+add_library(parsing
+  ${SOURCES})
