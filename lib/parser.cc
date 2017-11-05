@@ -367,6 +367,12 @@ statement_node *parser_base::parse_keyword_stmt() {
     return parse_throw_stmt();
   } else if (kwty == keyword_type::kw_try) {
     return parse_try_stmt();
+  } else if (kwty == keyword_type::kw_import) {
+    return parse_import();
+  } else if (kwty == keyword_type::kw_export) {
+    return parse_export();
+  } else if (kwty == keyword_type::kw_class) {
+    return parse_class_stmt();
   } else if (kwty == keyword_type::kw_super) {
     auto *id = nodes.make_identifier_expr();
     id->str = current_token.text;
@@ -1094,7 +1100,9 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
 expression_node *parser_base::parse_atomic_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kwty = get_lexer().get_keyword_type(current_token);
-  if (kwty == keyword_type::kw_function) {
+  if (kwty == keyword_type::kw_class) {
+    return parse_class_expr();
+  } else if (kwty == keyword_type::kw_function) {
     return parse_function_expr();
   } else if (kwty == keyword_type::kw_new) {
     return parse_new_keyword();
@@ -1127,6 +1135,29 @@ expression_node *parser_base::parse_new_keyword() {
     new_expr->constructor = constructor;
   }
   return new_expr;
+}
+
+statement_node *parser_base::parse_import() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_import);
+  set_error("Not implemented (parse_import)", current_token.loc);
+  return nullptr;
+}
+
+statement_node *parser_base::parse_export() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_export);
+  set_error("Not implemented (parse_export)", current_token.loc);
+  return nullptr;
+}
+
+class_stmt_node *parser_base::parse_class_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_class);
+  set_error("Not implemented (parse_class_stmt)", current_token.loc);
+  return nullptr;
 }
 
 number_literal_node *parser_base::parse_number_literal() {
@@ -1169,10 +1200,14 @@ template_literal_node *parser_base::parse_template_literal() {
     ADVANCE_OR_ERROR("Unexpected EOF in template literal", nullptr);
     SUBPARSE(expr, parse_expression(true));
     tmplt->exprs.emplace_back(expr);
-    ADVANCE_OR_ERROR("Unexpected EOF after interpolated expression in template literal", nullptr);
-    EXPECT_SEVERAL(TYPELIST(token_type::TEMPLATE_MIDDLE, token_type::TEMPLATE_END), nullptr);
+    ADVANCE_OR_ERROR(
+        "Unexpected EOF after interpolated expression in template literal",
+        nullptr);
+    EXPECT_SEVERAL(
+        TYPELIST(token_type::TEMPLATE_MIDDLE, token_type::TEMPLATE_END),
+        nullptr);
     tmplt->strs.emplace_back(current_token.text);
-  } while(current_token.type == token_type::TEMPLATE_MIDDLE);
+  } while (current_token.type == token_type::TEMPLATE_MIDDLE);
   assert(tmplt->strs.size() == tmplt->exprs.size() + 1);
   return tmplt;
 }
@@ -1214,6 +1249,13 @@ function_expr_node *parser_base::parse_function_expr() {
   SUBPARSE(body, parse_block());
   func->body = body;
   return func;
+}
+
+class_expr_node *parser_base::parse_class_expr() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_class);
+  set_error("Not implemented (parse_class_expr)", current_token.loc);
+  return nullptr;
 }
 
 param_list_node *parser_base::parse_param_list() {

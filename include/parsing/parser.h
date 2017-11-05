@@ -46,6 +46,9 @@ private:
   throw_stmt_node *parse_throw_stmt();
   try_stmt_node *parse_try_stmt();
   expression_node *parse_new_keyword();
+  statement_node *parse_import();
+  statement_node *parse_export();
+  class_stmt_node *parse_class_stmt();
 
   expression_node *parse_expression(bool comma_is_operator);
   expression_node *parse_unary_or_atomic_expr();
@@ -56,6 +59,7 @@ private:
   string_literal_node *parse_string_literal();
   template_literal_node *parse_template_literal();
   number_literal_node *parse_number_literal();
+  class_expr_node *parse_class_expr();
   function_expr_node *parse_function_expr();
   param_list_node *parse_param_list();
   block_node *parse_block();

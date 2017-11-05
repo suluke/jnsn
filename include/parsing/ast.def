@@ -146,6 +146,11 @@ DERIVED(return_stmt, EXTENDS(statement), CHILDREN(MAYBE(expression, value)))
 DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, value)))
 NODE(catch, CHILDREN(STRING(var) ONE(block, body)))
 DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, catch_blocks) MAYBE(block, finally)))
+// FIXME these are not yet correctly modeled
+DERIVED(import_stmt, EXTENDS(statement), CHILDREN())
+DERIVED(export_stmt, EXTENDS(statement), CHILDREN())
+DERIVED(import_wildcard, EXTENDS(statement), CHILDREN())
+DERIVED(export_wildcard, EXTENDS(statement), CHILDREN(STRING(module)))
 
 #undef MAYBE
 #undef MAYBE_STR
