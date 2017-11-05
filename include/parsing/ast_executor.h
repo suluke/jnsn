@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 namespace parsing {
 
@@ -40,9 +41,18 @@ struct string_value : public exec_value_base {
   void print(std::ostream &stream) override { stream << value; }
 };
 
+class exec_value;
+struct array_value : public exec_value_base {
+  // This ain't even UB! https://stackoverflow.com/a/31047542/1468532
+  std::vector<exec_value> elms;
+  array_value();
+  void print(std::ostream &stream) override;
+};
+
 class exec_value : public exec_value_base {
-  using val_t = std::variant<undefined_value, null_value, true_value,
-                             false_value, number_value, string_value>;
+  using val_t =
+      std::variant<undefined_value, null_value, true_value, false_value,
+                   number_value, string_value, array_value>;
   val_t val;
   exec_value_base &upcast_content();
 
@@ -53,6 +63,7 @@ public:
   exec_value(false_value val) : val(val) {}
   exec_value(number_value val) : val(val) {}
   exec_value(string_value val) : val(val) {}
+  exec_value(array_value val) : val(val) {}
 
   exec_value(const exec_value &) = default;
   exec_value(exec_value &&) = default;

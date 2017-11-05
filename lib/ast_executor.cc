@@ -17,6 +17,22 @@ exec_value_base &exec_value::upcast_content() {
 
 void exec_value::print(std::ostream &stream) { upcast_content().print(stream); }
 
+array_value::array_value() = default;
+void array_value::print(std::ostream &stream) {
+  stream << "[";
+  if (!elms.empty()) {
+    auto It = elms.begin();
+    It->print(stream);
+    ++It;
+    while (It != elms.end()) {
+      stream << ", ";
+      It->print(stream);
+      ++It;
+    }
+  }
+  stream << "]";
+}
+
 exec_value exec_vm::lookup(std::string_view identifier) {
   static const std::map<std::string_view, exec_value> builtin_values = {
       {"undefined", undefined_value{}},
@@ -117,8 +133,16 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   result accept(const template_literal_node &) override {
     return exec_error{"Not implemented"};
   }
-  result accept(const array_literal_node &) override {
-    return exec_error{"Not implemented"};
+  result accept(const array_literal_node &node) override {
+    array_value arr;
+    for (auto *val : node.values) {
+      auto res = visit(*val);
+      if (std::holds_alternative<exec_error>(res)) {
+        return res;
+      }
+      arr.elms.emplace_back(std::get<exec_value>(res));
+    }
+    return exec_value(arr);
   }
   result accept(const object_entry_node &) override {
     return exec_error{"Not implemented"};
