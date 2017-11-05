@@ -52,6 +52,10 @@ TEST_F(parser_test, number_literals) {
                                   "\"1\"}]}");
   PARSER_ERROR("1.window");
 }
+TEST_F(parser_test, string_literals) {
+  ASSERT_PARSED_MATCHES_JSON("'use strict'", MOD_WRAP("{\"type\": \"string_literal\", \"val\": \"'use strict'\"}"));
+  ASSERT_PARSED_MATCHES_JSON("let s = \"text\"", MOD_WRAP("{\"type\": \"var_decl\", \"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", \"name\": \"s\", \"init\": {\"type\": \"string_literal\", \"val\": \"\\\"text\\\"\"}}]}"));
+}
 TEST_F(parser_test, array_literals) {
   ASSERT_PARSED_MATCHES_JSON(
       "let arr = [1, ...a, 3, ...b]",

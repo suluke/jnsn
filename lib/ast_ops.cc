@@ -8,6 +8,21 @@
 using namespace parsing;
 using namespace std;
 
+struct json_escape {
+  std::string_view str;
+  json_escape(std::string_view str) : str(str) {}
+};
+static std::ostream &operator<<(std::ostream &stream,
+                                const json_escape escape) {
+  for (auto c : escape.str) {
+    if (c == '"') {
+      stream << '\\';
+    }
+    stream << c;
+  }
+  return stream;
+}
+
 /// Returns the number of children that were printed for the top-level
 /// node
 struct parent_json_printer : public const_ast_node_visitor<void> {
@@ -23,7 +38,7 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
   } while (false)
 
 #define MANY(OF, NAME)                                                         \
-  stream << ", \"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                              \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -33,11 +48,11 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
   stream << "]";
 
 #define ONE(OF, NAME)                                                          \
-  stream << ", \"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                               \
   node.NAME->accept(printer);
 
 #define MAYBE(OF, NAME)                                                        \
-  stream << ", \"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                               \
   if (node.NAME) {                                                             \
     (*node.NAME)->accept(printer);                                             \
   } else {                                                                     \
@@ -45,34 +60,32 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
   }
 
 #define MAYBE_STR(NAME)                                                        \
-  stream << ", \"" #NAME << "\": ";                                              \
+  stream << ", \"" #NAME << "\": ";                                            \
   if (node.NAME) {                                                             \
-    stream << "\"" << *node.NAME << "\"";                                      \
+    stream << "\"" << json_escape{*node.NAME} << "\"";                         \
   } else {                                                                     \
     stream << "null";                                                          \
   }
 
 #define STRINGS(NAME)                                                          \
-  stream << ", \"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                              \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
     }                                                                          \
-    stream << "\"" << node.NAME[i] << "\"";                                    \
+    stream << "\"" << json_escape{node.NAME[i]} << "\"";                       \
   }                                                                            \
   stream << "]";
 
 #define STRING(NAME)                                                           \
-  stream << ", \"" #NAME "\": \"" << node.NAME << "\"";
+  stream << ", \"" #NAME "\": \"" << json_escape{node.NAME} << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  void accept(const NAME##_node &node) override {                          \
-    CHILD_NODES;                                                               \
-  }
+  void accept(const NAME##_node &node) override { CHILD_NODES; }
 #define EXTENDS(NAME) NAME##_node
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
-  void accept(const NAME##_node &node) override {                          \
-    accept(static_cast<const ANCESTOR &>(node));   \
+  void accept(const NAME##_node &node) override {                              \
+    accept(static_cast<const ANCESTOR &>(node));                               \
     CHILD_NODES;                                                               \
   }
 
@@ -91,7 +104,7 @@ struct json_printer : public const_ast_node_visitor<void> {
   } while (false)
 
 #define MANY(OF, NAME)                                                         \
-  stream << ", \"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                              \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
@@ -101,11 +114,11 @@ struct json_printer : public const_ast_node_visitor<void> {
   stream << "]";
 
 #define ONE(OF, NAME)                                                          \
-  stream << ", \"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                               \
   node.NAME->accept(*this);
 
 #define MAYBE(OF, NAME)                                                        \
-  stream << ", \"" #NAME "\": ";                                                 \
+  stream << ", \"" #NAME "\": ";                                               \
   if (node.NAME) {                                                             \
     visit(**node.NAME);                                                        \
   } else {                                                                     \
@@ -113,31 +126,31 @@ struct json_printer : public const_ast_node_visitor<void> {
   }
 
 #define MAYBE_STR(NAME)                                                        \
-  stream << ", \"" #NAME << "\": ";                                              \
+  stream << ", \"" #NAME << "\": ";                                            \
   if (node.NAME) {                                                             \
-    stream << "\"" << *node.NAME << "\"";                                      \
+    stream << "\"" << json_escape{*node.NAME} << "\"";                         \
   } else {                                                                     \
     stream << "null";                                                          \
   }
 
 #define STRINGS(NAME)                                                          \
-  stream << ", \"" #NAME "\": [";                                                \
+  stream << ", \"" #NAME "\": [";                                              \
   for (size_t i = 0; i < node.NAME.size(); ++i) {                              \
     if (i != 0) {                                                              \
       stream << ", ";                                                          \
     }                                                                          \
-    stream << "\"" << node.NAME[i] << "\"";                                    \
+    stream << "\"" << json_escape{node.NAME[i]} << "\"";                       \
   }                                                                            \
   stream << "]";
 
 #define STRING(NAME)                                                           \
-  stream << ", \"" #NAME "\": \"" << node.NAME << "\"";
+  stream << ", \"" #NAME "\": \"" << json_escape{node.NAME} << "\"";
 
 #define NODE(NAME, CHILD_NODES)                                                \
   void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
-           << "\"" #NAME << "\"";                                               \
+           << "\"" #NAME << "\"";                                              \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
@@ -146,8 +159,8 @@ struct json_printer : public const_ast_node_visitor<void> {
   void accept(const NAME##_node &node) override {                              \
     stream << "{";                                                             \
     stream << "\"type\": "                                                     \
-           << "\"" #NAME << "\"";                                               \
-    parent_printer.accept(static_cast<const ANCESTOR &>(node));            \
+           << "\"" #NAME << "\"";                                              \
+    parent_printer.accept(static_cast<const ANCESTOR &>(node));                \
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
