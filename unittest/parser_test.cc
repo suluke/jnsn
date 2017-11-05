@@ -340,6 +340,7 @@ TEST_F(parser_test, call) {
                              "\"add\", \"lhs\": {\"type\": \"int_literal\", "
                              "\"val\": \"1\"}, \"rhs\": {\"type\": "
                              "\"int_literal\", \"val\": \"2\"}}]}}]}");
+  XFAIL("console.log(...[1,2,3])");
 }
 
 TEST_F(parser_test, computed_member_access) {

@@ -3,6 +3,7 @@ set(SOURCES
   ast.cc
   ast_ops.cc
   parser.cc
+  ast_executor.cc
   ../include/parsing/ast.def
   ../include/parsing/ast.h
   ../include/parsing/ast_ops.h
