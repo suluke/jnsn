@@ -22,7 +22,7 @@ set(UNITTEST_RUNS)
 macro(add_unittest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
   target_link_libraries(${test_name} gtest_main gtest)
-  add_custom_target(run_${test_name} DEPENDS ${test_name} COMMAND ${test_name})
+  add_custom_target(run_${test_name} DEPENDS ${test_name} COMMAND ${test_name} --gtest_color=true)
   list(APPEND UNITTEST_RUNS run_${test_name})
 endmacro()
 
