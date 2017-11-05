@@ -71,6 +71,9 @@ TEST_F(parser_test, template_literals) {
                "\"4\"}]}"));
   PARSER_ERROR("let o = {``: 0}");
 }
+TEST_F(parser_test, regex_literals) {
+  ASSERT_PARSED_MATCHES_JSON("/.*/.test('abc')", MOD_WRAP("{\"type\": \"call_expr\", \"callee\": {\"type\": \"member_access\", \"base\": {\"type\": \"regex_literal\", \"val\": \"/.*/\"}, \"member\": \"test\"}, \"args\": {\"type\": \"argument_list\", \"values\": [{\"type\": \"string_literal\", \"val\": \"'abc'\"}]}}"));
+}
 TEST_F(parser_test, array_literals) {
   ASSERT_PARSED_MATCHES_JSON(
       "let arr = [1, ...a, 3, ...b]",

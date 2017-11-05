@@ -792,6 +792,10 @@ expression_node *parser_base::parse_atomic_expr() {
     expr = parse_string_literal();
   } else if (current_token.type == token_type::TEMPLATE_HEAD) {
     expr = parse_template_literal();
+  } else if (current_token.type == token_type::REGEX_LITERAL) {
+    auto *regex = nodes.make_regex_literal();
+    regex->val = current_token.text;
+    expr = regex;
   } else if (current_token.type == token_type::BRACKET_OPEN) {
     expr = parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
