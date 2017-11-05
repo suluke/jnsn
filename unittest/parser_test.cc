@@ -457,3 +457,23 @@ TEST_F(parser_test, new_test) {
                "\"int_literal\", \"val\": \"1\"}, {\"type\": \"int_literal\", "
                "\"val\": \"2\"}]}}"));
 }
+TEST_F(parser_test, try_catch) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "try {} catch(e) {} finally {}",
+      MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
+               "\"stmts\": []}, \"catch_blocks\": [{\"type\": \"catch\", "
+               "\"var\": \"e\", \"body\": {\"type\": \"block\", \"stmts\": "
+               "[]}}], \"finally\": {\"type\": \"block\", \"stmts\": []}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "try {} catch(e) {}",
+      MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
+               "\"stmts\": []}, \"catch_blocks\": [{\"type\": \"catch\", "
+               "\"var\": \"e\", \"body\": {\"type\": \"block\", \"stmts\": "
+               "[]}}], \"finally\": null}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "try {} finally {}",
+      MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
+               "\"stmts\": []}, \"catch_blocks\": [], \"finally\": {\"type\": "
+               "\"block\", \"stmts\": []}}"));
+  PARSER_ERROR("try {}");
+}

@@ -139,8 +139,8 @@ DERIVED(break_stmt, EXTENDS(statement), CHILDREN(MAYBE_STR(label)))
 DERIVED(continue_stmt, EXTENDS(statement), CHILDREN(MAYBE_STR(label)))
 DERIVED(return_stmt, EXTENDS(statement), CHILDREN(MAYBE(expression, value)))
 DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, value)))
-NODE(catch, CHILDREN(ONE(expression, condition) ONE(block, body)))
-DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, caughts) MAYBE(block, finally)))
+NODE(catch, CHILDREN(STRING(var) ONE(block, body)))
+DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, catch_blocks) MAYBE(block, finally)))
 
 #undef MAYBE
 #undef MAYBE_STR

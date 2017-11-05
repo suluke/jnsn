@@ -565,8 +565,42 @@ try_stmt_node *parser_base::parse_try_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_try);
-  set_error("Not implemented (parse_try)", current_token.loc);
-  return nullptr;
+  auto *try_stmt = nodes.make_try_stmt();
+  ADVANCE_OR_ERROR("Unexpected EOF after try", nullptr);
+  EXPECT(BRACE_OPEN, nullptr);
+  SUBPARSE(body, parse_block());
+  try_stmt->body = body;
+  ADVANCE_OR_ERROR("Unexpected EOF after try {}", nullptr);
+  while (current_token.type == token_type::KEYWORD && lexer_base::get_keyword_type(current_token) == keyword_type::kw_catch) {
+    ADVANCE_OR_ERROR("Unexpected EOF after catch", nullptr);
+    EXPECT(PAREN_OPEN, nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(", nullptr);
+    EXPECT(IDENTIFIER, nullptr);
+    auto id = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>", nullptr);
+    EXPECT(PAREN_CLOSE, nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>)", nullptr);
+    EXPECT(BRACE_OPEN, nullptr);
+    SUBPARSE(catch_block, parse_block());
+    auto *ctch = nodes.make_catch();
+    ctch->var = id.text;
+    ctch->body = catch_block;
+    try_stmt->catch_blocks.emplace_back(ctch);
+    if (!advance()) {
+      break;
+    }
+  }
+  if (current_token.type == token_type::KEYWORD && lexer_base::get_keyword_type(current_token) == keyword_type::kw_finally) {
+    ADVANCE_OR_ERROR("Unexpected EOF after finally", nullptr);
+    EXPECT(BRACE_OPEN, nullptr);
+    SUBPARSE(finally_block, parse_block());
+    try_stmt->finally = finally_block;
+  }
+  if (try_stmt->catch_blocks.empty() && !try_stmt->finally) {
+    set_error("Encountered try without any catch or finally block", current_token.loc);
+    return nullptr;
+  }
+  return try_stmt;
 }
 
 static int get_precedence(token op) {
