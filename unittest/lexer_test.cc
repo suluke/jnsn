@@ -133,8 +133,8 @@ TEST_F(lexer_test, strings) {
 }
 
 TEST_F(lexer_test, templates) {
-  TOKEN_SEQUENCE("`\\\n`", TOKEN(STRING_LITERAL, "``")); // This is a weird one
-  INPUT_IS_TOKEN_TEXT("`\\u{abc}\\uabcd\\xababc`", STRING_LITERAL);
+  TOKEN_SEQUENCE("`\\\n`", TOKEN(TEMPLATE_STRING, "``")); // This is a weird one
+  INPUT_IS_TOKEN_TEXT("`\\u{abc}\\uabcd\\xababc`", TEMPLATE_STRING);
   LEXER_ERROR("`");
   LEXER_ERROR_AFTER("`${", 1);
   TOKEN_SEQUENCE("`${A}`", TOKEN(TEMPLATE_HEAD, "`${"), TOKEN(IDENTIFIER, "A"),

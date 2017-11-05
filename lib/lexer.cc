@@ -560,7 +560,7 @@ result lexer_base::lex_backtick() {
     return lexer_error{"Unexpected EOF in template literal", loc};
   }
   return token{
-      token_type::STRING_LITERAL, str_table.get_handle(text.str()), {}};
+      token_type::TEMPLATE_STRING, str_table.get_handle(text.str()), {}};
 }
 
 result lexer_base::lex_closing_brace() {
