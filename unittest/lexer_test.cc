@@ -149,6 +149,10 @@ TEST_F(lexer_test, templates) {
   TOKEN_SEQUENCE("`1${2}3${4}5`", TOKEN(TEMPLATE_HEAD, "`1${"),
                  TOKEN(INT_LITERAL, "2"), TOKEN(TEMPLATE_MIDDLE, "}3${"),
                  TOKEN(INT_LITERAL, "4"), TOKEN(TEMPLATE_END, "}5`"));
+  TOKEN_SEQUENCE("let o = {``: 0}", TOKEN(KEYWORD, "let"),
+                 TOKEN(IDENTIFIER, "o"), TOKEN(EQ, ""), TOKEN(BRACE_OPEN, ""),
+                 TOKEN(TEMPLATE_STRING, "``"), TOKEN(COLON, ""),
+                 TOKEN(INT_LITERAL, "0"), TOKEN(BRACE_CLOSE, ""));
 }
 
 TEST_F(lexer_test, regex) {

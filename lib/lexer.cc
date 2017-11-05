@@ -530,12 +530,17 @@ result lexer_base::lex_str() {
 result lexer_base::lex_backtick() {
   assert(current() == '`');
   text << '`';
-  if (!peek()) {
-    return lexer_error{"Unexpected EOF in template literal", loc};
-  }
-  advance();
   bool ended = false;
   while (peek()) {
+    advance();
+    if (current() == '`') {
+      ended = true;
+      text << '`';
+      break;
+    }
+    if (!peek()) {
+      return lexer_error{"Unexpected EOF in template literal", loc};
+    }
     if (current() == '$' && *peek() == '{') {
       advance();
       text << "${";
@@ -548,12 +553,6 @@ result lexer_base::lex_backtick() {
       }
     } else {
       text << current();
-    }
-    advance();
-    if (current() == '`') {
-      ended = true;
-      text << '`';
-      break;
     }
   }
   if (!ended) {
