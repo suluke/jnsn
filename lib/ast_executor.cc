@@ -323,8 +323,12 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   // other binops
-  result accept(const comma_operator_node &) override {
-    return exec_error{"Not implemented"};
+  result accept(const comma_operator_node &node) override {
+    auto res = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(res)) {
+      return res;
+    }
+    return visit(*node.rhs);
   }
   result accept(const ternary_operator_node &) override {
     return exec_error{"Not implemented"};

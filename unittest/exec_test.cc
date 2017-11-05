@@ -37,4 +37,5 @@ TEST_F(exec_test, basic) {
   ASSERT_EXEC_RES_EQUALS("undefined", "undefined");
   ASSERT_EXEC_RES_EQUALS("0xf", "15");
   ASSERT_EXEC_RES_EQUALS("[1,2,3]", "[1, 2, 3]");
+  ASSERT_EXEC_RES_EQUALS("1,2", "2");
 }
