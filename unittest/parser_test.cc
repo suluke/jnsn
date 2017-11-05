@@ -53,8 +53,23 @@ TEST_F(parser_test, number_literals) {
   PARSER_ERROR("1.window");
 }
 TEST_F(parser_test, string_literals) {
-  ASSERT_PARSED_MATCHES_JSON("'use strict'", MOD_WRAP("{\"type\": \"string_literal\", \"val\": \"'use strict'\"}"));
-  ASSERT_PARSED_MATCHES_JSON("let s = \"text\"", MOD_WRAP("{\"type\": \"var_decl\", \"keyword\": \"let\", \"parts\": [{\"type\": \"var_decl_part\", \"name\": \"s\", \"init\": {\"type\": \"string_literal\", \"val\": \"\\\"text\\\"\"}}]}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "'use strict'",
+      MOD_WRAP("{\"type\": \"string_literal\", \"val\": \"'use strict'\"}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "let s = \"text\"",
+      MOD_WRAP("{\"type\": \"var_decl\", \"keyword\": \"let\", \"parts\": "
+               "[{\"type\": \"var_decl_part\", \"name\": \"s\", \"init\": "
+               "{\"type\": \"string_literal\", \"val\": \"\\\"text\\\"\"}}]}"));
+}
+TEST_F(parser_test, template_literals) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "`1${2}3${4}5`",
+      MOD_WRAP("{\"type\": \"template_literal\", \"strs\": [\"`1${\", "
+               "\"}3${\", \"}5`\"], \"exprs\": [{\"type\": \"int_literal\", "
+               "\"val\": \"2\"}, {\"type\": \"int_literal\", \"val\": "
+               "\"4\"}]}"));
+  PARSER_ERROR("let o = {``: 0}");
 }
 TEST_F(parser_test, array_literals) {
   ASSERT_PARSED_MATCHES_JSON(
@@ -513,6 +528,6 @@ TEST_F(parser_test, switch_stmt) {
                "\"block\", \"stmts\": [{\"type\": \"return_stmt\", \"value\": "
                "{\"type\": \"int_literal\", \"val\": \"1\"}}]}}, \"args\": "
                "{\"type\": \"argument_list\", \"values\": []}}}}]}"));
-    PARSER_ERROR("switch(){}");
-    PARSER_ERROR("switch(1){default: 2; default: 3;}");
+  PARSER_ERROR("switch(){}");
+  PARSER_ERROR("switch(1){default: 2; default: 3;}");
 }

@@ -535,7 +535,8 @@ statement_node *parser_base::parse_for_stmt() {
 
 switch_stmt_node *parser_base::parse_switch_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_switch);
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_switch);
   ADVANCE_OR_ERROR("Unexpected EOF after switch", nullptr);
   EXPECT(PAREN_OPEN, nullptr);
   ADVANCE_OR_ERROR("Unexpected EOF after switch (", nullptr);
@@ -549,7 +550,8 @@ switch_stmt_node *parser_base::parse_switch_stmt() {
   ADVANCE_OR_ERROR("Unexpected EOF after switch (value) {", nullptr);
   bool hasDefault = false;
   do {
-    EXPECT_SEVERAL(TYPELIST(token_type::KEYWORD, token_type::BRACE_CLOSE), nullptr);
+    EXPECT_SEVERAL(TYPELIST(token_type::KEYWORD, token_type::BRACE_CLOSE),
+                   nullptr);
     if (current_token.type == token_type::BRACE_CLOSE) {
       break;
     }
@@ -557,7 +559,8 @@ switch_stmt_node *parser_base::parse_switch_stmt() {
     switch_clause_node *clause = nullptr;
     if (kwty == keyword_type::kw_default) {
       if (hasDefault) {
-        set_error("Switch statement already has a default clause", current_token.loc);
+        set_error("Switch statement already has a default clause",
+                  current_token.loc);
         return nullptr;
       }
       hasDefault = true;
@@ -589,8 +592,8 @@ switch_stmt_node *parser_base::parse_switch_stmt() {
       SUBPARSE(stmt, parse_statement());
       clause->stmts.emplace_back(stmt);
       ADVANCE_OR_ERROR("Unexpected EOF in switch clauses block", nullptr);
-    } while(true);
-  } while(true);
+    } while (true);
+  } while (true);
   return switch_stmt;
 }
 
@@ -784,8 +787,11 @@ expression_node *parser_base::parse_atomic_expr() {
     expr = id;
   } else if (current_token.is_number_literal()) {
     expr = parse_number_literal();
-  } else if (current_token.type == token_type::STRING_LITERAL) {
+  } else if (current_token.type == token_type::STRING_LITERAL ||
+             current_token.type == token_type::TEMPLATE_STRING) {
     expr = parse_string_literal();
+  } else if (current_token.type == token_type::TEMPLATE_HEAD) {
+    expr = parse_template_literal();
   } else if (current_token.type == token_type::BRACKET_OPEN) {
     expr = parse_array_literal();
   } else if (current_token.type == token_type::BRACE_OPEN) {
@@ -1135,6 +1141,8 @@ number_literal_node *parser_base::parse_number_literal() {
 }
 
 string_literal_node *parser_base::parse_string_literal() {
+  assert(current_token.type == token_type::STRING_LITERAL ||
+         current_token.type == token_type::TEMPLATE_STRING);
   auto str = current_token;
   auto res = nodes.make_string_literal();
   res->val = current_token.text;
@@ -1147,6 +1155,22 @@ string_literal_node *parser_base::parse_string_literal() {
   }
   set_error("Unexpected token after string literal", current_token.loc);
   return nullptr;
+}
+
+template_literal_node *parser_base::parse_template_literal() {
+  assert(current_token.type == token_type::TEMPLATE_HEAD);
+  auto *tmplt = nodes.make_template_literal();
+  tmplt->strs.emplace_back(current_token.text);
+  do {
+    ADVANCE_OR_ERROR("Unexpected EOF in template literal", nullptr);
+    SUBPARSE(expr, parse_expression(true));
+    tmplt->exprs.emplace_back(expr);
+    ADVANCE_OR_ERROR("Unexpected EOF after interpolated expression in template literal", nullptr);
+    EXPECT_SEVERAL(TYPELIST(token_type::TEMPLATE_MIDDLE, token_type::TEMPLATE_END), nullptr);
+    tmplt->strs.emplace_back(current_token.text);
+  } while(current_token.type == token_type::TEMPLATE_MIDDLE);
+  assert(tmplt->strs.size() == tmplt->exprs.size() + 1);
+  return tmplt;
 }
 
 function_stmt_node *parser_base::parse_function_stmt() {

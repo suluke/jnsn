@@ -54,6 +54,7 @@ private:
   expression_node *parse_keyword_expr();
   expression_node *parse_parens_expr();
   string_literal_node *parse_string_literal();
+  template_literal_node *parse_template_literal();
   number_literal_node *parse_number_literal();
   function_expr_node *parse_function_expr();
   param_list_node *parse_param_list();
