@@ -52,6 +52,7 @@ add_unittest(ast_ops_test
 )
 add_unittest(parser_test
   parser_test.cc
+  gtest_utils.h
   ../lib/parser.cc
   ../lib/ast.cc
   ../lib/ast_ops.cc

@@ -1,3 +1,4 @@
+#include "./gtest_utils.h"
 #include "parse_utils.h"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -5,6 +6,7 @@
 
 using namespace parsing;
 using namespace std;
+using namespace testing::internal;
 
 class parser_test : public ::testing::Test {
 protected:
@@ -50,7 +52,8 @@ using ast_root = parser_base::ast_root;
     parser.lexer.set_text(INPUT);                                              \
     auto res = parser.parse();                                                 \
     ASSERT_TRUE(holds_alternative<parser_error>(res));                         \
-    std::cout << "XFAIL" << std::endl;                                         \
+    ColoredPrintf(COLOR_YELLOW, "[   XFAIL  ] ");                              \
+    ColoredPrintf(COLOR_DEFAULT, INPUT "\n");                                  \
   } while (false)
 
 TEST_F(parser_test, empty) {
