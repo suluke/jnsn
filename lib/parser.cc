@@ -379,6 +379,7 @@ statement_node *parser_base::parse_keyword_stmt() {
 }
 
 expression_node *parser_base::parse_keyword_expr() {
+  assert(current_token.type == token_type::KEYWORD);
   if (is_unary_prefix_op(current_token)) {
     return parse_unary_or_atomic_expr();
   }
@@ -561,6 +562,9 @@ throw_stmt_node *parser_base::parse_throw_stmt() {
 }
 
 try_stmt_node *parser_base::parse_try_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_try);
   set_error("Not implemented (parse_try)", current_token.loc);
   return nullptr;
 }
@@ -987,13 +991,41 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
 
 expression_node *parser_base::parse_atomic_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
-  auto kw_ty = get_lexer().get_keyword_type(current_token);
-  if (kw_ty == keyword_type::kw_function) {
+  auto kwty = get_lexer().get_keyword_type(current_token);
+  if (kwty == keyword_type::kw_function) {
     return parse_function_expr();
+  } else if (kwty == keyword_type::kw_new) {
+    return parse_new_keyword();
   } else {
     set_error("Not implemented (keyword)", current_token.loc);
     return nullptr;
   }
+}
+
+expression_node *parser_base::parse_new_keyword() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_new);
+  ADVANCE_OR_ERROR("Unexpected EOF after new", nullptr);
+  if (current_token.type == token_type::DOT) {
+    ADVANCE_OR_ERROR("Unexpected EOF after new.", nullptr);
+    EXPECT(IDENTIFIER, nullptr);
+    if (static_cast<std::string_view>(current_token.text) != "target") {
+      set_error("Expected new.target after new.", current_token.loc);
+      return nullptr;
+    }
+    return nodes.make_new_target();
+  }
+  SUBPARSE(constructor, parse_atomic_expr());
+  auto *new_expr = nodes.make_new_expr();
+  if (isa<call_expr_node>(constructor)) {
+    auto *call = static_cast<call_expr_node *>(constructor);
+    new_expr->constructor = call->callee;
+    new_expr->args = call->args;
+  } else {
+    new_expr->constructor = constructor;
+  }
+  return new_expr;
 }
 
 number_literal_node *parser_base::parse_number_literal() {

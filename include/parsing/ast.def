@@ -57,6 +57,8 @@ DERIVED(computed_member_access, EXTENDS(expression), CHILDREN(ONE(expression, ba
 NODE(argument_list, CHILDREN(MANY(expression, values)))
 DERIVED(call_expr, EXTENDS(expression), CHILDREN(ONE(expression, callee) ONE(argument_list, args)))
 DERIVED(spread_expr, EXTENDS(expression), CHILDREN(ONE(expression, list)))
+DERIVED(new_expr, EXTENDS(expression), CHILDREN(ONE(expression, constructor) MAYBE(argument_list, args)))
+DERIVED(new_target, EXTENDS(expression), CHILDREN())
 
 DERIVED(unary_expr, EXTENDS(expression), CHILDREN(ONE(expression, value)))
 DERIVED(postfix_increment, EXTENDS(unary_expr), CHILDREN())

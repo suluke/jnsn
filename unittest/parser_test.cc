@@ -437,3 +437,23 @@ TEST_F(parser_test, throw_stmt) {
                             "\"object_literal\", \"entries\": [{\"type\": "
                             "\"identifier_expr\", \"str\": \"a\"}]}}"));
 }
+TEST_F(parser_test, new_test) {
+  ASSERT_PARSED_MATCHES_JSON("new.target",
+                             MOD_WRAP("{\"type\": \"new_target\"}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "new target",
+      MOD_WRAP("{\"type\": \"new_expr\", \"constructor\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"target\"}, \"args\": null}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "new target()",
+      MOD_WRAP("{\"type\": \"new_expr\", \"constructor\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"target\"}, \"args\": "
+               "{\"type\": \"argument_list\", \"values\": []}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "new target(1, 2)",
+      MOD_WRAP("{\"type\": \"new_expr\", \"constructor\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"target\"}, \"args\": "
+               "{\"type\": \"argument_list\", \"values\": [{\"type\": "
+               "\"int_literal\", \"val\": \"1\"}, {\"type\": \"int_literal\", "
+               "\"val\": \"2\"}]}}"));
+}

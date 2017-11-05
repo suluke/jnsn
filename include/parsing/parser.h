@@ -45,6 +45,7 @@ private:
   return_stmt_node *parse_return_stmt();
   throw_stmt_node *parse_throw_stmt();
   try_stmt_node *parse_try_stmt();
+  expression_node *parse_new_keyword();
 
   expression_node *parse_expression(bool comma_is_operator);
   expression_node *parse_unary_or_atomic_expr();
