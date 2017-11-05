@@ -572,14 +572,18 @@ result lexer_base::lex_closing_brace() {
     return lexer_error{"Unexpected EOF in template literal", loc};
   }
   text << '}';
-  advance();
   bool ended = false;
-  do {
+  while(peek()) {
+    advance();
     if (current() == '`') {
       ended = true;
       text << '`';
       break;
-    } else if (current() == '$' && *peek() == '{') {
+    }
+    if (!peek()) {
+      return lexer_error{"Unexpected EOF in template literal", loc};
+    }
+    if (current() == '$' && *peek() == '{') {
       advance();
       text << "${";
       return token{
@@ -591,8 +595,7 @@ result lexer_base::lex_closing_brace() {
     } else {
       text << current();
     }
-    advance();
-  } while (peek());
+  }
   if (!ended) {
     return lexer_error{"Unexpected EOF in template literal", loc};
   }

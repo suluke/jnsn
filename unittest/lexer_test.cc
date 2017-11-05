@@ -146,6 +146,9 @@ TEST_F(lexer_test, templates) {
                  TOKEN(STRING_LITERAL, "'A'"), TOKEN(PLUS, ""),
                  TOKEN(TEMPLATE_HEAD, "`${"), TOKEN(IDENTIFIER, "B"),
                  TOKEN(TEMPLATE_END, "}`"), TOKEN(TEMPLATE_END, "}`"));
+  TOKEN_SEQUENCE("`1${2}3${4}5`", TOKEN(TEMPLATE_HEAD, "`1${"),
+                 TOKEN(INT_LITERAL, "2"), TOKEN(TEMPLATE_MIDDLE, "}3${"),
+                 TOKEN(INT_LITERAL, "4"), TOKEN(TEMPLATE_END, "}5`"));
 }
 
 TEST_F(lexer_test, regex) {
