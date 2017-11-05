@@ -534,8 +534,64 @@ statement_node *parser_base::parse_for_stmt() {
 }
 
 switch_stmt_node *parser_base::parse_switch_stmt() {
-  set_error("Not implemented (parse_switch)", current_token.loc);
-  return nullptr;
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_switch);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch", nullptr);
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (", nullptr);
+  SUBPARSE(value, parse_expression(true));
+  auto *switch_stmt = nodes.make_switch_stmt();
+  switch_stmt->value = value;
+  ADVANCE_OR_ERROR("Unexpected EOF after switch value", nullptr);
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (value)", nullptr);
+  EXPECT(BRACE_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (value) {", nullptr);
+  bool hasDefault = false;
+  do {
+    EXPECT_SEVERAL(TYPELIST(token_type::KEYWORD, token_type::BRACE_CLOSE), nullptr);
+    if (current_token.type == token_type::BRACE_CLOSE) {
+      break;
+    }
+    auto kwty = lexer_base::get_keyword_type(current_token);
+    switch_clause_node *clause = nullptr;
+    if (kwty == keyword_type::kw_default) {
+      if (hasDefault) {
+        set_error("Switch statement already has a default clause", current_token.loc);
+        return nullptr;
+      }
+      hasDefault = true;
+      clause = nodes.make_switch_clause();
+      ADVANCE_OR_ERROR("Unexpected EOF after default", nullptr);
+    } else if (kwty == keyword_type::kw_case) {
+      auto *case_clause = nodes.make_case();
+      ADVANCE_OR_ERROR("Unexpected EOF after case", nullptr);
+      SUBPARSE(condition, parse_expression(true));
+      case_clause->condition = condition;
+      ADVANCE_OR_ERROR("Unexpected EOF after case condition", nullptr);
+      clause = case_clause;
+    } else {
+      set_error("Unexpected keyword in switch", current_token.loc);
+      return nullptr;
+    }
+    EXPECT(COLON, nullptr);
+    switch_stmt->clauses.emplace_back(clause);
+    ADVANCE_OR_ERROR("Unexpected EOF after colon (switch clause)", nullptr);
+    do {
+      if (current_token.type == token_type::KEYWORD) {
+        auto kwty = lexer_base::get_keyword_type(current_token);
+        if (kwty == keyword_type::kw_case || kwty == keyword_type::kw_default) {
+          break;
+        }
+      } else if (current_token.type == token_type::BRACE_CLOSE) {
+        break;
+      }
+      SUBPARSE(stmt, parse_statement());
+      clause->stmts.emplace_back(stmt);
+      ADVANCE_OR_ERROR("Unexpected EOF in switch clauses block", nullptr);
+    } while(true);
+  } while(true);
+  return switch_stmt;
 }
 
 return_stmt_node *parser_base::parse_return_stmt() {

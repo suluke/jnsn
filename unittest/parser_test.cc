@@ -477,3 +477,38 @@ TEST_F(parser_test, try_catch) {
                "\"block\", \"stmts\": []}}"));
   PARSER_ERROR("try {}");
 }
+TEST_F(parser_test, switch_stmt) {
+  ASSERT_PARSED_MATCHES_JSON(
+      "switch(1) {}",
+      MOD_WRAP("{\"type\": \"switch_stmt\", \"value\": {\"type\": "
+               "\"int_literal\", \"val\": \"1\"}, \"clauses\": []}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "switch(1) {case 2: 3; break; 4; break; default: 5;}",
+      MOD_WRAP("{\"type\": \"switch_stmt\", \"value\": {\"type\": "
+               "\"int_literal\", \"val\": \"1\"}, \"clauses\": [{\"type\": "
+               "\"case\", \"stmts\": [{\"type\": \"int_literal\", \"val\": "
+               "\"3\"}, {\"type\": \"break_stmt\", \"label\": null}, "
+               "{\"type\": \"int_literal\", \"val\": \"4\"}, {\"type\": "
+               "\"break_stmt\", \"label\": null}], \"condition\": {\"type\": "
+               "\"int_literal\", \"val\": \"2\"}}, {\"type\": "
+               "\"switch_clause\", \"stmts\": [{\"type\": \"int_literal\", "
+               "\"val\": \"5\"}]}]}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "switch(val) {case void function() {return 1;}(): console.log(1)}",
+      MOD_WRAP("{\"type\": \"switch_stmt\", \"value\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"val\"}, \"clauses\": "
+               "[{\"type\": \"case\", \"stmts\": [{\"type\": \"call_expr\", "
+               "\"callee\": {\"type\": \"member_access\", \"base\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"console\"}, \"member\": "
+               "\"log\"}, \"args\": {\"type\": \"argument_list\", \"values\": "
+               "[{\"type\": \"int_literal\", \"val\": \"1\"}]}}], "
+               "\"condition\": {\"type\": \"void_expr\", \"value\": {\"type\": "
+               "\"call_expr\", \"callee\": {\"type\": \"function_expr\", "
+               "\"name\": null, \"params\": {\"type\": \"param_list\", "
+               "\"names\": [], \"rest\": null}, \"body\": {\"type\": "
+               "\"block\", \"stmts\": [{\"type\": \"return_stmt\", \"value\": "
+               "{\"type\": \"int_literal\", \"val\": \"1\"}}]}}, \"args\": "
+               "{\"type\": \"argument_list\", \"values\": []}}}}]}"));
+    PARSER_ERROR("switch(){}");
+    PARSER_ERROR("switch(1){default: 2; default: 3;}");
+}
