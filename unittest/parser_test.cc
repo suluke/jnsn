@@ -1,5 +1,6 @@
 #include "parse_utils.h"
 #include "gtest/gtest.h"
+#include <iostream>
 #include <sstream>
 
 using namespace parsing;
@@ -43,6 +44,15 @@ using ast_root = parser_base::ast_root;
     ASSERT_TRUE(holds_alternative<parser_error>(res));                         \
   } while (false)
 
+#define XFAIL(INPUT)                                                           \
+  do {                                                                         \
+    str.str("");                                                               \
+    parser.lexer.set_text(INPUT);                                              \
+    auto res = parser.parse();                                                 \
+    ASSERT_TRUE(holds_alternative<parser_error>(res));                         \
+    std::cout << "XFAIL" << std::endl;                                         \
+  } while (false)
+
 TEST_F(parser_test, empty) {
   ASSERT_PARSED_MATCHES_JSON("", "{\"type\": \"module\", \"stmts\": []}");
 }
@@ -72,7 +82,13 @@ TEST_F(parser_test, template_literals) {
   PARSER_ERROR("let o = {``: 0}");
 }
 TEST_F(parser_test, regex_literals) {
-  ASSERT_PARSED_MATCHES_JSON("/.*/.test('abc')", MOD_WRAP("{\"type\": \"call_expr\", \"callee\": {\"type\": \"member_access\", \"base\": {\"type\": \"regex_literal\", \"val\": \"/.*/\"}, \"member\": \"test\"}, \"args\": {\"type\": \"argument_list\", \"values\": [{\"type\": \"string_literal\", \"val\": \"'abc'\"}]}}"));
+  ASSERT_PARSED_MATCHES_JSON(
+      "/.*/.test('abc')",
+      MOD_WRAP("{\"type\": \"call_expr\", \"callee\": {\"type\": "
+               "\"member_access\", \"base\": {\"type\": \"regex_literal\", "
+               "\"val\": \"/.*/\"}, \"member\": \"test\"}, \"args\": "
+               "{\"type\": \"argument_list\", \"values\": [{\"type\": "
+               "\"string_literal\", \"val\": \"'abc'\"}]}}"));
 }
 TEST_F(parser_test, array_literals) {
   ASSERT_PARSED_MATCHES_JSON(
@@ -533,4 +549,22 @@ TEST_F(parser_test, switch_stmt) {
                "{\"type\": \"argument_list\", \"values\": []}}}}]}"));
   PARSER_ERROR("switch(){}");
   PARSER_ERROR("switch(1){default: 2; default: 3;}");
+}
+TEST_F(parser_test, classes) {
+  XFAIL("class test {}");
+  XFAIL("class test { constructor() {} }");
+  XFAIL("class test { static foo() {} }");
+}
+TEST_F(parser_test, import_stmt) {
+  XFAIL("import * as Test from 'test'");
+  XFAIL("import Test from 'test'");
+  XFAIL("import { Test } from 'test'");
+  XFAIL("import { Test as tseT } from 'test'");
+}
+TEST_F(parser_test, export_stmt) {
+  XFAIL("export * from 'test'");
+  XFAIL("export { Test as tseT }");
+  XFAIL("export { Test } from 'test'");
+  XFAIL("export var i = 0");
+  XFAIL("export default class test {}");
 }
