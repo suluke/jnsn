@@ -21,30 +21,25 @@ add_subdirectory("${PROJECT_BINARY_DIR}/googletest/src"
 set(UNITTEST_RUNS)
 macro(add_unittest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
-  target_link_libraries(${test_name} gtest_main gtest)
+  target_link_libraries(${test_name} gtest_main gtest parsing)
   add_custom_target(run_${test_name} DEPENDS ${test_name} COMMAND ${test_name} --gtest_color=true)
   list(APPEND UNITTEST_RUNS run_${test_name})
 endmacro()
 
 add_unittest(lexer_test
   lexer_test.cc
-  ../lib/lexer.cc
   ../include/parsing/lexer.h
   ../include/parsing/tokens.def
   ../include/parsing/keywords.def
 )
 add_unittest(ast_test
   ast_test.cc
-  ../lib/ast.cc
-  ../lib/ast_ops.cc
   ../include/parsing/ast.h
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
 )
 add_unittest(ast_ops_test
   ast_ops_test.cc
-  ../lib/ast.cc
-  ../lib/ast_ops.cc
   ../include/parsing/ast.h
   ../include/parsing/ast.def
   ../include/parsing/ast_visitor.h
@@ -53,11 +48,11 @@ add_unittest(ast_ops_test
 add_unittest(parser_test
   parser_test.cc
   gtest_utils.h
-  ../lib/parser.cc
-  ../lib/ast.cc
-  ../lib/ast_ops.cc
-  ../lib/lexer.cc
   ../include/parsing/parser.h
+)
+add_unittest(exec_test
+  exec_test.cc
+  ../include/parsing/ast_executor.h
 )
 
 add_custom_target(unittests
