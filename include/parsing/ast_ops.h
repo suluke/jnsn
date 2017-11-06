@@ -14,11 +14,9 @@ public:
 };
 
 template<class nodety> bool isa(const ast_node *);
-#ifndef PARSING_AST_OPS_CC
-#define NODE(NAME, CHILDREN) extern template bool isa<NAME##_node>(const ast_node *);
+#define NODE(NAME, CHILDREN) template<> bool isa<NAME##_node>(const ast_node *);
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
 #include "parsing/ast.def"
-#endif
 
 template<class nodety>
 bool isa(const ast_node &node) {

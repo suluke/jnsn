@@ -1,8 +1,4 @@
-// This definition disables the "extern template isa" declarations so that we
-// can safely provide them here
-#define PARSING_AST_OPS_CC
 #include "parsing/ast_ops.h"
-#undef PARSING_AST_OPS_CC
 #include <sstream>
 
 using namespace parsing;
