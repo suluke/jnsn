@@ -1,5 +1,5 @@
 #include "parse_utils.h"
-#include "parsing/ast_executor.h"
+#include "parsing/ast_exec.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
@@ -36,6 +36,9 @@ TEST_F(exec_test, basic) {
   ASSERT_EXEC_RES_EQUALS("null", "null");
   ASSERT_EXEC_RES_EQUALS("undefined", "undefined");
   ASSERT_EXEC_RES_EQUALS("0xf", "15");
+  ASSERT_EXEC_RES_EQUALS("\"abc\"", "\"abc\"");
+  ASSERT_EXEC_RES_EQUALS("'abc'", "\"abc\"");
+  ASSERT_EXEC_RES_EQUALS("`abc`", "\"abc\"");
   ASSERT_EXEC_RES_EQUALS("[1,2,3]", "[1, 2, 3]");
   ASSERT_EXEC_RES_EQUALS("1,2", "2");
 }

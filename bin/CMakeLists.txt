@@ -26,7 +26,7 @@ add_executable(exec_cli
   exec_cli.cc
   ../include/parsing/ast.def
   ../include/parsing/ast.h
-  ../include/parsing/ast_executor.h
+  ../include/parsing/ast_exec.h
   ../include/parsing/ast_ops.h
   ../include/parsing/ast_visitor.h
   ../include/parsing/keywords.def

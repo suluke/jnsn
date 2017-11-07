@@ -1,5 +1,5 @@
 #include "parsing/ast.h"
-#include "parsing/ast_executor.h"
+#include "parsing/ast_exec.h"
 #include <cstdlib>
 #include <map>
 
@@ -122,15 +122,15 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_value(number_value(val));
   }
   result accept(const string_literal_node &node) override {
-    return exec_value(string_value(node.val));
+    return exec_value(string_value(node.val->substr(1, node.val->size() - 2)));
   }
   result accept(const regex_literal_node &) override {
     return exec_error{"Not implemented"};
   }
   result accept(const template_string_node &node) override {
-    return exec_value(string_value(node.val));
+    return exec_value(string_value(node.val->substr(1, node.val->size() - 2)));
   }
-  result accept(const template_literal_node &) override {
+  result accept(const template_literal_node &node) override {
     return exec_error{"Not implemented"};
   }
   result accept(const array_literal_node &node) override {

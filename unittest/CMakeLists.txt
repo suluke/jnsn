@@ -52,7 +52,7 @@ add_unittest(parser_test
 )
 add_unittest(exec_test
   exec_test.cc
-  ../include/parsing/ast_executor.h
+  ../include/parsing/ast_exec.h
 )
 
 add_custom_target(unittests

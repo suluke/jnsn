@@ -38,7 +38,7 @@ struct number_value : public exec_value_base {
 struct string_value : public exec_value_base {
   std::string_view value;
   string_value(std::string_view value) : value(value) {}
-  void print(std::ostream &stream) override { stream << value; }
+  void print(std::ostream &stream) override { stream << "\"" << value << "\""; }
 };
 
 class exec_value;

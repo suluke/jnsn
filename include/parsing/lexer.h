@@ -42,6 +42,7 @@ public:
   std::string_view::iterator begin() const { return text.begin(); }
   std::string_view::iterator end() const { return text.end(); }
   bool operator==(const string_table_entry &o) const { return text == o.text; }
+  const std::string_view *operator->() const { return &text; }
   friend std::ostream &operator<<(std::ostream &stream,
                                   const string_table_entry &entry) {
     return stream << entry.text;
