@@ -432,7 +432,7 @@ result lexer_base::lex_gt() {
     }
     return token{token_type::RSHIFT};
   }
-  return token{token_type::LT, {}, {}};
+  return token{token_type::GT, {}, {}};
 }
 
 result lexer_base::lex_ampersand() {
