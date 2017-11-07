@@ -24,11 +24,12 @@ struct undefined_value : public exec_value_base {
 struct null_value : public exec_value_base {
   void print(std::ostream &stream) override { stream << "null"; };
 };
-struct true_value : public exec_value_base {
-  void print(std::ostream &stream) override { stream << "true"; };
-};
-struct false_value : public exec_value_base {
-  void print(std::ostream &stream) override { stream << "false"; };
+struct bool_value : public exec_value_base {
+  bool value;
+  bool_value(bool value) : value(value) {}
+  void print(std::ostream &stream) override {
+    stream << (value ? "true" : "false");
+  };
 };
 struct number_value : public exec_value_base {
   double value;
@@ -50,17 +51,15 @@ struct array_value : public exec_value_base {
 };
 
 class exec_value : public exec_value_base {
-  using val_t =
-      std::variant<undefined_value, null_value, true_value, false_value,
-                   number_value, string_value, array_value>;
+  using val_t = std::variant<undefined_value, null_value, bool_value,
+                             number_value, string_value, array_value>;
   val_t val;
   exec_value_base &upcast_content();
 
 public:
   exec_value(undefined_value val) : val(val) {}
   exec_value(null_value val) : val(val) {}
-  exec_value(true_value val) : val(val) {}
-  exec_value(false_value val) : val(val) {}
+  exec_value(bool_value val) : val(val) {}
   exec_value(number_value val) : val(val) {}
   exec_value(string_value val) : val(val) {}
   exec_value(array_value val) : val(val) {}
@@ -71,7 +70,13 @@ public:
   exec_value &operator=(exec_value &&) = default;
 
   void print(std::ostream &) override;
+  template <typename T> T &get() { return std::get<T>(val); }
+  template <typename T> friend bool isa(const exec_value &);
 };
+
+template <typename T> bool isa(const exec_value &val) {
+  return std::holds_alternative<T>(val.val);
+}
 
 struct exec_error {
   std::string msg;

@@ -1,5 +1,6 @@
 #include "parsing/ast.h"
 #include "parsing/ast_exec.h"
+#include <cmath>
 #include <cstdlib>
 #include <map>
 
@@ -37,8 +38,8 @@ exec_value exec_vm::lookup(std::string_view identifier) {
   static const std::map<std::string_view, exec_value> builtin_values = {
       {"undefined", undefined_value{}},
       {"null", null_value{}},
-      {"true", true_value{}},
-      {"false", false_value{}}};
+      {"true", bool_value{true}},
+      {"false", bool_value{false}}};
   if (builtin_values.count(identifier)) {
     return builtin_values.at(identifier);
   }
@@ -174,9 +175,9 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   }
   // Unary expressions
   result accept(const unary_expr_node &) override {
-    return exec_error{"Not implemented"};
+    return exec_error{"Encountered abstract class unary_expr_node"};
   }
-  result accept(const postfix_increment_node &) override {
+  result accept(const postfix_increment_node &node) override {
     return exec_error{"Not implemented"};
   }
   result accept(const postfix_decrement_node &) override {
@@ -194,10 +195,27 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   result accept(const prefix_minus_node &) override {
     return exec_error{"Not implemented"};
   }
-  result accept(const not_expr_node &) override {
+  result accept(const not_expr_node &node) override {
+    auto subexpr = visit(node);
+    if (std::holds_alternative<exec_error>(subexpr)) {
+      return subexpr;
+    }
+    auto val = std::get<exec_value>(subexpr);
+    if (isa<bool_value>(val)) {
+      return {bool_value(val.get<bool_value>().value)};
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const binverse_expr_node &) override {
+  result accept(const binverse_expr_node &node) override {
+    auto subexpr = visit(*node.value);
+    if (std::holds_alternative<exec_error>(subexpr)) {
+      return subexpr;
+    }
+    auto val = std::get<exec_value>(subexpr);
+    if (isa<number_value>(val)) {
+      int64_t num = val.get<number_value>().value;
+      return {number_value{static_cast<double>(~num)}};
+    }
     return exec_error{"Not implemented"};
   }
   result accept(const typeof_expr_node &) override {
@@ -214,35 +232,176 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   // arithmetic binops
-  result accept(const add_node &) override {
+  result accept(const add_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return number_value(lhs.get<number_value>().value +
+                          rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const subtract_node &) override {
+  result accept(const subtract_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return number_value(lhs.get<number_value>().value -
+                          rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const multiply_node &) override {
+  result accept(const multiply_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return number_value(lhs.get<number_value>().value *
+                          rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const divide_node &) override {
+  result accept(const divide_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return number_value(lhs.get<number_value>().value /
+                          rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const pow_expr_node &) override {
+  result accept(const pow_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return number_value(std::pow(lhs.get<number_value>().value,
+                                   rhs.get<number_value>().value));
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const modulo_expr_node &) override {
+  result accept(const modulo_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      int64_t l = lhs.get<number_value>().value;
+      int64_t r = rhs.get<number_value>().value;
+      return number_value(static_cast<double>(l % r));
+    }
     return exec_error{"Not implemented"};
   }
   // comparison binops
-  result accept(const less_expr_node &) override {
+  result accept(const less_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return bool_value(lhs.get<number_value>().value <
+                        rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const less_eq_expr_node &) override {
+  result accept(const less_eq_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return bool_value(lhs.get<number_value>().value <=
+                        rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const greater_expr_node &) override {
+  result accept(const greater_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return bool_value(lhs.get<number_value>().value >
+                        rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
-  result accept(const greater_eq_expr_node &) override {
+  result accept(const greater_eq_expr_node &node) override {
+    auto lhs_or_err = visit(*node.lhs);
+    if (std::holds_alternative<exec_error>(lhs_or_err)) {
+      return lhs_or_err;
+    }
+    auto lhs = std::get<exec_value>(lhs_or_err);
+    auto rhs_or_err = visit(*node.rhs);
+    if (std::holds_alternative<exec_error>(rhs_or_err)) {
+      return rhs_or_err;
+    }
+    auto rhs = std::get<exec_value>(rhs_or_err);
+    if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
+      return bool_value(lhs.get<number_value>().value >=
+                        rhs.get<number_value>().value);
+    }
     return exec_error{"Not implemented"};
   }
   result accept(const equals_expr_node &) override {
