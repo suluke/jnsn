@@ -12,14 +12,7 @@ std::ostream &operator<<(std::ostream &stream, const exec_error error) {
 }
 } // namespace parsing
 
-exec_value_base &exec_value::upcast_content() {
-  return std::visit([](auto &val) -> exec_value_base & { return val; }, val);
-}
-
-void exec_value::print(std::ostream &stream) { upcast_content().print(stream); }
-
-array_value::array_value() = default;
-void array_value::print(std::ostream &stream) {
+void array_value::print(std::ostream &stream) const {
   stream << "[";
   if (!elms.empty()) {
     auto It = elms.begin();
@@ -34,6 +27,23 @@ void array_value::print(std::ostream &stream) {
   stream << "]";
 }
 
+void object_value::print(std::ostream &stream) const {
+  stream << "{";
+  if (!entries.empty()) {
+    auto It = entries.begin();
+    stream << It->first << ": ";
+    It->second.print(stream);
+    ++It;
+    while (It != entries.end()) {
+      stream << ", ";
+      stream << It->first << ": ";
+      It->second.print(stream);
+      ++It;
+    }
+  }
+  stream << "}";
+}
+
 exec_value exec_vm::lookup(std::string_view identifier) {
   static const std::map<std::string_view, exec_value> builtin_values = {
       {"undefined", undefined_value{}},
@@ -44,6 +54,25 @@ exec_value exec_vm::lookup(std::string_view identifier) {
     return builtin_values.at(identifier);
   }
   return undefined_value{};
+}
+heap_value &exec_vm::find_slot() {
+  if (!free_pool.empty()) {
+    auto slot = free_pool.back();
+    free_pool.pop_back();
+    return heap[slot];
+  }
+  heap.emplace_back();
+  return heap.back();
+}
+array_value &exec_vm::alloc_array() {
+  auto &slot = find_slot();
+  slot = array_value{};
+  return std::get<array_value>(slot);
+}
+object_value &exec_vm::alloc_object() {
+  auto &slot = find_slot();
+  slot = object_value{};
+  return std::get<object_value>(slot);
 }
 
 struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
@@ -135,7 +164,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const array_literal_node &node) override {
-    array_value arr;
+    auto &arr = vm.alloc_array();
     for (auto *val : node.values) {
       auto res = visit(*val);
       if (std::holds_alternative<exec_error>(res)) {
@@ -143,7 +172,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
       }
       arr.elms.emplace_back(std::get<exec_value>(res));
     }
-    return exec_value(arr);
+    return exec_value(ref_value(&arr));
   }
   result accept(const object_entry_node &) override {
     return exec_error{"Not implemented"};
