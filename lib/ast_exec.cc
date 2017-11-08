@@ -229,20 +229,24 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   }
 
   result accept(const bin_op_expr_node &) override {
-    return exec_error{"Not implemented"};
+    return exec_error{"Encountered abstract class bin_op_expr_node"};
   }
-  // arithmetic binops
+
+    // arithmetic binops
+#define GET_EVALED_OPERANDS()                                                  \
+  auto lhs_or_err = visit(*node.lhs);                                          \
+  if (std::holds_alternative<exec_error>(lhs_or_err)) {                        \
+    return lhs_or_err;                                                         \
+  }                                                                            \
+  auto lhs = std::get<exec_value>(lhs_or_err);                                 \
+  auto rhs_or_err = visit(*node.rhs);                                          \
+  if (std::holds_alternative<exec_error>(rhs_or_err)) {                        \
+    return rhs_or_err;                                                         \
+  }                                                                            \
+  auto rhs = std::get<exec_value>(rhs_or_err)
+
   result accept(const add_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return number_value(lhs.get<number_value>().value +
                           rhs.get<number_value>().value);
@@ -250,16 +254,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const subtract_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return number_value(lhs.get<number_value>().value -
                           rhs.get<number_value>().value);
@@ -267,16 +262,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const multiply_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return number_value(lhs.get<number_value>().value *
                           rhs.get<number_value>().value);
@@ -284,16 +270,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const divide_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return number_value(lhs.get<number_value>().value /
                           rhs.get<number_value>().value);
@@ -301,16 +278,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const pow_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return number_value(std::pow(lhs.get<number_value>().value,
                                    rhs.get<number_value>().value));
@@ -318,16 +286,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const modulo_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       int64_t l = lhs.get<number_value>().value;
       int64_t r = rhs.get<number_value>().value;
@@ -337,16 +296,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   }
   // comparison binops
   result accept(const less_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return bool_value(lhs.get<number_value>().value <
                         rhs.get<number_value>().value);
@@ -354,16 +304,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const less_eq_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return bool_value(lhs.get<number_value>().value <=
                         rhs.get<number_value>().value);
@@ -371,16 +312,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const greater_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return bool_value(lhs.get<number_value>().value >
                         rhs.get<number_value>().value);
@@ -388,16 +320,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Not implemented"};
   }
   result accept(const greater_eq_expr_node &node) override {
-    auto lhs_or_err = visit(*node.lhs);
-    if (std::holds_alternative<exec_error>(lhs_or_err)) {
-      return lhs_or_err;
-    }
-    auto lhs = std::get<exec_value>(lhs_or_err);
-    auto rhs_or_err = visit(*node.rhs);
-    if (std::holds_alternative<exec_error>(rhs_or_err)) {
-      return rhs_or_err;
-    }
-    auto rhs = std::get<exec_value>(rhs_or_err);
+    GET_EVALED_OPERANDS();
     if (isa<number_value>(lhs) && isa<number_value>(rhs)) {
       return bool_value(lhs.get<number_value>().value >=
                         rhs.get<number_value>().value);
@@ -441,6 +364,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   result accept(const bitwise_xor_expr_node &) override {
     return exec_error{"Not implemented"};
   }
+#undef GET_EVALED_OPERANDS
   // assignment binops
   result accept(const assign_node &) override {
     return exec_error{"Not implemented"};
