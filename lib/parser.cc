@@ -717,18 +717,10 @@ expression_node *parser_base::parse_expression(bool comma_is_operator) {
       return expr;
     }
     if (is_binary_operator(current_token, comma_is_operator)) {
-      token prev_token;
-      do {
-        expr = parse_bin_op(expr, comma_is_operator);
-        prev_token = current_token;
-        if (!advance()) {
-          // note that we skip rewinding here
-          return expr;
-        }
-      } while (is_binary_operator(current_token, comma_is_operator));
-      rewind(prev_token);
-      return expr;
+      return parse_bin_op(expr, comma_is_operator);
     }
+    rewind(final_token);
+    return expr;
   } else if (error) {
     return nullptr;
   }
@@ -1084,11 +1076,13 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
     if (next_prec > current_prec) {
       SUBPARSE(new_rhs, parse_bin_op(binop->rhs, comma_is_operator));
       binop->rhs = new_rhs;
-    }
-    if (next_prec == current_prec &&
+    } else if (next_prec == current_prec &&
         get_associativity(op) == associativity::RIGHT_TO_LEFT) {
       SUBPARSE(new_rhs, parse_bin_op(binop->rhs, comma_is_operator));
       binop->rhs = new_rhs;
+    } else {
+      SUBPARSE(new_binop, parse_bin_op(binop, comma_is_operator));
+      binop = new_binop;
     }
     return binop;
   }

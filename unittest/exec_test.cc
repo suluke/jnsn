@@ -52,6 +52,7 @@ TEST_F(exec_test, binops) {
   ASSERT_EXEC_RES_EQUALS("4/2", "2");
   ASSERT_EXEC_RES_EQUALS("5%3", "2");
   ASSERT_EXEC_RES_EQUALS("2**3", "8");
+  ASSERT_EXEC_RES_EQUALS("1 + 2**3 / 4 * 7", "15");
 }
 TEST_F(exec_test, comparisons) {
   ASSERT_EXEC_RES_EQUALS("2<3", "true");
