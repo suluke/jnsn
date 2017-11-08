@@ -10,6 +10,7 @@ class exec_test : public ::testing::Test {
 protected:
   constant_string_parser parser;
   stringstream str;
+  ast_executor exec;
 };
 
 #define ASSERT_EXEC_RES_EQUALS(INPUT, EXPECTED)                                \
@@ -20,8 +21,7 @@ protected:
     ASSERT_TRUE(holds_alternative<module_node *>(parse_res))                   \
         << std::get<parser_error>(parse_res);                                  \
     auto mod = get<module_node *>(parse_res);                                  \
-                                                                               \
-    auto exec_res = ast_executor().execute(*mod);                              \
+    auto exec_res = exec.execute(*mod);                                        \
     ASSERT_TRUE(holds_alternative<exec_value>(exec_res))                       \
         << std::get<exec_error>(exec_res);                                     \
     auto val = std::get<exec_value>(exec_res);                                 \
