@@ -145,7 +145,7 @@ DERIVED(continue_stmt, EXTENDS(statement), CHILDREN(MAYBE_STR(label)))
 DERIVED(return_stmt, EXTENDS(statement), CHILDREN(MAYBE(expression, value)))
 DERIVED(throw_stmt, EXTENDS(statement), CHILDREN(ONE(expression, value)))
 NODE(catch, CHILDREN(STRING(var) ONE(block, body)))
-DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MANY(catch, catch_blocks) MAYBE(block, finally)))
+DERIVED(try_stmt, EXTENDS(statement), CHILDREN(ONE(block, body) MAYBE(catch, catch_block) MAYBE(block, finally)))
 // FIXME these are not yet correctly modeled
 DERIVED(import_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(export_stmt, EXTENDS(statement), CHILDREN())

@@ -634,7 +634,7 @@ try_stmt_node *parser_base::parse_try_stmt() {
   SUBPARSE(body, parse_block());
   try_stmt->body = body;
   ADVANCE_OR_ERROR("Unexpected EOF after try {}", nullptr);
-  while (current_token.type == token_type::KEYWORD &&
+  if (current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_catch) {
     ADVANCE_OR_ERROR("Unexpected EOF after catch", nullptr);
@@ -650,9 +650,9 @@ try_stmt_node *parser_base::parse_try_stmt() {
     auto *ctch = nodes.make_catch();
     ctch->var = id.text;
     ctch->body = catch_block;
-    try_stmt->catch_blocks.emplace_back(ctch);
+    try_stmt->catch_block = ctch;
     if (!advance()) {
-      break;
+      return try_stmt;
     }
   }
   if (current_token.type == token_type::KEYWORD &&
@@ -662,7 +662,7 @@ try_stmt_node *parser_base::parse_try_stmt() {
     SUBPARSE(finally_block, parse_block());
     try_stmt->finally = finally_block;
   }
-  if (try_stmt->catch_blocks.empty() && !try_stmt->finally) {
+  if (!try_stmt->catch_block && !try_stmt->finally) {
     set_error("Encountered try without any catch or finally block",
               current_token.loc);
     return nullptr;

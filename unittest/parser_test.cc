@@ -505,21 +505,24 @@ TEST_F(parser_test, try_catch) {
   ASSERT_PARSED_MATCHES_JSON(
       "try {} catch(e) {} finally {}",
       MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
-               "\"stmts\": []}, \"catch_blocks\": [{\"type\": \"catch\", "
+               "\"stmts\": []}, \"catch_block\": {\"type\": \"catch\", "
                "\"var\": \"e\", \"body\": {\"type\": \"block\", \"stmts\": "
-               "[]}}], \"finally\": {\"type\": \"block\", \"stmts\": []}}"));
+               "[]}}, \"finally\": {\"type\": \"block\", \"stmts\": []}}"));
   ASSERT_PARSED_MATCHES_JSON(
       "try {} catch(e) {}",
       MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
-               "\"stmts\": []}, \"catch_blocks\": [{\"type\": \"catch\", "
+               "\"stmts\": []}, \"catch_block\": {\"type\": \"catch\", "
                "\"var\": \"e\", \"body\": {\"type\": \"block\", \"stmts\": "
-               "[]}}], \"finally\": null}"));
+               "[]}}, \"finally\": null}"));
   ASSERT_PARSED_MATCHES_JSON(
       "try {} finally {}",
       MOD_WRAP("{\"type\": \"try_stmt\", \"body\": {\"type\": \"block\", "
-               "\"stmts\": []}, \"catch_blocks\": [], \"finally\": {\"type\": "
+               "\"stmts\": []}, \"catch_block\": null, \"finally\": {\"type\": "
                "\"block\", \"stmts\": []}}"));
   PARSER_ERROR("try {}");
+  PARSER_ERROR("try {} catch(e1) {} catch(e2) {}");
+  PARSER_ERROR("try {} finally {} catch(e) {}");
+  PARSER_ERROR("try {} finally {} finally {}");
 }
 TEST_F(parser_test, switch_stmt) {
   ASSERT_PARSED_MATCHES_JSON(
