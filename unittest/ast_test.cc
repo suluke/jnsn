@@ -1,12 +1,13 @@
 #include "parsing/ast.h"
+#include "parsing/ast_walker.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
 using namespace parsing;
 
-struct name_checker : public ast_node_visitor<const char *> {
-#define NODE(NAME, CHILD_NODES) const char *accept(NAME ## _node &) override { return #NAME; }
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) const char *accept(NAME ## _node &) override { return #NAME; }
+struct name_checker : public const_ast_node_visitor<const char *> {
+#define NODE(NAME, CHILD_NODES) const char *accept(const NAME ## _node &) override { return #NAME; }
+#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, ANCESTOR)
 #include "parsing/ast.def"
 };
 
@@ -22,6 +23,26 @@ TEST(ast_test, visitor) {
   #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE_CHECK(NAME)
   #include "parsing/ast.def"
   #undef NODE_CHECK
+}
+
+TEST(ast_test, walker) {
+  std::stringstream ss;
+  ast_node_store store;
+  auto *node = store.make_module();
+  auto *block1 = store.make_block();
+  auto *block2 = store.make_block();
+  node->stmts.emplace_back(block1);
+  node->stmts.emplace_back(block2);
+  struct walker : public ast_walker<walker> {
+    std::stringstream &ss;
+    walker(std::stringstream &ss) : ss(ss) {}
+    void on_enter(const module_node &mod) override { ss << "enter mod;"; }
+    void on_leave(const module_node &mod) override { ss << "leave mod;"; }
+    void on_enter(const block_node &mod) override { ss << "enter block;"; }
+    void on_leave(const block_node &mod) override { ss << "leave block;"; }
+  } wlk(ss);
+  wlk.visit(*node);
+  ASSERT_STREQ(ss.str().c_str(), "enter mod;enter block;leave block;enter block;leave block;leave mod;");
 }
 
 TEST(ast_test, node_store) {
