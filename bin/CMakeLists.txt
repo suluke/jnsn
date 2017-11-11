@@ -2,6 +2,7 @@ add_executable(lexer_cli
   lexer_cli.cc
   ../include/parsing/keywords.def
   ../include/parsing/lexer.h
+  ../include/parsing/string_table.h
   ../include/parsing/source_location.h
   ../include/parsing/tokens.def
   ../include/parsing/util.h)
@@ -17,6 +18,7 @@ add_executable(parser_cli
   ../include/parsing/lexer.h
   ../include/parsing/operators.def
   ../include/parsing/parser.h
+  ../include/parsing/string_table.h
   ../include/parsing/source_location.h
   ../include/parsing/tokens.def
   ../include/parsing/util.h)
@@ -33,6 +35,7 @@ add_executable(exec_cli
   ../include/parsing/lexer.h
   ../include/parsing/operators.def
   ../include/parsing/parser.h
+  ../include/parsing/string_table.h
   ../include/parsing/source_location.h
   ../include/parsing/tokens.def
   ../include/parsing/util.h)

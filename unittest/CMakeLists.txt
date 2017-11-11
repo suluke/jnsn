@@ -29,6 +29,7 @@ endmacro()
 add_unittest(lexer_test
   lexer_test.cc
   ../include/parsing/lexer.h
+  ../include/parsing/string_table.h
   ../include/parsing/tokens.def
   ../include/parsing/keywords.def
 )
