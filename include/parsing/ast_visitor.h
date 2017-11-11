@@ -1,11 +1,18 @@
 #ifndef PARSING_AST_VISITOR_H
 #define PARSING_AST_VISITOR_H
+#include "parsing/source_location.h"
 
 namespace parsing {
 
 class const_ast_node_visitor_base;
 /// Base class of all ast nodes (for visitor)
 struct ast_node {
+  source_location loc;
+  ast_node(source_location loc) : loc(loc) {}
+  ast_node(const ast_node &) = default;
+  ast_node(ast_node &&) = default;
+  ast_node &operator=(const ast_node &) = default;
+  ast_node &operator=(ast_node &&) = default;
   virtual void accept(const_ast_node_visitor_base &v) const = 0;
   virtual ~ast_node() = default;
 };

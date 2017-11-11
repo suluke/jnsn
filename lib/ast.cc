@@ -12,7 +12,7 @@ void ast_node_store::clear() {
 }
 
 #define NODE(NAME, CHILD_NODES)                                                \
-  NAME##_node *ast_node_store::make_##NAME() {                                 \
+  NAME##_node *ast_node_store::make_##NAME(source_location loc) {              \
     if (NAME##_vec.empty()) {                                                  \
       NAME##_vec.emplace_back(std::make_unique<no_reloc_buf<NAME##_node>>());  \
       NAME##_vec.back()->reserve(1);                                           \
@@ -25,7 +25,7 @@ void ast_node_store::clear() {
       storage = NAME##_vec.back().get();                                       \
       storage->reserve(2 * cap);                                               \
     }                                                                          \
-    storage->emplace_back();                                                   \
+    storage->emplace_back(loc);                                                \
     return &storage->back();                                                   \
   }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
