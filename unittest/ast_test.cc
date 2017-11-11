@@ -36,13 +36,26 @@ TEST(ast_test, walker) {
   struct walker : public ast_walker<walker> {
     std::stringstream &ss;
     walker(std::stringstream &ss) : ss(ss) {}
-    void on_enter(const module_node &mod) override { ss << "enter mod;"; }
+    bool on_enter(const module_node &mod) override { ss << "enter mod;"; return true; }
     void on_leave(const module_node &mod) override { ss << "leave mod;"; }
-    void on_enter(const block_node &mod) override { ss << "enter block;"; }
+    bool on_enter(const block_node &mod) override { ss << "enter block;"; return true; }
     void on_leave(const block_node &mod) override { ss << "leave block;"; }
   } wlk(ss);
   wlk.visit(*node);
   ASSERT_STREQ(ss.str().c_str(), "enter mod;enter block;leave block;enter block;leave block;leave mod;");
+
+  // Test early exit
+  ss.str("");
+  struct walker2 : public ast_walker<walker2> {
+    std::stringstream &ss;
+    walker2(std::stringstream &ss) : ss(ss) {}
+    bool on_enter(const module_node &mod) override { ss << "enter mod;"; return false; }
+    void on_leave(const module_node &mod) override { ss << "leave mod;"; }
+    bool on_enter(const block_node &mod) override { ss << "enter block;"; return true; }
+    void on_leave(const block_node &mod) override { ss << "leave block;"; }
+  } wlk2(ss);
+  wlk2.visit(*node);
+  ASSERT_STREQ(ss.str().c_str(), "enter mod;leave mod;");
 }
 
 TEST(ast_test, node_store) {
