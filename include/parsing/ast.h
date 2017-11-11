@@ -16,7 +16,6 @@ class ast_node_store;
 #define CHILDREN(...)                                                          \
   {                                                                            \
     __VA_ARGS__                                                                \
-    void accept(ast_node_visitor_base &v) override { v.gen_result(*this); }    \
     void accept(const_ast_node_visitor_base &v) const override {               \
       v.gen_result(*this);                                                     \
     }                                                                          \
