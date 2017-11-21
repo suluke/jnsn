@@ -42,11 +42,18 @@ public:
 
 class string_table {
 private:
-  std::unordered_set<std::string> table;
+  using container = std::unordered_set<std::string>;
+  container table;
 
 public:
   using entry = string_table_entry;
+  using iterator = container::iterator;
+  using const_iterator = container::const_iterator;
   entry get_handle(std::string s);
+  iterator begin() { return table.begin(); }
+  const_iterator begin() const { return table.begin(); }
+  iterator end() { return table.end(); }
+  const_iterator end() const { return table.end(); }
 };
 
 } // namespace parsing
