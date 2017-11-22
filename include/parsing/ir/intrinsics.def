@@ -1,0 +1,18 @@
+#ifndef INTRINSIC
+#define INTRINSIC(NAME, ARGUMENTS, RETTY)
+#endif
+#ifndef ARGS
+#define ARGS(...)
+#endif
+#ifndef RETURN
+#define RETURN(TY)
+#endif
+
+INTRINSIC(to_string, ARGS(), RETURN(string))
+INTRINSIC(to_bool, ARGS(), RETURN(bool))
+INTRINSIC(to_number, ARGS(), RETURN(number))
+INTRINSIC(concat, ARGS(), RETURN(string))
+
+#undef RETURN
+#undef ARGS
+#undef INTRINSIC

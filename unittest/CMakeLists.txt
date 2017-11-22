@@ -51,6 +51,19 @@ add_unittest(parser_test
   gtest_utils.h
   ../include/parsing/parser.h
 )
+add_unittest(ir_test
+  ir_test.cc
+  ../include/parsing/ir/instructions.def
+  ../include/parsing/ir/instructions.h
+  ../include/parsing/ir/intrinsics.def
+  ../include/parsing/ir/ir.h
+  ../include/parsing/ir/ir_builder.h
+  ../include/parsing/ir/ir_context.h
+  ../include/parsing/ir/module.h
+  ../include/parsing/ir/types.def
+  ../include/parsing/ir/types.h
+  ../include/parsing/ir/value.h
+)
 add_unittest(exec_test
   exec_test.cc
   ../include/parsing/ast_exec.h

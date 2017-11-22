@@ -1,0 +1,114 @@
+/// comparison operators
+#ifndef CMP_OP
+#define CMP_OP(OP)
+#endif
+
+CMP_OP(lt)
+CMP_OP(leq)
+CMP_OP(gt)
+CMP_OP(geq)
+CMP_OP(neq)
+CMP_OP(neqeq)
+CMP_OP(eq)
+CMP_OP(eqeq)
+
+#undef CMP_OP
+
+/// instructions
+#ifndef ARG
+#define ARG(NAME, TYPE)
+#endif
+#ifndef ARGS
+#define ARGS(ARGUMENTS)
+#endif
+#ifndef PROP
+#define PROP(NAME, TYPE)
+#endif
+#ifndef PROPS
+#define PROPS(ARGUMENTS)
+#endif
+#ifndef RETURN
+#define RETURN(RET)
+#endif
+#ifndef INSTRUCTION
+#define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET)
+#endif
+
+// create heap-stored values
+INSTRUCTION(alloc_object, ARGS(), PROPS(), RETURN(addr))
+INSTRUCTION(alloc_array, ARGS(), PROPS(), RETURN(addr))
+INSTRUCTION(bind_scope, ARGS(ARG(func, function)), PROPS(), RETURN(addr))
+
+// interact with the scope
+INSTRUCTION(define, ARGS(ARG(name, c_str)), PROPS(), RETURN(void))
+INSTRUCTION(lookup, ARGS(ARG(name, c_str)), PROPS(), RETURN(addr))
+
+// normal operations
+INSTRUCTION(call,
+            ARGS(ARG(callee, addr) ARG(this_val, register)
+                     ARG(arguments, addr)),
+            PROPS(), RETURN(register))
+INSTRUCTION(load, ARGS(ARG(address, addr)), PROPS(), RETURN(register))
+INSTRUCTION(store, ARGS(ARG(address, addr) ARG(value, register)), PROPS(),
+            RETURN(void))
+INSTRUCTION(add, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(sub, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(mul, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(div, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(mod, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(pow, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(shl, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(shr, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(zshr, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(bit_and, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(bit_or, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(bit_xor, ARGS(ARG(lhs, number) ARG(rhs, number)), PROPS(),
+            RETURN(number))
+INSTRUCTION(bit_neg, ARGS(ARG(value, number)), PROPS(), RETURN(number))
+INSTRUCTION(log_and, ARGS(ARG(lhs, bool) ARG(rhs, bool)), PROPS(), RETURN(bool))
+INSTRUCTION(log_or, ARGS(ARG(lhs, bool) ARG(rhs, bool)), PROPS(), RETURN(bool))
+INSTRUCTION(log_neg, ARGS(ARG(value, bool)), PROPS(), RETURN(bool))
+INSTRUCTION(cmp, ARGS(ARG(lhs, register) ARG(rhs, register)),
+            PROPS(op, cmp_operator), RETURN(bool))
+
+// terminator instrs
+INSTRUCTION(ret, ARGS(ARG(value, register)), PROPS(), RETURN(void))
+INSTRUCTION(br, ARGS(ARG(target, basic_block)), PROPS(), RETURN(void))
+INSTRUCTION(cbr,
+            ARGS(ARG(cond, bool) ARG(true_target, basic_block)
+                     ARG(false_target, basic_block)),
+            PROPS(), RETURN(void))
+INSTRUCTION(throw, ARGS(ARG(value, register)), PROPS(), RETURN(void))
+
+// exception handling
+INSTRUCTION(push_err_handler, ARGS(ARG(catch_block, basic_block)), PROPS(),
+            RETURN(void))
+INSTRUCTION(pop_err_handler, ARGS(), PROPS(), RETURN(void))
+
+// dict introspection
+INSTRUCTION(has_prop, ARGS(ARG(address, addr) ARG(prop, string)), PROPS(),
+            RETURN(bool))
+INSTRUCTION(get_prop, ARGS(ARG(address, addr) ARG(prop, string)), PROPS(),
+            RETURN(addr))
+INSTRUCTION(def_prop, ARGS(ARG(address, addr) ARG(prop, string)), PROPS(),
+            RETURN(addr))
+INSTRUCTION(del_prop, ARGS(ARG(address, addr) ARG(prop, string)), PROPS(),
+            RETURN(void))
+
+#undef INSTRUCTION
+#undef RETURN
+#undef PROPS
+#undef PROP
+#undef ARGS
+#undef ARG

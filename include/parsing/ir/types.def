@@ -1,0 +1,30 @@
+/// types
+#ifndef TYPE
+#define TYPE(NAME)
+#endif
+#ifndef SUBTYPE
+#define SUBTYPE(NAME, BASE)
+#endif
+
+TYPE(value) // = {addr, str, num, bool, null, undefined}
+SUBTYPE(register, value)
+SUBTYPE(void, value)
+SUBTYPE(addr, register) // = (heap_val *)
+SUBTYPE(bool, register)
+SUBTYPE(c_bool, bool)
+SUBTYPE(number, register)
+SUBTYPE(c_num, number)
+SUBTYPE(string, register)
+SUBTYPE(c_str, string)
+SUBTYPE(regex, register)
+SUBTYPE(null, register)
+SUBTYPE(undefined, register)
+SUBTYPE(function, value)
+SUBTYPE(basic_block, value)
+SUBTYPE(heap_value, value) // = {array, object, bound_function}
+SUBTYPE(array, heap_value)
+SUBTYPE(object, heap_value)
+SUBTYPE(bound_function, heap_value) // = (function, scope)
+
+#undef TYPE
+#undef SUBTYPE

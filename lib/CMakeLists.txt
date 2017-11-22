@@ -4,15 +4,30 @@ set(SOURCES
   ast_ops.cc
   parser.cc
   ast_exec.cc
+  ir/ir.cc
+  ir/ir_context.cc
+  ir/module.cc
+  ir/ir_builder.cc
   ../include/parsing/ast.def
   ../include/parsing/ast.h
   ../include/parsing/ast_ops.h
   ../include/parsing/ast_visitor.h
+  ../include/parsing/ir/instructions.def
+  ../include/parsing/ir/instructions.h
+  ../include/parsing/ir/intrinsics.def
+  ../include/parsing/ir/ir.h
+  ../include/parsing/ir/ir_builder.h
+  ../include/parsing/ir/ir_context.h
+  ../include/parsing/ir/module.h
+  ../include/parsing/ir/types.def
+  ../include/parsing/ir/types.h
+  ../include/parsing/ir/value.h
   ../include/parsing/keywords.def
   ../include/parsing/lexer.h
   ../include/parsing/operators.def
   ../include/parsing/parser.h
   ../include/parsing/source_location.h
+  ../include/parsing/string_table.h
   ../include/parsing/tokens.def
   ../include/parsing/util.h)
 
