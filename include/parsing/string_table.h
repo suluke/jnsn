@@ -2,7 +2,7 @@
 #define PARSING_STRING_TABLE_H
 #include <string>
 #include <string_view>
-#include <unordered_set>
+#include <set> // don't use unordered_set because elements might relocate
 
 namespace parsing {
 
@@ -42,7 +42,7 @@ public:
 
 class string_table {
 private:
-  using container = std::unordered_set<std::string>;
+  using container = std::set<std::string>;
   container table;
 
 public:
