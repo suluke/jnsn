@@ -30,7 +30,12 @@ enum class cmp_operator {
 #define RETURN(RET) RET##_type::create()
 #define ARG(NAME, TY) NAME,
 #define ARGS(...) enum class arguments { __VA_ARGS__ _ARGC_ };
-#define PROP(NAME, TY) TY NAME;
+#define PROP(NAME, TY)                                                         \
+private:                                                                       \
+  TY NAME;                                                                     \
+public:                                                                        \
+  TY get_##NAME() { return NAME; }                                             \
+  void set_##NAME(TY val) { NAME = val; }
 #define PROPS(...) __VA_ARGS__
 #define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET)                          \
   class NAME##_inst : public instruction {                                     \
@@ -43,6 +48,7 @@ enum class cmp_operator {
         : instruction(ctx, ir_value_kind::NAME##_inst_kind, RET) {}            \
     ARGUMENTS                                                                  \
     void print(std::ostream &stream, unsigned indent = 0) const;               \
+    PROPERTIES                                                                 \
                                                                                \
   private:                                                                     \
     std::array<value *, static_cast<std::underlying_type_t<arguments>>(        \

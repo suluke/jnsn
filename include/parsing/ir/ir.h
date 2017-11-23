@@ -103,6 +103,12 @@ public:
   function(const function &) = default;
   function(function &&) = default;
   basic_block *get_entry() const { return blocks.front(); }
+  bool is_intrinsic() {
+    auto &name = get_name();
+    if (name.empty())
+      return false;
+    return name[0] == '!';
+  }
   void print(std::ostream &stream, unsigned indent = 0) const;
 };
 

@@ -1,9 +1,20 @@
 #include "parsing/ir/ir_context.h"
 #include "parsing/ir/module.h"
 #include "parsing/util.h"
+#include <cassert>
 #include <sstream>
 
 using namespace parsing;
+
+ir_context::ir_context(){
+#define INTRINSIC(NAME, ARGS, RET)                                             \
+  {                                                                            \
+    auto *i = make_function();                                                 \
+    i->set_name("!" #NAME);                                                    \
+    intrinsics.emplace(intrinsic::NAME, i);                                    \
+  }
+#include "parsing/ir/intrinsics.def"
+}
 
 c_num_val *ir_context::get_c_num_val(double d) {
   auto I = nums.find(d);
@@ -40,6 +51,11 @@ void ir_context::insert_block_into(function *F, basic_block *BB) {
 void ir_context::insert_inst_into(basic_block *BB, instruction *Inst) {
   Inst->parent = BB;
   BB->instructions.emplace_back(Inst);
+}
+
+function *ir_context::get_intrinsic(intrinsic i) {
+  assert(intrinsics.count(i));
+  return intrinsics[i];
 }
 
 // FIXME this is of course WIP and eventually needs a proper impl

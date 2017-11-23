@@ -1,6 +1,7 @@
 #ifndef PARSING_IR_CONTEXT_H
 #define PARSING_IR_CONTEXT_H
 #include "parsing/ir/ir.h"
+#include "parsing/ir/intrinsics.h"
 #include <deque>
 #include <map>
 #include <variant>
@@ -26,6 +27,7 @@ class ir_context {
 
   std::deque<basic_block> blocks;
   std::deque<function> functions;
+  std::map<intrinsic, function *> intrinsics;
   /// union of instructions for unified storage
   using inst = std::variant<
 #define INSTRUCTION(NAME, ARGUMENTS, PROPS, RET) NAME##_inst,
@@ -65,9 +67,16 @@ class ir_context {
         arg)] = &val;
   }
 
+  function *get_intrinsic(intrinsic);
+
 public:
+  ir_context();
   c_num_val *get_c_num_val(double d);
   c_str_val *get_c_str_val(std::string s);
+  undefined_val *get_undefined() { return &undef_v; }
+  null_val *get_null() { return &null_v; }
+  c_bool_val *get_true() { return &true_v; }
+  c_bool_val *get_false() { return &false_v; }
 };
 
 } // namespace parsing

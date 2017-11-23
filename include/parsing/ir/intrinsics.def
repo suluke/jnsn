@@ -1,6 +1,9 @@
 #ifndef INTRINSIC
 #define INTRINSIC(NAME, ARGUMENTS, RETTY)
 #endif
+#ifndef ARG
+#define ARG(NAME, TYPE)
+#endif
 #ifndef ARGS
 #define ARGS(...)
 #endif
@@ -8,10 +11,13 @@
 #define RETURN(TY)
 #endif
 
-INTRINSIC(to_string, ARGS(), RETURN(string))
-INTRINSIC(to_bool, ARGS(), RETURN(bool))
-INTRINSIC(to_number, ARGS(), RETURN(number))
-INTRINSIC(concat, ARGS(), RETURN(string))
+INTRINSIC(to_primitive, ARGS(ARG(val, register)), RETURN(register))
+INTRINSIC(is_object, ARGS(ARG(val, register)), RETURN(bool))
+INTRINSIC(is_string, ARGS(ARG(val, register)), RETURN(bool))
+INTRINSIC(to_string, ARGS(ARG(val, register)), RETURN(string))
+INTRINSIC(to_bool, ARGS(ARG(val, register)), RETURN(bool))
+INTRINSIC(to_number, ARGS(ARG(val, register)), RETURN(number))
+INTRINSIC(concat, ARGS(ARG(s1, string) ARG(s2, string)), RETURN(string))
 
 #undef RETURN
 #undef ARGS

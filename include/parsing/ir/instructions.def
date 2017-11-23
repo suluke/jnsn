@@ -80,7 +80,7 @@ INSTRUCTION(log_and, ARGS(ARG(lhs, bool) ARG(rhs, bool)), PROPS(), RETURN(bool))
 INSTRUCTION(log_or, ARGS(ARG(lhs, bool) ARG(rhs, bool)), PROPS(), RETURN(bool))
 INSTRUCTION(log_neg, ARGS(ARG(value, bool)), PROPS(), RETURN(bool))
 INSTRUCTION(cmp, ARGS(ARG(lhs, register) ARG(rhs, register)),
-            PROPS(op, cmp_operator), RETURN(bool))
+            PROPS(PROP(op, cmp_operator)), RETURN(bool))
 
 // terminator instrs
 INSTRUCTION(ret, ARGS(ARG(value, register)), PROPS(), RETURN(void))
