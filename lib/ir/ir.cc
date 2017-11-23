@@ -88,8 +88,12 @@ void instruction::print(std::ostream &stream, unsigned indent) const {
       stream << get_ctx().get_unique_id(*this) << " = ";                       \
     }                                                                          \
     stream << #NAME << " ";                                                    \
-    for (auto *arg : args) {                                                   \
-      stream << get_ctx().get_unique_id(*arg) << ", ";                         \
+    if (!args.empty()) {                                                       \
+      auto It = args.begin();                                                  \
+      stream << get_ctx().get_unique_id(**It);                                 \
+      while (++It != args.end()) {                                             \
+        stream << ", " << get_ctx().get_unique_id(**It);                       \
+      }                                                                        \
     }                                                                          \
   }
 #include "parsing/ir/instructions.def"
