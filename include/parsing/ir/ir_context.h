@@ -66,8 +66,8 @@ class ir_context {
   }
 
 public:
-  c_num_val &get_c_num_val(double d);
-  c_str_val &get_c_str_val(std::string s);
+  c_num_val *get_c_num_val(double d);
+  c_str_val *get_c_str_val(std::string s);
 };
 
 } // namespace parsing

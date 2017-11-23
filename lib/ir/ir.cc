@@ -26,8 +26,9 @@ void constant::print(std::ostream &stream, unsigned indent) const {
     static_cast<const undefined_val *>(this)->print(stream, indent);
   } else if (isa<null_val>(*this)) {
     static_cast<const null_val *>(this)->print(stream, indent);
+  } else {
+    unreachable("Unknown constant type encountered");
   }
-  unreachable("Unknown constant type encountered");
 }
 void c_bool_val::print(std::ostream &stream, unsigned indent) const {
   INDENT_HELPER();

@@ -5,20 +5,20 @@
 
 using namespace parsing;
 
-c_num_val &ir_context::get_c_num_val(double d) {
+c_num_val *ir_context::get_c_num_val(double d) {
   auto I = nums.find(d);
   if (I == nums.end()) {
     I = nums.emplace(d, c_num_val{d, *this}).first;
   }
-  return I->second;
+  return &I->second;
 }
-c_str_val &ir_context::get_c_str_val(std::string s) {
+c_str_val *ir_context::get_c_str_val(std::string s) {
   auto h = str_table.get_handle(s);
   auto I = strs.find(h);
   if (I == strs.end()) {
     I = strs.emplace(h, c_str_val{h, *this}).first;
   }
-  return I->second;
+  return &I->second;
 }
 
 function *ir_context::make_function() {

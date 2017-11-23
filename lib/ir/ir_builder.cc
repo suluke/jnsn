@@ -3,6 +3,7 @@
 #include "parsing/ir/ir_builder.h"
 #include "parsing/ir/module.h"
 #include "parsing/util.h"
+#include <cstdlib>
 #include <map>
 
 namespace parsing {
@@ -12,16 +13,55 @@ struct ir_error {
   source_location loc;
 };
 
+struct ast_ir_mappings {
+  std::map<const ast_node *, function *> funcs;
+};
+
+static std::string to_str(const string_table_entry &s) {
+  return std::string{s.data(), s.size()};
+}
+
+struct ir_builder {
+  using result = std::variant<semantic_error, std::unique_ptr<module>>;
+  ir_context &ctx;
+  ast_ir_mappings mappings;
+  module *mod;
+  ir_builder(ir_context &ctx) : ctx(ctx) {}
+  result build(const module_node &ast);
+  template <class ty> ty *insert_inst(basic_block &bb) {
+    assert(mod);
+    auto *inst = ctx.make_inst<ty>();
+    ctx.insert_inst_into(&bb, inst);
+    return inst;
+  }
+  template <class Inst>
+  void set_inst_arg(Inst &inst, typename Inst::arguments arg, value &val) {
+    ctx.set_inst_arg(inst, arg, val);
+  }
+  std::string get_unique_id(value &v) { return ctx.get_unique_id(v); }
+};
+
 using inst_result = std::variant<ir_error, value *>;
 
 struct inst_creator : public const_ast_node_visitor<inst_result> {
   using result = inst_result;
+  ir_builder &builder;
+  basic_block *IP;
+
+  inst_creator(ir_builder &builder, basic_block *IP)
+      : builder(builder), IP(IP) {}
 
   result accept(const statement_node &) override {
     return ir_error{"Encountered abstract class statement_node", {}};
   }
   result accept(const module_node &node) override {
-    return ir_error{"Not implemented", {}};
+    for (auto *stmt : node.stmts) {
+      auto res = visit(*stmt);
+      if (std::holds_alternative<ir_error>(res)) {
+        return std::get<ir_error>(res);
+      }
+    }
+    return nullptr;
   }
   result accept(const expression_node &) override {
     return ir_error{"Encountered abstract class expression_node", {}};
@@ -29,8 +69,14 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const param_list_node &) override {
     return ir_error{"Not implemented", {}};
   }
-  result accept(const block_node &) override {
-    return ir_error{"Not implemented", {}};
+  result accept(const block_node &node) override {
+    for (auto *child : node.stmts) {
+      auto res = visit(*child);
+      if (std::holds_alternative<ir_error>(res)) {
+        return std::get<ir_error>(res);
+      }
+    }
+    return nullptr;
   }
   result accept(const function_expr_node &) override {
     return ir_error{"Not implemented", {}};
@@ -52,28 +98,34 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
     return ir_error{"Encountered abstract class number_literal", {}};
   }
   result accept(const int_literal_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_num_val(
+        static_cast<double>(std::strtol(node.val.data(), nullptr, 10)));
   }
   result accept(const float_literal_node &node) override {
     return ir_error{"Not implemented", {}};
   }
   result accept(const hex_literal_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_num_val(
+        static_cast<double>(std::strtol(node.val.data() + 2, nullptr, 16)));
   }
   result accept(const oct_literal_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_num_val(
+        static_cast<double>(std::strtol(node.val.data() + 2, nullptr, 8)));
   }
   result accept(const bin_literal_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_num_val(
+        static_cast<double>(std::strtol(node.val.data() + 2, nullptr, 2)));
   }
   result accept(const string_literal_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_str_val(
+        std::string{node.val.data() + 1, node.val.size() - 2});
   }
   result accept(const regex_literal_node &) override {
     return ir_error{"Not implemented", {}};
   }
   result accept(const template_string_node &node) override {
-    return ir_error{"Not implemented", {}};
+    return builder.ctx.get_c_str_val(
+        std::string{node.val.data() + 1, node.val.size() - 2});
   }
   result accept(const template_literal_node &node) override {
     return ir_error{"Not implemented", {}};
@@ -151,7 +203,21 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   }
   // arithmetic binops
   result accept(const add_node &node) override {
-    return ir_error{"Not implemented", {}};
+    auto lhs = visit(*node.lhs);
+    if (std::holds_alternative<ir_error>(lhs)) {
+      return lhs;
+    }
+    auto rhs = visit(*node.rhs);
+    if (std::holds_alternative<ir_error>(rhs)) {
+      return rhs;
+    }
+    // FIXME arguments should be cast to number first
+    auto *add = builder.insert_inst<add_inst>(*IP);
+    builder.set_inst_arg(*add, add_inst::arguments::lhs,
+                         *std::get<value *>(lhs));
+    builder.set_inst_arg(*add, add_inst::arguments::rhs,
+                         *std::get<value *>(rhs));
+    return add;
   }
   result accept(const subtract_node &node) override {
     return ir_error{"Not implemented", {}};
@@ -351,32 +417,6 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   }
 };
 
-struct ast_ir_mappings {
-  std::map<const ast_node *, function *> funcs;
-};
-
-struct ir_builder {
-  using result = std::variant<semantic_error, std::unique_ptr<module>>;
-  ir_context &ctx;
-  ast_ir_mappings mappings;
-  module *mod;
-  ir_builder(ir_context &ctx) : ctx(ctx) {}
-  result build(const module_node &ast);
-  template <class ty> ty &insert_inst(basic_block &bb) {
-    assert(mod);
-    auto *inst = ctx.make_inst<ty>();
-    ctx.insert_inst_into(&bb, inst);
-    return *inst;
-  }
-  template <class Inst>
-  void set_inst_arg(Inst &inst, typename Inst::arguments arg, value &val) {
-    ctx.set_inst_arg(inst, arg, val);
-  }
-  std::string get_unique_id(value &v) {
-    return ctx.get_unique_id(v);
-  }
-};
-
 /// Collects all functions in post order
 struct function_collector : public ast_walker<function_collector> {
   std::vector<const ast_node *> funcs;
@@ -385,10 +425,6 @@ struct function_collector : public ast_walker<function_collector> {
   void on_leave(const arrow_function_node &node) { funcs.emplace_back(&node); }
   void on_leave(const class_func_node &node) { funcs.emplace_back(&node); }
 };
-
-static std::string to_str(const string_table_entry &s) {
-  return std::string{s.data(), s.size()};
-}
 
 struct hoisted_codegen : public ast_walker<hoisted_codegen> {
   ir_builder &builder;
@@ -405,9 +441,9 @@ struct hoisted_codegen : public ast_walker<hoisted_codegen> {
   bool on_enter(const var_decl_node &node) {
     if (node.keyword == "var") {
       for (auto *part : node.parts) {
-        auto &define = builder.insert_inst<define_inst>(bb);
-        auto &name = builder.ctx.get_c_str_val(to_str(part->name));
-        builder.set_inst_arg(define, define_inst::arguments::name, name);
+        auto *define = builder.insert_inst<define_inst>(bb);
+        auto *name = builder.ctx.get_c_str_val(to_str(part->name));
+        builder.set_inst_arg(*define, define_inst::arguments::name, *name);
       }
     }
     return false;
@@ -436,6 +472,12 @@ ir_builder::result ir_builder::build(const module_node &ast) {
   ctx.insert_block_into(entry, ctx.make_block());
   entry->set_name("__module_entry__");
   hoisted_codegen(*this, *entry->get_entry()).visit(ast);
+  auto res = inst_creator(*this, entry->get_entry()).visit(ast);
+  if (std::holds_alternative<ir_error>(res)) {
+    auto &err = std::get<ir_error>(res);
+    return semantic_error(err.msg, err.loc);
+  }
+
   function_collector fcollect;
   fcollect.visit(ast);
   for (const auto *ast_func : fcollect.funcs) {
@@ -449,6 +491,11 @@ ir_builder::result ir_builder::build(const module_node &ast) {
     const auto *body = get_function_body(ast_func);
     hoisted_codegen(*this, *F->get_entry()).visit(*body);
     ctx.insert_function_into(mod.get(), F);
+    auto res = inst_creator(*this, F->get_entry()).visit(*body);
+    if (std::holds_alternative<ir_error>(res)) {
+      auto &err = std::get<ir_error>(res);
+      return semantic_error(err.msg, err.loc);
+    }
   }
   return std::move(mod);
 }
