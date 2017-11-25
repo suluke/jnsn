@@ -36,7 +36,6 @@ CMP_OP(eqeq)
 
 // create heap-stored values
 INSTRUCTION(alloc_object, ARGS(), PROPS(), RETURN(addr))
-INSTRUCTION(alloc_array, ARGS(), PROPS(), RETURN(addr))
 INSTRUCTION(bind_scope, ARGS(ARG(func, function)), PROPS(), RETURN(addr))
 
 // interact with the scope

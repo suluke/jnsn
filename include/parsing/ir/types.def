@@ -9,7 +9,7 @@
 TYPE(value) // = {addr, str, num, bool, null, undefined}
 SUBTYPE(register, value)
 SUBTYPE(void, value)
-SUBTYPE(addr, register) // = (heap_val *)
+SUBTYPE(addr, register) // = (object *)
 SUBTYPE(bool, register)
 SUBTYPE(c_bool, bool)
 SUBTYPE(number, register)
@@ -21,10 +21,8 @@ SUBTYPE(null, register)
 SUBTYPE(undefined, register)
 SUBTYPE(function, value)
 SUBTYPE(basic_block, value)
-SUBTYPE(heap_value, value) // = {array, object, bound_function}
-SUBTYPE(array, heap_value)
-SUBTYPE(object, heap_value)
-SUBTYPE(bound_function, heap_value) // = (function, scope)
+SUBTYPE(object, value)
+SUBTYPE(bound_function, object) // = (function, scope)
 
 #undef TYPE
 #undef SUBTYPE
