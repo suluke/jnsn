@@ -49,9 +49,9 @@ class ir_context {
     insts.emplace_back(ty(*this));
     return &std::get<ty>(insts.back());
   }
-  void insert_function_into(module *M, function *F);
-  void insert_block_into(function *F, basic_block *BB);
-  void insert_inst_into(basic_block *BB, instruction *Inst);
+  void insert_function_into(module &M, function &F);
+  void insert_block_into(function &F, basic_block &BB);
+  void insert_inst_into(basic_block &BB, instruction &Inst);
 
   std::string get_unique_id(const value &) const;
   std::string get_unique_id(const constant &) const;
