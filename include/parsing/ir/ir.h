@@ -86,6 +86,7 @@ public:
   basic_block(ir_context &ctx)
       : value(ctx, ir_value_kind::basic_block_kind,
               basic_block_type::create()) {}
+  function *get_parent() const { return parent; }
   void print(std::ostream &stream, unsigned indent = 0) const;
 };
 
@@ -126,6 +127,8 @@ template <class ty> bool isa(const value &val) {
     case ir_value_kind::const_bool_kind:
     case ir_value_kind::const_num_kind:
     case ir_value_kind::const_str_kind:
+    case ir_value_kind::undefined_kind:
+    case ir_value_kind::null_kind:
       return true;
     default:
       return false;
