@@ -34,6 +34,10 @@ CMP_OP(eqeq)
 #define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET)
 #endif
 
+// SSA
+INSTRUCTION(phi, ARGS(ARG(in1, basic_block) ARG(val1, register)
+                          ARG(in2, basic_block) ARG(val2, register)), PROPS(), RETURN(register))
+
 // create heap-stored values
 INSTRUCTION(alloc_object, ARGS(), PROPS(), RETURN(addr))
 INSTRUCTION(bind_scope, ARGS(ARG(func, function)), PROPS(), RETURN(addr))
