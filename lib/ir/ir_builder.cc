@@ -31,6 +31,11 @@ struct ir_builder {
   module *mod;
   ir_builder(ir_context &ctx) : ctx(ctx) {}
   result build(const module_node &ast);
+  c_str_val *get_c_str_val(std::string str) {
+    auto *val = ctx.get_c_str_val(std::move(str));
+    mod->add_string_constant(*val);
+    return val;
+  }
   basic_block *make_block(function &F) {
     auto *bb = ctx.make_block();
     ctx.insert_block_into(F, *bb);
@@ -52,7 +57,7 @@ struct ir_builder {
     auto *args = insert_inst<alloc_object_inst>(IP);
     unsigned idx = 0;
     for (auto It = begin; It != end; ++It) {
-      auto *idx_val = ctx.get_c_str_val(std::to_string(idx));
+      auto *idx_val = get_c_str_val(std::to_string(idx));
       auto *addr = insert_inst<def_prop_inst>(IP);
       set_inst_arg(*addr, def_prop_inst::arguments::address, *args);
       set_inst_arg(*addr, def_prop_inst::arguments::prop, *idx_val);
@@ -112,7 +117,6 @@ struct ir_builder {
     set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
     return res;
   }
-  std::string get_unique_id(value &v) { return ctx.get_unique_id(v); }
   function *get_intrinsic(intrinsic i) { return ctx.get_intrinsic(i); }
 };
 
@@ -192,14 +196,14 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
         static_cast<double>(std::strtol(node.val.data() + 2, nullptr, 2)));
   }
   result accept(const string_literal_node &node) override {
-    return builder.ctx.get_c_str_val(
+    return builder.get_c_str_val(
         std::string{node.val.data() + 1, node.val.size() - 2});
   }
   result accept(const regex_literal_node &) override {
     return ir_error{"Not implemented", {}};
   }
   result accept(const template_string_node &node) override {
-    return builder.ctx.get_c_str_val(
+    return builder.get_c_str_val(
         std::string{node.val.data() + 1, node.val.size() - 2});
   }
   result accept(const template_literal_node &node) override {
@@ -310,8 +314,11 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
 
     // define some branch targets for later use
     auto *on_concat = builder.make_block(F);
+    on_concat->set_name("concat");
     auto *on_add = builder.make_block(F);
+    on_add->set_name("add");
     auto *val_unification = builder.make_block(F);
+    val_unification->set_name("plus.phi");
 
     // dispatch either to concatenation or addition
     {
@@ -337,7 +344,8 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
       concat = builder.concat_strings(*on_concat, *lhs_str, *rhs_str);
 
       auto *concat_br = builder.insert_inst<br_inst>(*on_concat);
-      builder.set_inst_arg(*concat_br, br_inst::arguments::target, *val_unification);
+      builder.set_inst_arg(*concat_br, br_inst::arguments::target,
+                           *val_unification);
     }
 
     // codegen for addition
@@ -345,19 +353,20 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
     {
       auto *lhs_num = builder.cast_to_number(*on_add, *lhs);
       auto *rhs_num = builder.cast_to_number(*on_add, *rhs);
-      
+
       add = builder.insert_inst<add_inst>(*on_add);
       builder.set_inst_arg(*add, add_inst::arguments::lhs, *lhs_num);
       builder.set_inst_arg(*add, add_inst::arguments::rhs, *rhs_num);
 
       auto *add_br = builder.insert_inst<br_inst>(*on_add);
-      builder.set_inst_arg(*add_br, br_inst::arguments::target, *val_unification);
+      builder.set_inst_arg(*add_br, br_inst::arguments::target,
+                           *val_unification);
     }
 
     // now unify results
     auto *val = builder.insert_inst<phi_inst>(*val_unification);
     builder.set_inst_arg(*val, phi_inst::arguments::in1, *on_concat);
-    builder.set_inst_arg(*val, phi_inst::arguments::val2, *concat);
+    builder.set_inst_arg(*val, phi_inst::arguments::val1, *concat);
     builder.set_inst_arg(*val, phi_inst::arguments::in2, *on_add);
     builder.set_inst_arg(*val, phi_inst::arguments::val2, *add);
 
@@ -612,7 +621,7 @@ struct hoisted_codegen : public ast_walker<hoisted_codegen> {
     if (node.keyword == "var") {
       for (auto *part : node.parts) {
         auto *define = builder.insert_inst<define_inst>(bb);
-        auto *name = builder.ctx.get_c_str_val(to_str(part->name));
+        auto *name = builder.get_c_str_val(to_str(part->name));
         builder.set_inst_arg(*define, define_inst::arguments::name, *name);
       }
     }

@@ -7,6 +7,7 @@ namespace parsing {
 
 enum class ir_value_kind {
   value_kind,
+  global_value_kind,
   function_kind,
   basic_block_kind,
   instruction_kind,
@@ -42,6 +43,7 @@ public:
   ir_value_kind get_kind() const { return dyn_kind; }
   type get_type() const { return ty; }
   const std::string &get_name() const { return name; }
+  bool has_name() const { return name != ""; }
   void set_name(std::string name) { this->name = std::move(name); }
 };
 

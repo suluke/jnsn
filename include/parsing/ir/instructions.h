@@ -10,13 +10,20 @@ class basic_block;
 
 /// base class of all instructions
 class instruction : public value {
+  friend class ir_context;
   template <class ty> friend bool isa(const value &);
   static constexpr ir_value_kind kind = ir_value_kind::instruction_kind;
+  basic_block *parent = nullptr;
+protected:
+  std::string get_unique_id() const;
+  /// Used for printing instruction's arguments
+  std::string get_unique_id(const value &val) const;
 
 public:
-  basic_block *parent;
   instruction(ir_context &ctx, ir_value_kind kind, type ty)
       : value(ctx, kind, ty) {}
+  bool has_parent() const { return parent; }
+  basic_block *get_parent() const { return parent; }
   void print(std::ostream &stream, unsigned indent = 0) const;
 };
 

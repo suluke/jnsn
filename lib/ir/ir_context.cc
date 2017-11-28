@@ -57,32 +57,3 @@ function *ir_context::get_intrinsic(intrinsic i) {
   assert(intrinsics.count(i));
   return intrinsics[i];
 }
-
-// FIXME this is of course WIP and eventually needs a proper impl
-std::string ir_context::get_unique_id(const value &val) const {
-  if (isa<constant>(val)) {
-    return get_unique_id(static_cast<const constant &>(val));
-  } else if (isa<instruction>(val)) {
-    return get_unique_id(static_cast<const instruction &>(val));
-  } else if (isa<basic_block>(val)) {
-    return get_unique_id(static_cast<const basic_block &>(val));
-  } else if (isa<function>(val)) {
-    return get_unique_id(static_cast<const function &>(val));
-  }
-  unreachable("Unknown value type");
-}
-std::string ir_context::get_unique_id(const constant &c) const {
-  if (isa<c_str_val>(c)) {
-    return "%str";
-  }
-  std::stringstream ss;
-  c.print(ss);
-  return ss.str();
-}
-std::string ir_context::get_unique_id(const instruction &) const { return "%"; }
-std::string ir_context::get_unique_id(const basic_block &) const {
-  return "label";
-}
-std::string ir_context::get_unique_id(const function &F) const {
-  return F.get_name();
-}

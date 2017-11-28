@@ -43,6 +43,7 @@ class ir_context {
   std::map<double, c_num_val> nums;
   string_table str_table;
   std::map<std::string_view, c_str_val> strs;
+
   function *make_function();
   basic_block *make_block();
   template <class ty> ty *make_inst() {
@@ -52,12 +53,6 @@ class ir_context {
   void insert_function_into(module &M, function &F);
   void insert_block_into(function &F, basic_block &BB);
   void insert_inst_into(basic_block &BB, instruction &Inst);
-
-  std::string get_unique_id(const value &) const;
-  std::string get_unique_id(const constant &) const;
-  std::string get_unique_id(const instruction &) const;
-  std::string get_unique_id(const basic_block &) const;
-  std::string get_unique_id(const function &) const;
 
   template <class Inst>
   void set_inst_arg(Inst &inst, typename Inst::arguments arg, value &val) {
