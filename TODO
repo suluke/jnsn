@@ -1,0 +1,51 @@
+### not implemented
+* trailing commas in arrays (XFAIL)
+* parameter default values  (XFAIL)
+* spread in call args       (XFAIL)
+* class (+static)           (XFAIL)
+* import/export             (XFAIL)
+* break/continue LABEL
+* HTML comments
+* Tagged template literals.
+* getters/setters
+* destructuring assignments (objects & arrays)
+* async/await
+* generators (function*, yield)
+
+### passes
+* unnecessary cast elimination
+
+### harder
+* let should not be a keyword
+* implicit semicolons
+
+### To decide
+* Make comments available in ast
+* Make trailing commas available in ast
+
+### DONE
+* unary +/-/!/~
+* ++, --
+* typeof
+* void
+* delete
+* pow **
+* shifts (<<, >>, >>>)
+* comparisons (==, ===, !=, !==, <, >...)
+* instanceof
+* conditional operator (? :)
+* super
+* object_or_block deferred decision (will not be implemented)
+* labels
+* if/else
+* for(;;)
+* for(in)
+* do/while
+* while
+* throw
+* new
+* new.target
+* try/catch/finally
+* switch/case
+* template strings
+* regex
