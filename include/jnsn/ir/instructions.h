@@ -14,6 +14,7 @@ class instruction : public value {
   template <class ty> friend bool isa(const value &);
   static constexpr ir_value_kind kind = ir_value_kind::instruction_kind;
   basic_block *parent = nullptr;
+
 protected:
   std::string get_unique_id() const;
   /// Used for printing instruction's arguments
@@ -40,6 +41,7 @@ enum class cmp_operator {
 #define PROP(NAME, TY)                                                         \
 private:                                                                       \
   TY NAME;                                                                     \
+                                                                               \
 public:                                                                        \
   TY get_##NAME() { return NAME; }                                             \
   void set_##NAME(TY val) { NAME = val; }
@@ -60,7 +62,8 @@ public:                                                                        \
   private:                                                                     \
     std::array<value *, static_cast<std::underlying_type_t<arguments>>(        \
                             arguments::_ARGC_)>                                \
-        args;                                                                  \
+        args{}; /* the {} is important for zero-initialization. FIXME only */  \
+                /* do this in Debug builds? */                                 \
   };
 #include "jnsn/ir/instructions.def"
 
