@@ -271,8 +271,9 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const typeof_expr_node &) override {
     return ir_error{"Not implemented", {}};
   }
-  result accept(const void_expr_node &) override {
-    return ir_error{"Not implemented", {}};
+  result accept(const void_expr_node &node) override {
+    visit(*node.value);
+    return builder.ctx.get_undefined();
   }
   result accept(const delete_expr_node &) override {
     return ir_error{"Not implemented", {}};
