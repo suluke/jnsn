@@ -1,8 +1,8 @@
-#ifndef PARSING_IR_BUILDER_H
-#define PARSING_IR_BUILDER_H
-#include "parsing/source_location.h"
+#ifndef JNSN_IR_BUILDER_H
+#define JNSN_IR_BUILDER_H
+#include "jnsn/source_location.h"
 #include <memory>
-namespace parsing {
+namespace jnsn {
 
 struct module_node;
 class module;
@@ -20,5 +20,5 @@ struct semantic_error {
 std::variant<semantic_error, std::unique_ptr<module>>
 ast_to_ir(const module_node &, ir_context &ctx);
 
-} // namespace parsing
-#endif // PARSING_IR_BUILDER_H
+} // namespace jnsn
+#endif // JNSN_IR_BUILDER_H

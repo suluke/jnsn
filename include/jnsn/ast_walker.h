@@ -1,7 +1,7 @@
-#ifndef PARSING_AST_WALKER_H
-#define PARSING_AST_WALKER_H
-#include "parsing/ast.h"
-namespace parsing {
+#ifndef JNSN_PARSING_AST_WALKER_H
+#define JNSN_PARSING_AST_WALKER_H
+#include "jnsn/ast.h"
+namespace jnsn {
 
 template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
   ast_walker() { static_assert(std::is_base_of_v<ast_walker, impl>); }
@@ -10,12 +10,12 @@ template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual bool on_enter(const NAME##_node &) { return true; }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual void on_leave(const NAME##_node &) {}
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
 #define CHILDREN(...) __VA_ARGS__
 #define ONE(OF, NAME) visit(*node.NAME);
@@ -41,8 +41,8 @@ template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
     }                                                                          \
     this->on_leave(node);                                                      \
   }
-#include "parsing/ast.def"
-}; // namespace parsing
+#include "jnsn/ast.def"
+}; // namespace jnsn
 
-} // namespace parsing
-#endif // PARSING_AST_WALKER_H
+} // namespace jnsn
+#endif // JNSN_PARSING_AST_WALKER_H

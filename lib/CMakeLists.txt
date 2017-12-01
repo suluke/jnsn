@@ -8,28 +8,28 @@ set(SOURCES
   ir/ir_context.cc
   ir/module.cc
   ir/ir_builder.cc
-  ../include/parsing/ast.def
-  ../include/parsing/ast.h
-  ../include/parsing/ast_ops.h
-  ../include/parsing/ast_visitor.h
-  ../include/parsing/ir/instructions.def
-  ../include/parsing/ir/instructions.h
-  ../include/parsing/ir/intrinsics.def
-  ../include/parsing/ir/ir.h
-  ../include/parsing/ir/ir_builder.h
-  ../include/parsing/ir/ir_context.h
-  ../include/parsing/ir/module.h
-  ../include/parsing/ir/types.def
-  ../include/parsing/ir/types.h
-  ../include/parsing/ir/value.h
-  ../include/parsing/keywords.def
-  ../include/parsing/lexer.h
-  ../include/parsing/operators.def
-  ../include/parsing/parser.h
-  ../include/parsing/source_location.h
-  ../include/parsing/string_table.h
-  ../include/parsing/tokens.def
-  ../include/parsing/util.h)
+  ../include/jnsn/ast.def
+  ../include/jnsn/ast.h
+  ../include/jnsn/ast_ops.h
+  ../include/jnsn/ast_visitor.h
+  ../include/jnsn/ir/instructions.def
+  ../include/jnsn/ir/instructions.h
+  ../include/jnsn/ir/intrinsics.def
+  ../include/jnsn/ir/ir.h
+  ../include/jnsn/ir/ir_builder.h
+  ../include/jnsn/ir/ir_context.h
+  ../include/jnsn/ir/module.h
+  ../include/jnsn/ir/types.def
+  ../include/jnsn/ir/types.h
+  ../include/jnsn/ir/value.h
+  ../include/jnsn/keywords.def
+  ../include/jnsn/lexer.h
+  ../include/jnsn/operators.def
+  ../include/jnsn/parser.h
+  ../include/jnsn/source_location.h
+  ../include/jnsn/string_table.h
+  ../include/jnsn/tokens.def
+  ../include/jnsn/util.h)
 
-add_library(parsing
+add_library(jnsn
   ${SOURCES})

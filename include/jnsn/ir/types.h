@@ -1,17 +1,17 @@
-#ifndef PARSING_IR_TYPES_H
-#define PARSING_IR_TYPES_H
-namespace parsing {
+#ifndef JNSN_IR_TYPES_H
+#define JNSN_IR_TYPES_H
+namespace jnsn {
 
 // runtime types
 class type {
 #define TYPE(NAME) friend class NAME##_type;
 #define SUBTYPE(NAME, BASE) TYPE(NAME)
-#include "parsing/ir/types.def"
+#include "jnsn/ir/types.def"
   template <class ty> friend bool isa(type valty);
   enum kind {
 #define TYPE(NAME) NAME##_ty,
 #define SUBTYPE(NAME, BASE) TYPE(NAME)
-#include "parsing/ir/types.def"
+#include "jnsn/ir/types.def"
   };
   const kind ty;
   type(kind ty) : ty(ty) {}
@@ -30,7 +30,7 @@ public:
     static inline type create() { return type(type::NAME##_ty); }              \
   };
 #define SUBTYPE(NAME, BASE) TYPE(NAME)
-#include "parsing/ir/types.def"
+#include "jnsn/ir/types.def"
 
 /// type introspection support for types
 template <class ty> bool isa(type valty) {
@@ -39,9 +39,9 @@ template <class ty> bool isa(type valty) {
 #define SUBTYPE(TY, BASE)                                                      \
   if (valty.ty == type::TY##_ty)                                               \
     return isa<ty>(BASE##_type::create());
-#include "parsing/ir/types.def"
+#include "jnsn/ir/types.def"
   return false;
 }
 
-} // namespace parsing
-#endif // PARSING_IR_TYPES_H
+} // namespace jnsn
+#endif // JNSN_IR_TYPES_H

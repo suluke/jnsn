@@ -1,10 +1,10 @@
-#ifndef PARSING_STRING_TABLE_H
-#define PARSING_STRING_TABLE_H
+#ifndef JNSN_STRING_TABLE_H
+#define JNSN_STRING_TABLE_H
 #include <string>
 #include <string_view>
 #include <set> // don't use unordered_set because elements might relocate
 
-namespace parsing {
+namespace jnsn {
 
 class string_table;
 class string_table_entry {
@@ -56,5 +56,5 @@ public:
   const_iterator end() const { return table.end(); }
 };
 
-} // namespace parsing
-#endif // PARSING_STRING_TABLE_H
+} // namespace jnsn
+#endif // JNSN_STRING_TABLE_H

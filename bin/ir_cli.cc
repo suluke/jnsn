@@ -1,9 +1,9 @@
-#include "parsing/ir/module.h"
-#include "parsing/ir/ir_builder.h"
-#include "parsing/parser.h"
+#include "jnsn/ir/module.h"
+#include "jnsn/ir/ir_builder.h"
+#include "jnsn/parser.h"
 
 using namespace std;
-using namespace parsing;
+using namespace jnsn;
 
 void ir_cli() {
   while (true) {

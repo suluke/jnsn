@@ -1,16 +1,16 @@
-#include "parsing/ast.h"
-#include "parsing/ast_exec.h"
+#include "jnsn/ast.h"
+#include "jnsn/ast_exec.h"
 #include <cmath>
 #include <cstdlib>
 #include <map>
 
-using namespace parsing;
+using namespace jnsn;
 
-namespace parsing {
+namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, const exec_error error) {
   return stream << error.msg;
 }
-} // namespace parsing
+} // namespace jnsn
 
 void array_value::print(std::ostream &stream) const {
   stream << "[";

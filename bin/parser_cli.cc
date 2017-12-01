@@ -1,7 +1,7 @@
-#include "parsing/parser.h"
+#include "jnsn/parser.h"
 
 using namespace std;
-using namespace parsing;
+using namespace jnsn;
 
 static void parser_cli() {
   using ast_root = parser_base::ast_root;

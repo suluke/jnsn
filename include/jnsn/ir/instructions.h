@@ -1,10 +1,10 @@
-#ifndef PARSING_IR_INSTRUCTIONS_H
-#define PARSING_IR_INSTRUCTIONS_H
-#include "parsing/ir/value.h"
+#ifndef JNSN_IR_INSTRUCTIONS_H
+#define JNSN_IR_INSTRUCTIONS_H
+#include "jnsn/ir/value.h"
 #include <array>
 #include <type_traits>
 
-namespace parsing {
+namespace jnsn {
 
 class basic_block;
 
@@ -30,7 +30,7 @@ public:
 /// instruction properties
 enum class cmp_operator {
 #define CMP_OP(OP) OP,
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 };
 
 /// instruction generation
@@ -62,7 +62,7 @@ public:                                                                        \
                             arguments::_ARGC_)>                                \
         args;                                                                  \
   };
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 
-} // namespace parsing
-#endif // PARSING_IR_INSTRUCTIONS_H
+} // namespace jnsn
+#endif // JNSN_IR_INSTRUCTIONS_H

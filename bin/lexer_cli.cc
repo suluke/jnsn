@@ -1,7 +1,7 @@
-#include "parsing/lexer.h"
+#include "jnsn/lexer.h"
 
 using namespace std;
-using namespace parsing;
+using namespace jnsn;
 
 static void lexer_cli() {
   struct lex_visitor {

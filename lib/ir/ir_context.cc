@@ -1,10 +1,10 @@
-#include "parsing/ir/ir_context.h"
-#include "parsing/ir/module.h"
-#include "parsing/util.h"
+#include "jnsn/ir/ir_context.h"
+#include "jnsn/ir/module.h"
+#include "jnsn/util.h"
 #include <cassert>
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 
 ir_context::ir_context(){
 #define INTRINSIC(NAME, ARGS, RET)                                             \
@@ -13,7 +13,7 @@ ir_context::ir_context(){
     i->set_name("!" #NAME);                                                    \
     intrinsics.emplace(intrinsic::NAME, i);                                    \
   }
-#include "parsing/ir/intrinsics.def"
+#include "jnsn/ir/intrinsics.def"
 }
 
 c_num_val *ir_context::get_c_num_val(double d) {

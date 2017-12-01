@@ -1,15 +1,15 @@
-#include "parsing/ast_ops.h"
-#include "parsing/ast_walker.h"
-#include "parsing/ir/intrinsics.h"
-#include "parsing/ir/ir_builder.h"
-#include "parsing/ir/module.h"
-#include "parsing/util.h"
+#include "jnsn/ast_ops.h"
+#include "jnsn/ast_walker.h"
+#include "jnsn/ir/intrinsics.h"
+#include "jnsn/ir/ir_builder.h"
+#include "jnsn/ir/module.h"
+#include "jnsn/util.h"
 #include <array>
 #include <cstdlib>
 #include <map>
 #include <string>
 
-namespace parsing {
+namespace jnsn {
 
 struct ir_error {
   std::string msg;
@@ -682,4 +682,4 @@ ir_builder::result ir_builder::build(const module_node &ast) {
 ir_builder::result ast_to_ir(const module_node &ast, ir_context &ctx) {
   return ir_builder(ctx).build(ast);
 }
-} // namespace parsing
+} // namespace jnsn

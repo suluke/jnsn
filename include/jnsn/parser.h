@@ -1,11 +1,11 @@
-#ifndef PARSING_PARSER_H
-#define PARSING_PARSER_H
+#ifndef JNSN_PARSING_PARSER_H
+#define JNSN_PARSING_PARSER_H
 
-#include "parsing/ast.h"
-#include "parsing/lexer.h"
+#include "jnsn/ast.h"
+#include "jnsn/lexer.h"
 #include <stack>
 
-namespace parsing {
+namespace jnsn {
 
 struct parser_error {
   std::string msg;
@@ -82,6 +82,6 @@ class cin_line_parser : public parser_base {
   lexer_base &get_lexer() { return lexer; }
 };
 
-} // namespace parsing
+} // namespace jnsn
 
-#endif // PARSING_PARSER_H
+#endif // JNSN_PARSING_PARSER_H

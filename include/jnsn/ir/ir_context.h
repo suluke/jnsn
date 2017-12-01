@@ -1,12 +1,12 @@
-#ifndef PARSING_IR_CONTEXT_H
-#define PARSING_IR_CONTEXT_H
-#include "parsing/ir/ir.h"
-#include "parsing/ir/intrinsics.h"
+#ifndef JNSN_IR_CONTEXT_H
+#define JNSN_IR_CONTEXT_H
+#include "jnsn/ir/ir.h"
+#include "jnsn/ir/intrinsics.h"
 #include <deque>
 #include <map>
 #include <variant>
 
-namespace parsing {
+namespace jnsn {
 class module;
 
 class ir_context {
@@ -23,7 +23,7 @@ class ir_context {
   friend class null_val;
   friend class instruction;
 #define INSTRUCTION(NAME, ARGUMENTS, PROPS, RET) friend class NAME##_inst;
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 
   std::deque<basic_block> blocks;
   std::deque<function> functions;
@@ -31,7 +31,7 @@ class ir_context {
   /// union of instructions for unified storage
   using inst = std::variant<
 #define INSTRUCTION(NAME, ARGUMENTS, PROPS, RET) NAME##_inst,
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
       std::nullptr_t // FIXME maybe we can omit this somehow
       >;
   std::deque<inst> insts;
@@ -74,5 +74,5 @@ public:
   c_bool_val *get_false() { return &false_v; }
 };
 
-} // namespace parsing
-#endif // PARSING_IR_CONTEXT_H
+} // namespace jnsn
+#endif // JNSN_IR_CONTEXT_H

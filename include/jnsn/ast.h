@@ -1,13 +1,13 @@
-#ifndef PARSING_AST_H
-#define PARSING_AST_H
+#ifndef JNSN_PARSING_AST_H
+#define JNSN_PARSING_AST_H
 
-#include "parsing/ast_visitor.h"
-#include "parsing/lexer.h"
+#include "jnsn/ast_visitor.h"
+#include "jnsn/lexer.h"
 #include <cassert>
 #include <memory>
 #include <vector>
 
-namespace parsing {
+namespace jnsn {
 class ast_node_store;
 
 /// Setting up node structs
@@ -36,7 +36,7 @@ class ast_node_store;
 #define STRINGS(NAME) std::vector<string_table::entry> NAME;
 #define MAYBE_STR(NAME) std::optional<string_table::entry> NAME;
 #define MAYBE(OF, NAME) std::optional<OF##_node *> NAME;
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
 /// The place where different nodes live
 class ast_node_store {
@@ -48,17 +48,17 @@ class ast_node_store {
 #define NODE(NAME, CHILD_NODES)                                                \
   std::vector<no_reloc_buf_ptr<NAME##_node>> NAME##_vec;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
 public:
 #define NODE(NAME, CHILD_NODES) NAME##_node *make_##NAME(source_location loc);
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
   void clear();
 };
 
 std::ostream &operator<<(std::ostream &, const ast_node *);
-} // namespace parsing
+} // namespace jnsn
 
-#endif // PARSING_AST_H
+#endif // JNSN_PARSING_AST_H

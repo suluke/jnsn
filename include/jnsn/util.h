@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
-namespace parsing {
+namespace jnsn {
 [[noreturn]] inline void unreachable_internal(const char *msg = nullptr,
                                               const char *file = nullptr,
                                               unsigned line = 0) {
@@ -15,11 +15,11 @@ namespace parsing {
   std::cerr << "!\n";
   std::abort();
 }
-} // namespace parsing
+} // namespace jnsn
 
 #ifndef NDEBUG
 #define unreachable(msg)                                                       \
-  ::parsing::unreachable_internal(msg, __FILE__, __LINE__)
+  ::jnsn::unreachable_internal(msg, __FILE__, __LINE__)
 #else
-#define unreachable(msg) ::parsing::unreachable_internal()
+#define unreachable(msg) ::jnsn::unreachable_internal()
 #endif

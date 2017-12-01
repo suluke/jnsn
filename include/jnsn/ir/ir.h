@@ -1,10 +1,10 @@
-#ifndef PARSING_IR_H
-#define PARSING_IR_H
-#include "parsing/ir/instructions.h"
-#include "parsing/string_table.h"
+#ifndef JNSN_IR_H
+#define JNSN_IR_H
+#include "jnsn/ir/instructions.h"
+#include "jnsn/string_table.h"
 #include <vector>
 
-namespace parsing {
+namespace jnsn {
 /// Forward-declare containers (for `parent` pointers)
 class module;
 class function;
@@ -176,7 +176,7 @@ template <class ty> bool isa(const value &val) {
   } else if constexpr (std::is_same_v<ty, instruction>) {
     switch (val.get_kind()) {
 #define INSTRUCTION(NAME, ARG, PROP, RET) case ir_value_kind::NAME##_inst_kind:
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
       return true;
     default:
       return false;
@@ -184,5 +184,5 @@ template <class ty> bool isa(const value &val) {
   }
   return ty::kind == val.get_kind();
 }
-} // namespace parsing
-#endif // PARSING_IR_H
+} // namespace jnsn
+#endif // JNSN_IR_H

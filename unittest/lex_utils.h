@@ -1,7 +1,7 @@
-#ifndef PARSING_UNITTEST_LEX_UTILS_H
-#define PARSING_UNITTEST_LEX_UTILS_H
-#include "parsing/lexer.h"
-namespace parsing {
+#ifndef JNSN_UNITTEST_LEX_UTILS_H
+#define JNSN_UNITTEST_LEX_UTILS_H
+#include "jnsn/lexer.h"
+namespace jnsn {
 ///
 ///
 class constant_string_lexer : public lexer_base {
@@ -21,5 +21,5 @@ public:
     it = text;
   }
 };
-} // namespace parsing
-#endif // PARSING_UNITTEST_LEX_UTILS_H
+} // namespace jnsn
+#endif // JNSN_UNITTEST_LEX_UTILS_H

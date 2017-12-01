@@ -1,5 +1,5 @@
-#ifndef PARSING_AST_EXECUTOR_H
-#define PARSING_AST_EXECUTOR_H
+#ifndef JNSN_PARSING_AST_EXECUTOR_H
+#define JNSN_PARSING_AST_EXECUTOR_H
 #include <iostream>
 #include <memory>
 #include <string>
@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-namespace parsing {
+namespace jnsn {
 
 struct module_node;
 struct exec_value_base {
@@ -131,5 +131,5 @@ public:
   result execute(module_node &ast);
 };
 
-} // namespace parsing
-#endif // PARSING_AST_EXECUTOR_H
+} // namespace jnsn
+#endif // JNSN_PARSING_AST_EXECUTOR_H

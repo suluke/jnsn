@@ -1,14 +1,14 @@
-#include "parsing/ast.h"
-#include "parsing/ast_ops.h"
+#include "jnsn/ast.h"
+#include "jnsn/ast_ops.h"
 #include <cassert>
 #include <iostream>
 
-using namespace parsing;
+using namespace jnsn;
 /// ast_node_store impl
 void ast_node_store::clear() {
 #define NODE(NAME, CHILD_NODES) NAME##_vec.clear();
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NAME##_vec.clear();
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 }
 
 #define NODE(NAME, CHILD_NODES)                                                \
@@ -29,11 +29,11 @@ void ast_node_store::clear() {
     return &storage->back();                                                   \
   }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
-namespace parsing {
+namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, const ast_node *ref) {
   stream << ast_to_json(ref) << "\n";
   return stream;
 }
-} // namespace parsing
+} // namespace jnsn

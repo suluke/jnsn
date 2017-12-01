@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 using namespace std;
 using namespace testing::internal;
 

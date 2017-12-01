@@ -1,9 +1,9 @@
-#include "parsing/lexer.h"
-#include "parsing/util.h"
+#include "jnsn/lexer.h"
+#include "jnsn/util.h"
 #include <algorithm>
 #include <cctype>
 
-namespace parsing {
+namespace jnsn {
 
 using unit = lexer_base::unit;
 using result = lexer_base::result;
@@ -12,7 +12,7 @@ std::ostream &operator<<(std::ostream &stream, const token_type ty) {
 #define TOKEN_TYPE(NAME, STR)                                                  \
   if (ty == token_type::NAME)                                                  \
     stream << #NAME;
-#include "parsing/tokens.def"
+#include "jnsn/tokens.def"
   return stream;
 }
 std::ostream &operator<<(std::ostream &stream, const token &tok) {
@@ -41,18 +41,18 @@ static bool is_keyword(string_table::entry word) {
 #define KEYWORD(NAME)                                                          \
   if (word == #NAME)                                                           \
     return true;
-#include "parsing/keywords.def"
+#include "jnsn/keywords.def"
   return false;
 }
 
 #define KEYWORD(NAME) static const char *kw_##NAME##_str = #NAME;
-#include "parsing/keywords.def"
+#include "jnsn/keywords.def"
 
 static const char *find_kw(std::string &s) {
 #define KEYWORD(NAME)                                                          \
   if (s == #NAME)                                                              \
     return kw_##NAME##_str;
-#include "parsing/keywords.def"
+#include "jnsn/keywords.def"
   return nullptr;
 }
 
@@ -836,7 +836,7 @@ keyword_type lexer_base::get_keyword_type(const token &t) {
   if (t.text.data() == kw_##NAME##_str) {                                      \
     return keyword_type::kw_##NAME;                                            \
   }
-#include "parsing/keywords.def"
+#include "jnsn/keywords.def"
   unreachable("Unknown keyword type");
 }
 
@@ -844,4 +844,4 @@ token lexer_base::make_token(token_type ty, const char *text) {
   return token{ty, str_table.get_handle(text), {}};
 }
 
-} // namespace parsing
+} // namespace jnsn

@@ -1,13 +1,13 @@
-#include "parsing/ir/ir.h"
-#include "parsing/ir/ir_context.h"
-#include "parsing/ir/module.h"
-#include "parsing/util.h"
+#include "jnsn/ir/ir.h"
+#include "jnsn/ir/ir_context.h"
+#include "jnsn/ir/module.h"
+#include "jnsn/util.h"
 #include <algorithm>
 #include <cassert>
 #include <iomanip>
 #include <iostream>
 
-using namespace parsing;
+using namespace jnsn;
 
 #define INDENT_HELPER()                                                        \
   do {                                                                         \
@@ -78,7 +78,7 @@ void c_str_val::print(std::ostream &stream, unsigned indent) const {
 struct inst_visitor_base {
 #define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET)                          \
   void accept(const NAME##_inst &) {}
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 };
 template <class impl> struct inst_visitor : public inst_visitor_base {
   void visit(const instruction &inst) {
@@ -86,7 +86,7 @@ template <class impl> struct inst_visitor : public inst_visitor_base {
   if (isa<NAME##_inst>(inst)) {                                                \
     static_cast<impl *>(this)->accept(static_cast<const NAME##_inst &>(inst)); \
   }
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
   }
 };
 
@@ -116,7 +116,7 @@ void instruction::print(std::ostream &stream, unsigned indent) const {
         : stream(stream), indent(indent) {}
 #define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET)                          \
   void accept(const NAME##_inst &inst) { inst.print(stream, indent); }
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
   };
   auto print = print_dispatcher(stream, indent);
   print.visit(*this);
@@ -137,7 +137,7 @@ void instruction::print(std::ostream &stream, unsigned indent) const {
       }                                                                        \
     }                                                                          \
   }
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 
 std::string basic_block::get_unique_id() const {
   if (!has_parent()) {

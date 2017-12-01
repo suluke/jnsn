@@ -1,8 +1,8 @@
-#include "parsing/ir/ir_context.h"
+#include "jnsn/ir/ir_context.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 
 TEST(ir_test, type_isa) {
   ASSERT_TRUE(isa<value_type>(addr_type::create()));  // inheritance

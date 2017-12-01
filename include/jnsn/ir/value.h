@@ -1,9 +1,9 @@
-#ifndef PARSING_IR_VALUE_H
-#define PARSING_IR_VALUE_H
-#include "parsing/ir/types.h"
+#ifndef JNSN_IR_VALUE_H
+#define JNSN_IR_VALUE_H
+#include "jnsn/ir/types.h"
 #include <string>
 
-namespace parsing {
+namespace jnsn {
 
 enum class ir_value_kind {
   value_kind,
@@ -18,7 +18,7 @@ enum class ir_value_kind {
   undefined_kind,
   null_kind,
 #define INSTRUCTION(NAME, ARGUMENTS, PROPERTIES, RET) NAME##_inst_kind,
-#include "parsing/ir/instructions.def"
+#include "jnsn/ir/instructions.def"
 };
 
 class ir_context;
@@ -47,5 +47,5 @@ public:
   void set_name(std::string name) { this->name = std::move(name); }
 };
 
-} // namespace parsing
-#endif // PARSING_IR_VALUE_H
+} // namespace jnsn
+#endif // JNSN_IR_VALUE_H

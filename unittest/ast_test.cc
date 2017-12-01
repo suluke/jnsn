@@ -1,15 +1,15 @@
-#include "parsing/ast.h"
-#include "parsing/ast_walker.h"
+#include "jnsn/ast.h"
+#include "jnsn/ast_walker.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 
 struct name_checker : public const_ast_node_visitor<const char *> {
 #define NODE(NAME, CHILD_NODES)                                                \
   const char *accept(const NAME##_node &) override { return #NAME; }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, ANCESTOR)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 };
 
 TEST(ast_test, visitor) {
@@ -23,7 +23,7 @@ TEST(ast_test, visitor) {
   }
 #define NODE(NAME, CHILD_NODES) NODE_CHECK(NAME)
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE_CHECK(NAME)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 #undef NODE_CHECK
 }
 

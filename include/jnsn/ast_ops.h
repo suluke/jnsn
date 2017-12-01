@@ -1,8 +1,8 @@
-#ifndef PARSING_AST_OPS_H
-#define PARSING_AST_OPS_H
-#include "parsing/ast.h"
+#ifndef JNSN_PARSING_AST_OPS_H
+#define JNSN_PARSING_AST_OPS_H
+#include "jnsn/ast.h"
 
-namespace parsing {
+namespace jnsn {
 
 class ast_to_json {
 private:
@@ -16,12 +16,12 @@ public:
 template<class nodety> bool isa(const ast_node *);
 #define NODE(NAME, CHILDREN) template<> bool isa<NAME##_node>(const ast_node *);
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 
 template<class nodety>
 bool isa(const ast_node &node) {
   return isa<nodety>(&node);
 }
 
-} // namespace parsing
-#endif // PARSING_AST_OPS_H
+} // namespace jnsn
+#endif // JNSN_PARSING_AST_OPS_H

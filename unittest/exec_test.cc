@@ -1,9 +1,9 @@
 #include "parse_utils.h"
-#include "parsing/ast_exec.h"
+#include "jnsn/ast_exec.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 using namespace std;
 
 class exec_test : public ::testing::Test {

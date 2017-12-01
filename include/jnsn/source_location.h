@@ -1,9 +1,9 @@
-#ifndef PARSING_SOURCE_LOCATION_H
-#define PARSING_SOURCE_LOCATION_H
+#ifndef JNSN_SOURCE_LOCATION_H
+#define JNSN_SOURCE_LOCATION_H
 #include <cctype>
 #include <sstream>
 
-namespace parsing {
+namespace jnsn {
 
 /// FIXME duplicate type alias
 using unit_t = char;
@@ -46,6 +46,6 @@ public:
   }
 };
 
-} // namespace parsing
+} // namespace jnsn
 
-#endif // PARSING_SOURCE_LOCATION_H
+#endif // JNSN_SOURCE_LOCATION_H

@@ -1,7 +1,7 @@
-#include "parsing/ast_ops.h"
+#include "jnsn/ast_ops.h"
 #include <sstream>
 
-using namespace parsing;
+using namespace jnsn;
 using namespace std;
 
 struct json_escape {
@@ -85,7 +85,7 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
     CHILD_NODES;                                                               \
   }
 
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 };
 
 struct json_printer : public const_ast_node_visitor<void> {
@@ -160,16 +160,16 @@ struct json_printer : public const_ast_node_visitor<void> {
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 };
 
-namespace parsing {
+namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, const ast_to_json &wrapper) {
   json_printer printer{stream};
   printer.visit(*wrapper.ast);
   return stream;
 }
-} // namespace parsing
+} // namespace jnsn
 
 /// isa<> impl
 template <class nodety>
@@ -184,15 +184,15 @@ struct isa_checker : public const_ast_node_visitor<bool> {
     return std::is_same_v<NAME##_node, nodety> ||                              \
            accept(static_cast<const BASE &>(node));                            \
   }
-#include "parsing/ast.def"
+#include "jnsn/ast.def"
 };
 
-namespace parsing {
+namespace jnsn {
 #define NODE(NAME, CHILDREN)                                                   \
   template <> bool isa<NAME##_node>(const ast_node *node) {                    \
     assert(node);                                                              \
     return isa_checker<NAME##_node>().visit(*node);                            \
   }
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
-#include "parsing/ast.def"
-} // namespace parsing
+#include "jnsn/ast.def"
+} // namespace jnsn

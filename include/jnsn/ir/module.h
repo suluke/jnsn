@@ -1,9 +1,9 @@
-#ifndef PARSING_IR_MODULE_H
-#define PARSING_IR_MODULE_H
-#include "parsing/ir/ir_context.h"
+#ifndef JNSN_IR_MODULE_H
+#define JNSN_IR_MODULE_H
+#include "jnsn/ir/ir_context.h"
 #include <set>
 
-namespace parsing {
+namespace jnsn {
 
 class module {
   friend struct ir_context;
@@ -23,5 +23,5 @@ public:
   void add_string_constant(c_str_val &str) { strs.emplace(&str); }
 };
 
-} // namespace parsing
-#endif // PARSING_IR_MODULE_H
+} // namespace jnsn
+#endif // JNSN_IR_MODULE_H

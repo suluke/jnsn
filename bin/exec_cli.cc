@@ -1,8 +1,8 @@
-#include "parsing/ast_exec.h"
-#include "parsing/parser.h"
+#include "jnsn/ast_exec.h"
+#include "jnsn/parser.h"
 
 using namespace std;
-using namespace parsing;
+using namespace jnsn;
 
 void exec_cli() {
   ast_executor exec;

@@ -1,9 +1,9 @@
-#include "parsing/ir/module.h"
-#include "parsing/util.h"
+#include "jnsn/ir/module.h"
+#include "jnsn/util.h"
 #include <sstream>
 #include <iostream>
 
-using namespace parsing;
+using namespace jnsn;
 
 void module::print(std::ostream &stream) {
   stream << "; global values\n";
@@ -28,9 +28,9 @@ std::string module::get_unique_id(const global_value &G) {
   return G.get_name();
 }
 
-namespace parsing {
+namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, module &mod) {
   mod.print(stream);
   return stream;
 }
-} // namespace parsing
+} // namespace jnsn

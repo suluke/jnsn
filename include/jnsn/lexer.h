@@ -1,8 +1,8 @@
-#ifndef PARSING_LEXER_H
-#define PARSING_LEXER_H
+#ifndef JNSN_PARSING_LEXER_H
+#define JNSN_PARSING_LEXER_H
 
-#include "parsing/source_location.h"
-#include "parsing/string_table.h"
+#include "jnsn/source_location.h"
+#include "jnsn/string_table.h"
 #include <cassert>
 #include <iostream>
 #include <optional>
@@ -10,17 +10,17 @@
 #include <string>
 #include <variant>
 
-namespace parsing {
+namespace jnsn {
 
 enum class token_type {
 #define TOKEN_TYPE(NAME, STR) NAME,
-#include "parsing/tokens.def"
+#include "jnsn/tokens.def"
 };
 std::ostream &operator<<(std::ostream &stream, const token_type ty);
 
 enum class keyword_type {
 #define KEYWORD(NAME) kw_##NAME,
-#include "parsing/keywords.def"
+#include "jnsn/keywords.def"
 };
 
 ///
@@ -137,6 +137,6 @@ public:
     it = line.begin();
   }
 };
-} // namespace parsing
+} // namespace jnsn
 
-#endif // PARSING_LEXER_H
+#endif // JNSN_PARSING_LEXER_H
