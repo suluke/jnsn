@@ -45,14 +45,16 @@ std::string constant::str() const {
   unreachable("Unknown constant type encountered");
 }
 
-
-
 std::string c_bool_val::str() const { return val ? "true" : "false"; }
 void c_bool_val::print(std::ostream &stream, unsigned indent) const {
   INDENT_HELPER();
   stream << str();
 }
-std::string c_num_val::str() const { return std::to_string(val); }
+std::string c_num_val::str() const {
+  std::stringstream ss;
+  ss << val;
+  return ss.str();
+}
 void c_num_val::print(std::ostream &stream, unsigned indent) const {
   INDENT_HELPER();
   stream << val;
@@ -201,7 +203,7 @@ std::string function::get_unique_id(const instruction &inst) const {
   auto bbPos = std::distance(blocks.begin(), bbIt);
   assert(bbPos >= 0);
   size_t idx = 0;
-  for (size_t i = 0u; i < (size_t) bbPos; ++i) {
+  for (size_t i = 0u; i < (size_t)bbPos; ++i) {
     idx += blocks[i]->size();
   }
   auto iIt = std::find(bb->begin(), bb->end(), &inst);
