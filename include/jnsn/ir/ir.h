@@ -69,6 +69,7 @@ public:
 
 class global_value : public value {
   friend class ir_context;
+  friend class module;
   template <class ty> friend bool isa(const value &);
   static constexpr ir_value_kind kind = ir_value_kind::global_value_kind;
   module *parent = nullptr;
@@ -85,15 +86,15 @@ public:
 class c_str_val : public global_value {
   template <class ty> friend bool isa(const value &);
   friend class ir_context;
+  friend class module;
   static constexpr ir_value_kind kind = ir_value_kind::const_str_kind;
   string_table_entry val;
 
   using global_value::get_unique_id;
-
-public:
   c_str_val(string_table_entry val, ir_context &ctx)
       : global_value(ctx, ir_value_kind::const_str_kind, c_str_type::create()),
         val(val) {}
+public:
   void print(std::ostream &stream, unsigned indent = 0) const;
 };
 

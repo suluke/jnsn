@@ -23,10 +23,8 @@ static const statement_node *get_function_body(const ast_node *node) {
 }
 
 // ============ ir_builder impl ============
-c_str_val *ir_builder::get_c_str_val(std::string str) {
-  auto *val = ctx.get_c_str_val(std::move(str));
-  mod->add_string_constant(*val);
-  return val;
+c_str_val *ir_builder::get_str_val(std::string str) {
+  return mod->get_str_val(std::move(str));
 }
 basic_block *ir_builder::make_block(function &F) {
   auto *bb = ctx.make_block();
@@ -145,7 +143,7 @@ bool hoisted_codegen::on_enter(const var_decl_node &node) {
   if (node.keyword == "var") {
     for (auto *part : node.parts) {
       auto *define = builder.insert_inst<define_inst>(bb);
-      auto *name = builder.get_c_str_val(to_str(part->name));
+      auto *name = builder.get_str_val(to_str(part->name));
       builder.set_inst_arg(*define, define_inst::arguments::name, *name);
     }
   }
@@ -210,14 +208,14 @@ inst_creator::result inst_creator::accept(const bin_literal_node &node) {
       static_cast<double>(std::strtol(node.val.data() + 2, nullptr, 2)));
 }
 inst_creator::result inst_creator::accept(const string_literal_node &node) {
-  return builder.get_c_str_val(
+  return builder.get_str_val(
       std::string{node.val.data() + 1, node.val.size() - 2});
 }
 inst_creator::result inst_creator::accept(const regex_literal_node &) {
   return ir_error{"Not implemented", {}};
 }
 inst_creator::result inst_creator::accept(const template_string_node &node) {
-  return builder.get_c_str_val(
+  return builder.get_str_val(
       std::string{node.val.data() + 1, node.val.size() - 2});
 }
 inst_creator::result inst_creator::accept(const template_literal_node &node) {
@@ -313,24 +311,9 @@ inst_creator::arithmetic_binop_codegen(const AstNodeTy &node) {
   if (auto err = load_binop_args<AstNodeTy>(node, &lhs, &rhs)) {
     return *err;
   }
-  std::array<value *, 1> args;
-  auto *to_num = builder.get_intrinsic(intrinsic::to_number);
-  /* turn lhs into a number */
-  args[0] = lhs;
-  auto *lhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
-  auto *lhs_num = builder.insert_inst<call_inst>(*IP);
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::callee, *to_num);
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::this_val,
-                       *builder.ctx.get_undefined());
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::arguments, *lhs_args);
-  /* turn rhs into a number */
-  args[0] = rhs;
-  auto *rhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
-  auto *rhs_num = builder.insert_inst<call_inst>(*IP);
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::callee, *to_num);
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::this_val,
-                       *builder.ctx.get_undefined());
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::arguments, *rhs_args);
+  /* turn args into numbers */
+  auto *lhs_num = builder.cast_to_number(*IP, *lhs);
+  auto *rhs_num = builder.cast_to_number(*IP, *rhs);
 
   auto *res = builder.insert_inst<InstTy>(*IP);
   builder.set_inst_arg(*res, InstTy::arguments::lhs, *lhs_num);
@@ -349,10 +332,10 @@ inst_creator::result inst_creator::accept(const add_node &node) {
   if (auto err = load_binop_args<add_node>(node, &lhs, &rhs))
     return *err;
 
-  // convert lhs to primitive
+  // convert args to primitive
   call_inst *lhs_prim = builder.cast_to_primitive(start, *lhs);
   call_inst *rhs_prim = builder.cast_to_primitive(start, *rhs);
-  // see if lhs primitive is string
+  // see if args primitives are strings
   call_inst *lhs_is_str = builder.test_is_string(start, *lhs_prim);
   call_inst *rhs_is_str = builder.test_is_string(start, *rhs_prim);
 
@@ -393,18 +376,12 @@ inst_creator::result inst_creator::accept(const add_node &node) {
   }
 
   // codegen for addition
-  add_inst *add = nullptr;
-  {
-    auto *lhs_num = builder.cast_to_number(*on_add, *lhs);
-    auto *rhs_num = builder.cast_to_number(*on_add, *rhs);
-
-    add = builder.insert_inst<add_inst>(*on_add);
-    builder.set_inst_arg(*add, add_inst::arguments::lhs, *lhs_num);
-    builder.set_inst_arg(*add, add_inst::arguments::rhs, *rhs_num);
-
-    auto *add_br = builder.insert_inst<br_inst>(*on_add);
-    builder.set_inst_arg(*add_br, br_inst::arguments::target, *val_unification);
-  }
+  IP = on_add;
+  // TODO we could optimize already by re-using the cast-to-primitive args
+  auto add_or_err = arithmetic_binop_codegen<add_node, add_inst>(node);
+  if (std::holds_alternative<ir_error>(add_or_err))
+    return std::get<ir_error>(add_or_err);
+  add_inst *add = std::get<add_inst *>(add_or_err);
 
   // now unify results
   auto *val = builder.insert_inst<phi_inst>(*val_unification);
@@ -657,7 +634,6 @@ inst_creator::result inst_creator::accept(const catch_node &) {
 inst_creator::result inst_creator::accept(const try_stmt_node &) {
   return ir_error{"Not implemented", {}};
 }
-// FIXME these are not yet correctly modeled
 inst_creator::result inst_creator::accept(const import_stmt_node &) {
   return ir_error{"Not implemented", {}};
 }

@@ -35,6 +35,7 @@ class ir_context {
       std::nullptr_t // FIXME maybe we can omit this somehow
       >;
   std::deque<inst> insts;
+  std::deque<c_str_val> strs;
   // literals
   undefined_val undef_v = {*this};
   null_val null_v = {*this};
@@ -42,8 +43,9 @@ class ir_context {
   c_bool_val false_v = {false, *this};
   std::map<double, c_num_val> nums;
   string_table str_table;
-  std::map<std::string_view, c_str_val> strs;
 
+  string_table_entry internalize_string(std::string s);
+  c_str_val *make_str_val(std::string val);
   function *make_function();
   basic_block *make_block();
   template <class ty> ty *make_inst() {
@@ -66,8 +68,8 @@ class ir_context {
 
 public:
   ir_context();
+  /// getters for globally uniqued values
   c_num_val *get_c_num_val(double d);
-  c_str_val *get_c_str_val(std::string s);
   undefined_val *get_undefined() { return &undef_v; }
   null_val *get_null() { return &null_v; }
   c_bool_val *get_true() { return &true_v; }

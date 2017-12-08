@@ -9,7 +9,12 @@ class module {
   friend struct ir_context;
   friend class global_value;
   std::set<function *> functions;
-  std::set<c_str_val *> strs;
+  struct str_val_less {
+    bool operator()(const c_str_val *s1, const c_str_val *s2) const {
+      return std::less<std::string_view>()(s1->val, s2->val);
+    }
+  };
+  std::set<c_str_val *, str_val_less> strs;
   ir_context &ctx;
   // unique identifier support
   std::map<const global_value *, std::string> global_names;
@@ -20,7 +25,17 @@ public:
   void print(std::ostream &);
   friend std::ostream &operator<<(std::ostream &stream, module &mod);
 
-  void add_string_constant(c_str_val &str) { strs.emplace(&str); }
+  c_str_val *get_str_val(std::string val) {
+    auto handle = ctx.internalize_string(val);
+    c_str_val tester(handle, ctx);
+    if (strs.count(&tester)) {
+      return *strs.find(&tester);
+    }
+    auto *str = ctx.make_str_val(std::move(val));
+    str->parent = this;
+    strs.emplace(str);
+    return str;
+  }
 };
 
 } // namespace jnsn

@@ -28,7 +28,7 @@ struct ir_builder {
   module *mod;
   ir_builder(ir_context &ctx) : ctx(ctx) {}
   result build(const module_node &ast);
-  c_str_val *get_c_str_val(std::string str);
+  c_str_val *get_str_val(std::string str);
   basic_block *make_block(function &F);
   call_inst *cast_to_number(basic_block &IP, value &val);
   call_inst *cast_to_primitive(basic_block &IP, value &val);
@@ -53,7 +53,7 @@ struct ir_builder {
     auto *args = insert_inst<alloc_object_inst>(IP);
     unsigned idx = 0;
     for (auto It = begin; It != end; ++It) {
-      auto *idx_val = get_c_str_val(std::to_string(idx));
+      auto *idx_val = get_str_val(std::to_string(idx));
       auto *addr = insert_inst<def_prop_inst>(IP);
       set_inst_arg(*addr, def_prop_inst::arguments::address, *args);
       set_inst_arg(*addr, def_prop_inst::arguments::prop, *idx_val);
