@@ -45,6 +45,8 @@ INSTRUCTION(bind_scope, ARGS(ARG(func, function)), PROPS(), RETURN(addr))
 // interact with the scope
 INSTRUCTION(define, ARGS(ARG(name, c_str)), PROPS(), RETURN(void))
 INSTRUCTION(lookup, ARGS(ARG(name, c_str)), PROPS(), RETURN(addr))
+INSTRUCTION(enter_scope, ARGS(), PROPS(), RETURN(void))
+INSTRUCTION(leave_scope, ARGS(), PROPS(), RETURN(void))
 
 // normal operations
 INSTRUCTION(call,
