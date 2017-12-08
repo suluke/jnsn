@@ -1,8 +1,7 @@
 #include "ir_builder_internal.h"
 #include "jnsn/ast_ops.h" // isa<> on ast nodes
-#include "jnsn/util.h" // unreachable
-#include <cstdlib> // number parsing
-
+#include "jnsn/util.h"    // unreachable
+#include <cstdlib>        // number parsing
 
 namespace jnsn {
 
@@ -126,15 +125,21 @@ ir_builder::result ast_to_ir(const module_node &ast, ir_context &ctx) {
 }
 // =========================================
 
-bool load_adress_gen::on_enter(const number_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const int_literal_node &node)  { return false; }
-bool load_adress_gen::on_enter(const float_literal_node &node)  { return false; }
+bool load_adress_gen::on_enter(const number_literal_node &node) {
+  return false;
+}
+bool load_adress_gen::on_enter(const int_literal_node &node) { return false; }
+bool load_adress_gen::on_enter(const float_literal_node &node) { return false; }
 bool load_adress_gen::on_enter(const hex_literal_node &node) { return false; }
 bool load_adress_gen::on_enter(const oct_literal_node &node) { return false; }
 bool load_adress_gen::on_enter(const bin_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const string_literal_node &node) { return false; }
+bool load_adress_gen::on_enter(const string_literal_node &node) {
+  return false;
+}
 bool load_adress_gen::on_enter(const regex_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const template_string_node &node) { return false; }
+bool load_adress_gen::on_enter(const template_string_node &node) {
+  return false;
+}
 
 bool hoisted_codegen::on_enter(const var_decl_node &node) {
   if (node.keyword == "var") {
@@ -284,23 +289,54 @@ inst_creator::result inst_creator::accept(const void_expr_node &node) {
 inst_creator::result inst_creator::accept(const delete_expr_node &) {
   return ir_error{"Not implemented", {}};
 }
-inst_creator::result inst_creator::accept(const bin_op_expr_node &) {
-  return ir_error{"Encountered abstract class bin_op_expr_node", {}};
+
+// arithmetic binops
+template <class AstNodeTy>
+std::optional<ir_error>
+inst_creator::load_binop_args(const AstNodeTy &node, value **lhs, value **rhs) {
+  auto lhs_err = visit(*node.lhs);
+  if (std::holds_alternative<ir_error>(lhs_err)) {
+    return std::get<ir_error>(lhs_err);
+  }
+  auto rhs_err = visit(*node.rhs);
+  if (std::holds_alternative<ir_error>(rhs_err)) {
+    return std::get<ir_error>(rhs_err);
+  }
+  *lhs = std::get<value *>(lhs_err);
+  *rhs = std::get<value *>(rhs_err);
+  return std::nullopt;
 }
-    // arithmetic binops
-#define LOAD_BINOP_ARGS(lhs, rhs)                                              \
-  do {                                                                         \
-    auto lhs_err = visit(*node.lhs);                                           \
-    if (std::holds_alternative<ir_error>(lhs_err)) {                           \
-      return lhs;                                                              \
-    }                                                                          \
-    auto rhs_err = visit(*node.rhs);                                           \
-    if (std::holds_alternative<ir_error>(rhs_err)) {                           \
-      return rhs;                                                              \
-    }                                                                          \
-    lhs = std::get<value *>(lhs_err);                                          \
-    rhs = std::get<value *>(rhs_err);                                          \
-  } while (false)
+template <class AstNodeTy, class InstTy>
+std::variant<ir_error, InstTy *>
+inst_creator::arithmetic_binop_codegen(const AstNodeTy &node) {
+  value *lhs, *rhs;
+  if (auto err = load_binop_args<AstNodeTy>(node, &lhs, &rhs)) {
+    return *err;
+  }
+  std::array<value *, 1> args;
+  auto *to_num = builder.get_intrinsic(intrinsic::to_number);
+  /* turn lhs into a number */
+  args[0] = lhs;
+  auto *lhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
+  auto *lhs_num = builder.insert_inst<call_inst>(*IP);
+  builder.set_inst_arg(*lhs_num, call_inst::arguments::callee, *to_num);
+  builder.set_inst_arg(*lhs_num, call_inst::arguments::this_val,
+                       *builder.ctx.get_undefined());
+  builder.set_inst_arg(*lhs_num, call_inst::arguments::arguments, *lhs_args);
+  /* turn rhs into a number */
+  args[0] = rhs;
+  auto *rhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
+  auto *rhs_num = builder.insert_inst<call_inst>(*IP);
+  builder.set_inst_arg(*rhs_num, call_inst::arguments::callee, *to_num);
+  builder.set_inst_arg(*rhs_num, call_inst::arguments::this_val,
+                       *builder.ctx.get_undefined());
+  builder.set_inst_arg(*rhs_num, call_inst::arguments::arguments, *rhs_args);
+
+  auto *res = builder.insert_inst<InstTy>(*IP);
+  builder.set_inst_arg(*res, InstTy::arguments::lhs, *lhs_num);
+  builder.set_inst_arg(*res, InstTy::arguments::rhs, *rhs_num);
+  return res;
+}
 
 inst_creator::result inst_creator::accept(const add_node &node) {
   // See dmitripavlutin.com/javascriptss-addition-operator-demystified/
@@ -310,7 +346,8 @@ inst_creator::result inst_creator::accept(const add_node &node) {
   auto &F = *IP->get_parent();
 
   value *lhs, *rhs;
-  LOAD_BINOP_ARGS(lhs, rhs);
+  if (auto err = load_binop_args<add_node>(node, &lhs, &rhs))
+    return *err;
 
   // convert lhs to primitive
   call_inst *lhs_prim = builder.cast_to_primitive(start, *lhs);
@@ -366,8 +403,7 @@ inst_creator::result inst_creator::accept(const add_node &node) {
     builder.set_inst_arg(*add, add_inst::arguments::rhs, *rhs_num);
 
     auto *add_br = builder.insert_inst<br_inst>(*on_add);
-    builder.set_inst_arg(*add_br, br_inst::arguments::target,
-                         *val_unification);
+    builder.set_inst_arg(*add_br, br_inst::arguments::target, *val_unification);
   }
 
   // now unify results
@@ -380,70 +416,103 @@ inst_creator::result inst_creator::accept(const add_node &node) {
   IP = val_unification;
   return val;
 }
-inst_creator::result inst_creator::accept(const subtract_node &node) {
-  value *lhs, *rhs;
-  LOAD_BINOP_ARGS(lhs, rhs);
-  std::array<value *, 1> args;
-  auto *to_num = builder.get_intrinsic(intrinsic::to_number);
-  // turn lhs into a number
-  args[0] = lhs;
-  auto *lhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
-  auto *lhs_num = builder.insert_inst<call_inst>(*IP);
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::callee, *to_num);
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::this_val,
-                       *builder.ctx.get_undefined());
-  builder.set_inst_arg(*lhs_num, call_inst::arguments::arguments, *lhs_args);
-  // turn rhs into a number
-  args[0] = rhs;
-  auto *rhs_args = builder.prepare_call_args(*IP, args.begin(), args.end());
-  auto *rhs_num = builder.insert_inst<call_inst>(*IP);
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::callee, *to_num);
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::this_val,
-                       *builder.ctx.get_undefined());
-  builder.set_inst_arg(*rhs_num, call_inst::arguments::arguments, *rhs_args);
 
-  //
-  auto *res = builder.insert_inst<sub_inst>(*IP);
-  builder.set_inst_arg(*res, sub_inst::arguments::lhs, *lhs_num);
-  builder.set_inst_arg(*res, sub_inst::arguments::rhs, *rhs_num);
-  return res;
+template <class InstTy>
+inst_creator::result to_inster_result(std::variant<ir_error, InstTy *> res) {
+  if (std::holds_alternative<ir_error>(res))
+    return std::get<ir_error>(res);
+  return static_cast<value *>(std::get<InstTy *>(res));
+}
+
+inst_creator::result inst_creator::accept(const subtract_node &node) {
+  return to_inster_result(
+      std::move(arithmetic_binop_codegen<subtract_node, sub_inst>(node)));
 }
 inst_creator::result inst_creator::accept(const multiply_node &node) {
-  return ir_error{"Not implemented", {}};
+  return to_inster_result(
+      std::move(arithmetic_binop_codegen<multiply_node, mul_inst>(node)));
 }
 inst_creator::result inst_creator::accept(const divide_node &node) {
-  return ir_error{"Not implemented", {}};
+  return to_inster_result(
+      std::move(arithmetic_binop_codegen<divide_node, div_inst>(node)));
 }
 inst_creator::result inst_creator::accept(const pow_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  return to_inster_result(
+      std::move(arithmetic_binop_codegen<pow_expr_node, pow_inst>(node)));
 }
 inst_creator::result inst_creator::accept(const modulo_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  return to_inster_result(
+      std::move(arithmetic_binop_codegen<modulo_expr_node, mod_inst>(node)));
 }
 // comparison binops
 inst_creator::result inst_creator::accept(const less_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  auto cmp_or_err = arithmetic_binop_codegen<less_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::lt);
+  return cmp;
 }
 inst_creator::result inst_creator::accept(const less_eq_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  auto cmp_or_err = arithmetic_binop_codegen<less_eq_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::leq);
+  return cmp;
 }
 inst_creator::result inst_creator::accept(const greater_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  auto cmp_or_err = arithmetic_binop_codegen<greater_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::gt);
+  return cmp;
 }
 inst_creator::result inst_creator::accept(const greater_eq_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  auto cmp_or_err =
+      arithmetic_binop_codegen<greater_eq_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::geq);
+  return cmp;
 }
-inst_creator::result inst_creator::accept(const equals_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const equals_expr_node &node) {
+  auto cmp_or_err = arithmetic_binop_codegen<equals_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::eq);
+  return cmp;
 }
-inst_creator::result inst_creator::accept(const strong_equals_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const strong_equals_expr_node &node) {
+  auto cmp_or_err =
+      arithmetic_binop_codegen<strong_equals_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::eqeq);
+  return cmp;
 }
-inst_creator::result inst_creator::accept(const not_equals_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const not_equals_expr_node &node) {
+  auto cmp_or_err =
+      arithmetic_binop_codegen<not_equals_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::neq);
+  return cmp;
 }
-inst_creator::result inst_creator::accept(const strong_not_equals_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result
+inst_creator::accept(const strong_not_equals_expr_node &node) {
+  auto cmp_or_err =
+      arithmetic_binop_codegen<strong_not_equals_expr_node, cmp_inst>(node);
+  if (std::holds_alternative<ir_error>(cmp_or_err))
+    return std::get<ir_error>(cmp_or_err);
+  auto *cmp = std::get<cmp_inst *>(cmp_or_err);
+  cmp->set_op(cmp_operator::neqeq);
+  return cmp;
 }
 inst_creator::result inst_creator::accept(const log_and_expr_node &) {
   return ir_error{"Not implemented", {}};

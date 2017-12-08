@@ -30,11 +30,11 @@ Our unittests usually reflect best what we *should* be able to process.
 This project is written in *C++17*.
 That means that at least you will need a modern compiler to build `jnsn`.
 The only supported (meta) build system is **CMake**.
-It will produce two targets of interested in the generated build system:
+It will produce two targets of interest in the generated build system:
 1. all (*default*)
 2. unittests
 
 The former should be self-explanatory.
-`unittests` uses a downloaded copy of the `googletest`  framework to compile and link against this projects unittest suite.
+`unittests` uses a downloaded copy of the `googletest` framework to compile and link against this project's unittest suite.
 Furthermore, it also automatically runs the unittests.
  

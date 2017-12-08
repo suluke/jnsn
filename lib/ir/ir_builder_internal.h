@@ -7,6 +7,7 @@
 
 #include <array>
 #include <map>
+#include <optional>
 #include <string>
 
 namespace jnsn {
@@ -139,7 +140,17 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const typeof_expr_node &) override;
   result accept(const void_expr_node &node) override;
   result accept(const delete_expr_node &) override;
-  result accept(const bin_op_expr_node &) override;
+
+  // arithmetic binops
+  result accept(const bin_op_expr_node &) override {
+    return ir_error{"Encountered abstract class bin_op_expr_node", {}};
+  }
+  template <class AstNodeTy>
+  std::optional<ir_error> load_binop_args(const AstNodeTy &node, value **lhs,
+                                          value **rhs);
+  template <class AstNodeTy, class InstTy>
+  std::variant<ir_error, InstTy *>
+  arithmetic_binop_codegen(const AstNodeTy &node);
   result accept(const add_node &node) override;
   result accept(const subtract_node &node) override;
   result accept(const multiply_node &node) override;
@@ -213,6 +224,8 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const export_wildcard_node &) override;
 };
 
+/// Helper to get the address value corresponding to an ast_node.
+// Makes use of inst_creator to produce code if necessary
 class load_adress_gen : public ast_walker<load_adress_gen> {
   inst_creator &inster;
   value *result = nullptr;
@@ -226,6 +239,7 @@ class load_adress_gen : public ast_walker<load_adress_gen> {
   bool on_enter(const string_literal_node &node) override;
   bool on_enter(const regex_literal_node &node) override;
   bool on_enter(const template_string_node &node) override;
+
 public:
   static value &get_address(ast_node &node, inst_creator &inster) {
     load_adress_gen addrgen(inster);
@@ -245,4 +259,4 @@ struct function_collector : public ast_walker<function_collector> {
 };
 
 } // namespace jnsn
-#endif //JNSN_IR_BUILDER_INTERNAL_H
+#endif // JNSN_IR_BUILDER_INTERNAL_H
