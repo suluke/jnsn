@@ -5,6 +5,15 @@
 
 using namespace jnsn;
 
+function *module::get_function_by_name(std::string name) {
+  for (auto *F : functions) {
+    if (F->get_name() == name) {
+      return F;
+    }
+  }
+  return nullptr;
+}
+
 void module::print(std::ostream &stream) {
   stream << "; global values\n";
   for (auto *str : strs) {

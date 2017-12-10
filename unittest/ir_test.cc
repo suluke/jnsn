@@ -27,3 +27,9 @@ TEST(ir_test, value_isa) {
   ASSERT_TRUE(isa<constant>(num));
   ASSERT_TRUE(isa<c_num_val>(num));
 }
+TEST(ir_test, mod_test) {
+  ir_context ctx;
+  module mod(ctx);
+  ASSERT_NE(nullptr, mod.get_function_by_name("!__module_entry__"));
+  ASSERT_EQ(nullptr, mod.get_function_by_name("any_func"));
+}
