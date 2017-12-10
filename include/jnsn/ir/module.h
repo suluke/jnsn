@@ -8,6 +8,8 @@ namespace jnsn {
 class module {
   friend struct ir_context;
   friend class global_value;
+  ir_context &ctx;
+  function *entry;
   std::set<function *> functions;
   struct str_val_less {
     bool operator()(const c_str_val *s1, const c_str_val *s2) const {
@@ -15,15 +17,19 @@ class module {
     }
   };
   std::set<c_str_val *, str_val_less> strs;
-  ir_context &ctx;
+
   // unique identifier support
   std::map<const global_value *, std::string> global_names;
   std::string get_unique_id(const global_value &);
 
 public:
-  module(ir_context &ctx) : ctx(ctx) {}
+  module(ir_context &ctx) : ctx(ctx), entry(ctx.make_function()) {
+    entry->set_name("!__module_entry__");
+    ctx.insert_function_into(*this, *entry);
+  }
   void print(std::ostream &);
   friend std::ostream &operator<<(std::ostream &stream, module &mod);
+  function *get_entry() { return entry; }
 
   c_str_val *get_str_val(std::string val) {
     auto handle = ctx.internalize_string(val);

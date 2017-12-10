@@ -85,10 +85,8 @@ ir_builder::result ir_builder::build(const module_node &ast) {
   auto mod = std::unique_ptr<module>(new module(ctx));
   this->mod = mod.get();
   ast_ir_mappings mappings;
-  auto *entry = ctx.make_function();
-  ctx.insert_function_into(*mod, *entry);
+  auto *entry = mod->get_entry();
   ctx.insert_block_into(*entry, *ctx.make_block());
-  entry->set_name("__module_entry__");
   hoisted_codegen(*this, *entry->get_entry()).visit(ast);
   auto res = inst_creator(*this, entry->get_entry()).visit(ast);
   if (std::holds_alternative<ir_error>(res)) {
@@ -622,8 +620,22 @@ inst_creator::result inst_creator::accept(const break_stmt_node &) {
 inst_creator::result inst_creator::accept(const continue_stmt_node &) {
   return ir_error{"Not implemented", {}};
 }
-inst_creator::result inst_creator::accept(const return_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const return_stmt_node &node) {
+  assert(IP && IP->has_parent());
+  if (IP->get_parent() == builder.mod->get_entry()) {
+    return ir_error{"Return statement illegal in global context", node.loc};
+  }
+  value *val = builder.ctx.get_undefined();
+  if (node.value) {
+    auto val_or_err = visit(**node.value);
+    if (std::holds_alternative<ir_error>(val_or_err)) {
+      return std::get<ir_error>(val_or_err);
+    }
+    val = std::get<value *>(val_or_err);
+  }
+  auto *ret = builder.insert_inst<ret_inst>(*IP);
+  builder.set_inst_arg(*ret, ret_inst::arguments::value, *val);
+  return ret;
 }
 inst_creator::result inst_creator::accept(const throw_stmt_node &) {
   return ir_error{"Not implemented", {}};
