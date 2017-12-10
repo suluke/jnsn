@@ -412,6 +412,16 @@ TEST_F(parser_test, assignment) {
       "\"identifier_expr\", \"str\": \"c\"}, \"rhs\": {\"type\": \"multiply\", "
       "\"lhs\": {\"type\": \"int_literal\", \"val\": \"1\"}, \"rhs\": "
       "{\"type\": \"int_literal\", \"val\": \"3\"}}}}}]}");
+  ASSERT_PARSED_MATCHES_JSON(
+      "a[i].x = b[j].y",
+      MOD_WRAP("{\"type\": \"assign\", \"lhs\": {\"type\": \"member_access\", "
+               "\"base\": {\"type\": \"computed_member_access\", \"base\": "
+               "{\"type\": \"identifier_expr\", \"str\": \"a\"}, \"member\": "
+               "{\"type\": \"identifier_expr\", \"str\": \"i\"}}, \"member\": "
+               "\"x\"}, \"rhs\": {\"type\": \"member_access\", \"base\": "
+               "{\"type\": \"computed_member_access\", \"base\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"b\"}, \"member\": {\"type\": "
+               "\"identifier_expr\", \"str\": \"j\"}}, \"member\": \"y\"}}"));
 }
 TEST_F(parser_test, if_stmt) {
   ASSERT_PARSED_MATCHES_JSON(
