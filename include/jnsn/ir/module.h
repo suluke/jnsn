@@ -12,11 +12,11 @@ class module {
   function *entry;
   std::set<function *> functions;
   struct str_val_less {
-    bool operator()(const c_str_val *s1, const c_str_val *s2) const {
+    bool operator()(const str_val *s1, const str_val *s2) const {
       return std::less<std::string_view>()(s1->val, s2->val);
     }
   };
-  std::set<c_str_val *, str_val_less> strs;
+  std::set<str_val *, str_val_less> strs;
 
   // unique identifier support
   std::map<const global_value *, std::string> global_names;
@@ -32,9 +32,9 @@ public:
   function *get_entry() { return entry; }
   function *get_function_by_name(std::string name);
 
-  c_str_val *get_str_val(std::string val) {
+  str_val *get_str_val(std::string val) {
     auto handle = ctx.internalize_string(val);
-    c_str_val tester(handle, ctx);
+    str_val tester(handle, ctx);
     if (strs.count(&tester)) {
       return *strs.find(&tester);
     }

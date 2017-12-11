@@ -1,7 +1,8 @@
 #include "jnsn/ir/module.h"
 #include "jnsn/util.h"
-#include <sstream>
+#include <cassert>
 #include <iostream>
+#include <sstream>
 
 using namespace jnsn;
 
@@ -16,7 +17,7 @@ function *module::get_function_by_name(std::string name) {
 
 void module::print(std::ostream &stream) {
   stream << "; global values\n";
-  for (auto *str : strs) {
+  for (const auto *str : strs) {
     stream << "string " << get_unique_id(*str) << ": \"";
     str->print(stream);
     stream << "\"\n";
@@ -27,12 +28,17 @@ void module::print(std::ostream &stream) {
   }
 }
 std::string module::get_unique_id(const global_value &G) {
+  assert(G.get_parent() == this);
   if (global_names.count(&G)) {
     return global_names[&G];
   }
   //~ // TODO this still needs improvements
-  if (isa<c_str_val>(G)) {
-    return "str";
+  if (isa<str_val>(G)) {
+    const auto *as_cstr = static_cast<const str_val *>(&G);
+    // Jeez, I'm so desperate, I'm using const_cast :(
+    auto *as_str = const_cast<str_val *>(as_cstr);
+    return "str" +
+           std::to_string(std::distance(strs.begin(), strs.find(as_str)));
   }
   return G.get_name();
 }

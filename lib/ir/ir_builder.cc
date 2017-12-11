@@ -23,7 +23,7 @@ static const statement_node *get_function_body(const ast_node *node) {
 }
 
 // ============ ir_builder impl ============
-c_str_val *ir_builder::get_str_val(std::string str) {
+str_val *ir_builder::get_str_val(std::string str) {
   return mod->get_str_val(std::move(str));
 }
 basic_block *ir_builder::make_block(function &F) {

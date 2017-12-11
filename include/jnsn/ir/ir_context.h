@@ -18,7 +18,7 @@ class ir_context {
   friend class constant;
   friend class c_bool_val;
   friend class c_num_val;
-  friend class c_str_val;
+  friend class str_val;
   friend class undefined_val;
   friend class null_val;
   friend class instruction;
@@ -35,7 +35,7 @@ class ir_context {
       std::nullptr_t // FIXME maybe we can omit this somehow
       >;
   std::deque<inst> insts;
-  std::deque<c_str_val> strs;
+  std::deque<str_val> strs;
   // literals
   undefined_val undef_v = {*this};
   null_val null_v = {*this};
@@ -45,7 +45,7 @@ class ir_context {
   string_table str_table;
 
   string_table_entry internalize_string(std::string s);
-  c_str_val *make_str_val(std::string val);
+  str_val *make_str_val(std::string val);
   function *make_function();
   basic_block *make_block();
   template <class ty> ty *make_inst() {

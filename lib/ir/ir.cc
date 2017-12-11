@@ -70,7 +70,7 @@ void null_val::print(std::ostream &stream, unsigned indent) const {
   stream << str();
 }
 
-void c_str_val::print(std::ostream &stream, unsigned indent) const {
+void str_val::print(std::ostream &stream, unsigned indent) const {
   INDENT_HELPER();
   stream << val;
 }

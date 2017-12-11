@@ -21,7 +21,7 @@ TEST(ir_test, value_isa) {
   ASSERT_FALSE(isa<sub_inst>(a)); // same pos in hierarchy
   ASSERT_TRUE(isa<value>(str));
   ASSERT_TRUE(isa<global_value>(str));
-  ASSERT_TRUE(isa<c_str_val>(str));
+  ASSERT_TRUE(isa<str_val>(str));
   ASSERT_FALSE(isa<constant>(str));
   ASSERT_TRUE(isa<value>(num));
   ASSERT_TRUE(isa<constant>(num));

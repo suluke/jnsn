@@ -83,7 +83,7 @@ public:
   std::string get_unique_id() const;
 };
 // FIXME drop the c_ prefix because strings are different from usual constants
-class c_str_val : public global_value {
+class str_val : public global_value {
   template <class ty> friend bool isa(const value &);
   friend class ir_context;
   friend class module;
@@ -91,7 +91,7 @@ class c_str_val : public global_value {
   string_table_entry val;
 
   using global_value::get_unique_id;
-  c_str_val(string_table_entry val, ir_context &ctx)
+  str_val(string_table_entry val, ir_context &ctx)
       : global_value(ctx, ir_value_kind::const_str_kind, c_str_type::create()),
         val(val) {}
 public:

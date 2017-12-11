@@ -26,9 +26,9 @@ c_num_val *ir_context::get_c_num_val(double d) {
 string_table_entry ir_context::internalize_string(std::string s) {
   return str_table.get_handle(std::move(s));
 }
-c_str_val *ir_context::make_str_val(std::string val) {
+str_val *ir_context::make_str_val(std::string val) {
   auto h = str_table.get_handle(std::move(val));
-  strs.emplace_back(c_str_val(h, *this));
+  strs.emplace_back(str_val(h, *this));
   return &strs.back();
 }
 

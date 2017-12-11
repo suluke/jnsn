@@ -28,7 +28,7 @@ struct ir_builder {
   module *mod;
   ir_builder(ir_context &ctx) : ctx(ctx) {}
   result build(const module_node &ast);
-  c_str_val *get_str_val(std::string str);
+  str_val *get_str_val(std::string str);
   basic_block *make_block(function &F);
   call_inst *cast_to_number(basic_block &IP, value &val);
   call_inst *cast_to_primitive(basic_block &IP, value &val);
