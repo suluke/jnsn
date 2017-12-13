@@ -13,7 +13,7 @@ void ir_cli() {
     if (std::holds_alternative<module_node *>(res)) {
       auto *mod = std::get<module_node *>(res);
       ir_context ctx;
-      auto res = ast_to_ir(*mod, ctx);
+      auto res = build_ir_from_ast(*mod, ctx);
       if (std::holds_alternative<semantic_error>(res)) {
         cout << "SEMANTIC ERROR: " << std::get<semantic_error>(res) << "\n";
         break;

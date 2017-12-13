@@ -31,6 +31,7 @@ public:
   friend std::ostream &operator<<(std::ostream &stream, module &mod);
   function *get_entry() { return entry; }
   function *get_function_by_name(std::string name);
+  ir_context &get_context() { return ctx; }
 
   str_val *get_str_val(std::string val) {
     auto handle = ctx.internalize_string(val);

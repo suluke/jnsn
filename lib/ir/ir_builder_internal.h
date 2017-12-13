@@ -22,14 +22,12 @@ struct ast_ir_mappings {
 };
 
 struct ir_builder {
-  using result = std::variant<semantic_error, std::unique_ptr<module>>;
+  module &mod;
   ir_context &ctx;
-  ast_ir_mappings mappings;
-  module *mod;
-  ir_builder(ir_context &ctx) : ctx(ctx) {}
-  result build(const module_node &ast);
+  ir_builder(module &mod) : mod(mod), ctx(mod.get_context()) {}
   str_val *get_str_val(std::string str);
   basic_block *make_block(function &F);
+  function *make_function();
   call_inst *cast_to_number(basic_block &IP, value &val);
   call_inst *cast_to_primitive(basic_block &IP, value &val);
   call_inst *cast_to_string(basic_block &IP, value &val);
@@ -38,7 +36,6 @@ struct ir_builder {
   function *get_intrinsic(intrinsic i) { return ctx.get_intrinsic(i); }
 
   template <class ty> ty *insert_inst(basic_block &bb) {
-    assert(mod);
     auto *inst = ctx.make_inst<ty>();
     ctx.insert_inst_into(bb, *inst);
     return inst;
@@ -65,19 +62,37 @@ struct ir_builder {
   }
 };
 
-struct hoisted_codegen : public ast_walker<hoisted_codegen> {
-  ir_builder &builder;
-  basic_block &bb;
-  hoisted_codegen(ir_builder &builder, basic_block &bb)
-      : builder(builder), bb(bb) {}
-  bool on_enter(const function_expr_node &node) { return false; }
-  bool on_enter(const function_stmt_node &node) {
-    // TODO
+struct ast_to_ir {
+  using result = ast_to_ir_result;
+  std::unique_ptr<module> mod;
+  ir_context ctx;
+  ir_builder builder;
+  ast_ir_mappings mappings;
+  ast_to_ir(ir_context &ctx) : mod(new module(ctx)), ctx(ctx), builder(*mod) {}
+  result build(const module_node &ast);
+  std::optional<semantic_error> build_function(const ast_node &node,
+                                               function &F);
+};
+
+struct hoist_collector : public ast_walker<hoist_collector> {
+  std::vector<const var_decl_node *> vars;
+  std::vector<const function_stmt_node *> funcs;
+
+  bool on_enter(const class_expr_node &node) override { return false; }
+  bool on_enter(const class_stmt_node &node) override { return false; }
+  bool on_enter(const function_expr_node &node) override { return false; }
+  bool on_enter(const function_stmt_node &node) override {
+    funcs.emplace_back(&node);
     return false;
   }
-  bool on_enter(const arrow_function_node &node) { return false; }
-  bool on_enter(const class_func_node &node) { return false; }
-  bool on_enter(const var_decl_node &node) override;
+  bool on_enter(const arrow_function_node &node) override { return false; }
+  bool on_enter(const class_func_node &node) override { return false; }
+  bool on_enter(const var_decl_node &node) override {
+    if (node.keyword == "var") {
+      vars.emplace_back(&node);
+    }
+    return false;
+  }
 };
 
 using inst_result = std::variant<ir_error, value *>;
@@ -222,31 +237,6 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const export_stmt_node &) override;
   result accept(const import_wildcard_node &) override;
   result accept(const export_wildcard_node &) override;
-};
-
-/// Helper to get the address value corresponding to an ast_node.
-// Makes use of inst_creator to produce code if necessary
-class load_adress_gen : public ast_walker<load_adress_gen> {
-  inst_creator &inster;
-  value *result = nullptr;
-  load_adress_gen(inst_creator &inster) : inster(inster) {}
-  bool on_enter(const number_literal_node &node) override;
-  bool on_enter(const int_literal_node &node) override;
-  bool on_enter(const float_literal_node &node) override;
-  bool on_enter(const hex_literal_node &node) override;
-  bool on_enter(const oct_literal_node &node) override;
-  bool on_enter(const bin_literal_node &node) override;
-  bool on_enter(const string_literal_node &node) override;
-  bool on_enter(const regex_literal_node &node) override;
-  bool on_enter(const template_string_node &node) override;
-
-public:
-  static value &get_address(ast_node &node, inst_creator &inster) {
-    load_adress_gen addrgen(inster);
-    addrgen.visit(node);
-    assert(addrgen.result);
-    return *addrgen.result;
-  }
 };
 
 /// Collects all functions in post order

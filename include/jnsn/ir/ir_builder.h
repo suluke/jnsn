@@ -17,8 +17,9 @@ struct semantic_error {
     return stream << err.msg;
   }
 };
-std::variant<semantic_error, std::unique_ptr<module>>
-ast_to_ir(const module_node &, ir_context &ctx);
+using ast_to_ir_result = std::variant<semantic_error, std::unique_ptr<module>>;
+
+ast_to_ir_result build_ir_from_ast(const module_node &, ir_context &ctx);
 
 } // namespace jnsn
 #endif // JNSN_IR_BUILDER_H

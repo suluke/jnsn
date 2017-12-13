@@ -24,12 +24,17 @@ static const statement_node *get_function_body(const ast_node *node) {
 
 // ============ ir_builder impl ============
 str_val *ir_builder::get_str_val(std::string str) {
-  return mod->get_str_val(std::move(str));
+  return mod.get_str_val(std::move(str));
 }
 basic_block *ir_builder::make_block(function &F) {
   auto *bb = ctx.make_block();
   ctx.insert_block_into(F, *bb);
   return bb;
+}
+function *ir_builder::make_function() {
+  auto *F = ctx.make_function();
+  ctx.insert_function_into(mod, *F);
+  return F;
 }
 call_inst *ir_builder::cast_to_number(basic_block &IP, value &val) {
   std::array<value *, 1> args = {&val};
@@ -81,71 +86,54 @@ call_inst *ir_builder::concat_strings(basic_block &IP, value &lhs, value &rhs) {
   set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
   return res;
 }
-ir_builder::result ir_builder::build(const module_node &ast) {
-  auto mod = std::unique_ptr<module>(new module(ctx));
-  this->mod = mod.get();
-  ast_ir_mappings mappings;
-  auto *entry = mod->get_entry();
-  ctx.insert_block_into(*entry, *ctx.make_block());
-  hoisted_codegen(*this, *entry->get_entry()).visit(ast);
-  auto res = inst_creator(*this, entry->get_entry()).visit(ast);
-  if (std::holds_alternative<ir_error>(res)) {
-    auto &err = std::get<ir_error>(res);
-    return semantic_error(err.msg, err.loc);
-  }
-
-  function_collector fcollect;
-  fcollect.visit(ast);
-  for (const auto *ast_func : fcollect.funcs) {
-    auto *F = ctx.make_function();
-    if (isa<function_stmt_node>(ast_func)) {
-      const auto as_stmt = static_cast<const function_stmt_node *>(ast_func);
-      F->set_name(to_str(as_stmt->name));
-    }
-    ctx.insert_block_into(*F, *ctx.make_block());
-    mappings.funcs.emplace(ast_func, F);
-    const auto *body = get_function_body(ast_func);
-    hoisted_codegen(*this, *F->get_entry()).visit(*body);
-    ctx.insert_function_into(*mod, *F);
-    auto res = inst_creator(*this, F->get_entry()).visit(*body);
-    if (std::holds_alternative<ir_error>(res)) {
-      auto &err = std::get<ir_error>(res);
-      return semantic_error(err.msg, err.loc);
-    }
-  }
-  return std::move(mod);
-}
-
-ir_builder::result ast_to_ir(const module_node &ast, ir_context &ctx) {
-  return ir_builder(ctx).build(ast);
-}
 // =========================================
 
-bool load_adress_gen::on_enter(const number_literal_node &node) {
-  return false;
-}
-bool load_adress_gen::on_enter(const int_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const float_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const hex_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const oct_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const bin_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const string_literal_node &node) {
-  return false;
-}
-bool load_adress_gen::on_enter(const regex_literal_node &node) { return false; }
-bool load_adress_gen::on_enter(const template_string_node &node) {
-  return false;
-}
-
-bool hoisted_codegen::on_enter(const var_decl_node &node) {
-  if (node.keyword == "var") {
-    for (auto *part : node.parts) {
-      auto *define = builder.insert_inst<define_inst>(bb);
+std::optional<semantic_error> ast_to_ir::build_function(const ast_node &node,
+                                                        function &F) {
+  auto *entryBB = builder.make_block(F);
+  hoist_collector hoists;
+  hoists.visit(node);
+  for (const auto *var : hoists.vars) {
+    for (auto *part : var->parts) {
+      auto *define = builder.insert_inst<define_inst>(*entryBB);
       auto *name = builder.get_str_val(to_str(part->name));
       builder.set_inst_arg(*define, define_inst::arguments::name, *name);
     }
   }
-  return false;
+  for (const auto *fun : hoists.funcs) {
+    // TODO
+  }
+  auto res = inst_creator(builder, entryBB).visit(node);
+  if (std::holds_alternative<ir_error>(res)) {
+    auto err = std::get<ir_error>(res);
+    return semantic_error{std::move(err.msg), std::move(err.loc)};
+  }
+  return std::nullopt;
+}
+
+ast_to_ir::result ast_to_ir::build(const module_node &ast) {
+  function_collector fcollect;
+  fcollect.visit(ast);
+  for (const auto *ast_func : fcollect.funcs) {
+    auto *F = builder.make_function();
+    if (isa<function_stmt_node>(ast_func)) {
+      const auto as_stmt = static_cast<const function_stmt_node *>(ast_func);
+      F->set_name(to_str(as_stmt->name));
+    }
+    mappings.funcs.emplace(ast_func, F);
+    const auto *body = get_function_body(ast_func);
+    if (auto err = build_function(*body, *F)) {
+      return *err;
+    }
+  }
+  if (auto err = build_function(ast, *mod->get_entry())) {
+    return *err;
+  }
+  return std::move(mod);
+}
+
+ast_to_ir::result build_ir_from_ast(const module_node &ast, ir_context &ctx) {
+  return ast_to_ir(ctx).build(ast);
 }
 
 // ============ inst_creator impl ============
@@ -622,7 +610,7 @@ inst_creator::result inst_creator::accept(const continue_stmt_node &) {
 }
 inst_creator::result inst_creator::accept(const return_stmt_node &node) {
   assert(IP && IP->has_parent());
-  if (IP->get_parent() == builder.mod->get_entry()) {
+  if (IP->get_parent() == builder.mod.get_entry()) {
     return ir_error{"Return statement illegal in global context", node.loc};
   }
   value *val = builder.ctx.get_undefined();
