@@ -70,8 +70,10 @@ struct ast_to_ir {
   ast_ir_mappings mappings;
   ast_to_ir(ir_context &ctx) : mod(new module(ctx)), ctx(ctx), builder(*mod) {}
   result build(const module_node &ast);
-  std::optional<semantic_error> build_function(const ast_node &node,
-                                               function &F);
+  std::optional<semantic_error> build_function_body(const ast_node &body,
+                                                    basic_block &BB);
+  std::optional<semantic_error> build_function_params(const ast_node &func,
+                                                      basic_block &BB);
 };
 
 struct hoist_collector : public ast_walker<hoist_collector> {

@@ -9,15 +9,27 @@ static std::string to_str(const string_table_entry &s) {
   return std::string{s.data(), s.size()};
 }
 
-static const statement_node *get_function_body(const ast_node *node) {
+static const param_list_node *get_function_params(const ast_node &node) {
   if (isa<function_expr_node>(node)) {
-    return static_cast<const function_expr_node *>(node)->body;
+    return static_cast<const function_expr_node &>(node).params;
   } else if (isa<function_stmt_node>(node)) {
-    return static_cast<const function_stmt_node *>(node)->body;
+    return static_cast<const function_stmt_node &>(node).params;
   } else if (isa<arrow_function_node>(node)) {
-    return static_cast<const arrow_function_node *>(node)->body;
+    return static_cast<const arrow_function_node &>(node).params;
   } else if (isa<class_func_node>(node)) {
-    return static_cast<const class_func_node *>(node)->body;
+    return static_cast<const class_func_node &>(node).params;
+  }
+  unreachable("Given ast node is not a function");
+}
+static const statement_node *get_function_body(const ast_node &node) {
+  if (isa<function_expr_node>(node)) {
+    return static_cast<const function_expr_node &>(node).body;
+  } else if (isa<function_stmt_node>(node)) {
+    return static_cast<const function_stmt_node &>(node).body;
+  } else if (isa<arrow_function_node>(node)) {
+    return static_cast<const arrow_function_node &>(node).body;
+  } else if (isa<class_func_node>(node)) {
+    return static_cast<const class_func_node &>(node).body;
   }
   unreachable("Given ast node is not a function");
 }
@@ -88,22 +100,30 @@ call_inst *ir_builder::concat_strings(basic_block &IP, value &lhs, value &rhs) {
 }
 // =========================================
 
-std::optional<semantic_error> ast_to_ir::build_function(const ast_node &node,
-                                                        function &F) {
-  auto *entryBB = builder.make_block(F);
+std::optional<semantic_error> ast_to_ir::build_function_params(const ast_node &func,
+                                                        basic_block &BB) {
+  const auto *params = get_function_params(func);
+  for (const auto &name : params->names) {
+    auto *def = builder.insert_inst<define_inst>(BB);
+    builder.set_inst_arg(*def, define_inst::arguments::name, *builder.get_str_val(to_str(name)));
+  }
+  return std::nullopt;
+}
+std::optional<semantic_error> ast_to_ir::build_function_body(const ast_node &body,
+                                                        basic_block &BB) {
   hoist_collector hoists;
-  hoists.visit(node);
+  hoists.visit(body);
   for (const auto *var : hoists.vars) {
     for (auto *part : var->parts) {
-      auto *define = builder.insert_inst<define_inst>(*entryBB);
+      auto *define = builder.insert_inst<define_inst>(BB);
       auto *name = builder.get_str_val(to_str(part->name));
       builder.set_inst_arg(*define, define_inst::arguments::name, *name);
     }
   }
   for (const auto *fun : hoists.funcs) {
-    // TODO
+    assert(mappings.funcs.count(fun));
   }
-  auto res = inst_creator(builder, entryBB).visit(node);
+  auto res = inst_creator(builder, &BB).visit(body);
   if (std::holds_alternative<ir_error>(res)) {
     auto err = std::get<ir_error>(res);
     return semantic_error{std::move(err.msg), std::move(err.loc)};
@@ -121,12 +141,17 @@ ast_to_ir::result ast_to_ir::build(const module_node &ast) {
       F->set_name(to_str(as_stmt->name));
     }
     mappings.funcs.emplace(ast_func, F);
-    const auto *body = get_function_body(ast_func);
-    if (auto err = build_function(*body, *F)) {
+    auto *entryBB = builder.make_block(*F);
+    if (auto err = build_function_params(*ast_func, *entryBB)) {
+      return *err;
+    }
+    const auto *body = get_function_body(*ast_func);
+    if (auto err = build_function_body(*body, *entryBB)) {
       return *err;
     }
   }
-  if (auto err = build_function(ast, *mod->get_entry())) {
+  builder.make_block(*mod->get_entry());
+  if (auto err = build_function_body(ast, *mod->get_entry()->get_entry())) {
     return *err;
   }
   return std::move(mod);
@@ -146,8 +171,13 @@ inst_creator::result inst_creator::accept(const module_node &node) {
   }
   return nullptr;
 }
-inst_creator::result inst_creator::accept(const param_list_node &) {
-  return ir_error{"Not implemented", {}};
+
+static ir_error not_implemented_error(const ast_node &node) {
+  return ir_error{std::string("Not implemented: ") + get_ast_node_typename(node), node.loc};
+}
+
+inst_creator::result inst_creator::accept(const param_list_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const block_node &node) {
   for (auto *child : node.stmts) {
@@ -158,20 +188,20 @@ inst_creator::result inst_creator::accept(const block_node &node) {
   }
   return nullptr;
 }
-inst_creator::result inst_creator::accept(const function_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const function_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const class_func_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const class_func_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const class_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const class_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const arrow_function_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const arrow_function_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const identifier_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
 
 inst_creator::result inst_creator::accept(const int_literal_node &node) {
@@ -179,7 +209,7 @@ inst_creator::result inst_creator::accept(const int_literal_node &node) {
       static_cast<double>(std::strtol(node.val.data(), nullptr, 10)));
 }
 inst_creator::result inst_creator::accept(const float_literal_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const hex_literal_node &node) {
   return builder.ctx.get_c_num_val(
@@ -197,81 +227,81 @@ inst_creator::result inst_creator::accept(const string_literal_node &node) {
   return builder.get_str_val(
       std::string{node.val.data() + 1, node.val.size() - 2});
 }
-inst_creator::result inst_creator::accept(const regex_literal_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const regex_literal_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const template_string_node &node) {
   return builder.get_str_val(
       std::string{node.val.data() + 1, node.val.size() - 2});
 }
 inst_creator::result inst_creator::accept(const template_literal_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const array_literal_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const object_entry_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const object_entry_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const object_literal_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const object_literal_node &node) {
+  return not_implemented_error(node);
 }
 
-inst_creator::result inst_creator::accept(const member_access_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const member_access_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const computed_member_access_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const computed_member_access_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const argument_list_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const argument_list_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const call_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const call_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const spread_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const spread_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const new_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const new_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const new_target_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const new_target_node &node) {
+  return not_implemented_error(node);
 }
 // Unary expressions
 inst_creator::result inst_creator::accept(const postfix_increment_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const postfix_decrement_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const postfix_decrement_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const prefix_increment_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const prefix_increment_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const prefix_decrement_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const prefix_decrement_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const prefix_plus_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const prefix_plus_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const prefix_minus_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const prefix_minus_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const not_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const binverse_expr_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const typeof_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const typeof_expr_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const void_expr_node &node) {
   visit(*node.value);
   return builder.ctx.get_undefined();
 }
-inst_creator::result inst_creator::accept(const delete_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const delete_expr_node &node) {
+  return not_implemented_error(node);
 }
 
 // arithmetic binops
@@ -477,136 +507,138 @@ inst_creator::accept(const strong_not_equals_expr_node &node) {
   cmp->set_op(cmp_operator::neqeq);
   return cmp;
 }
-inst_creator::result inst_creator::accept(const log_and_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const log_and_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const log_or_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const log_or_expr_node &node) {
+  return not_implemented_error(node);
 }
 // bitwise binops
-inst_creator::result inst_creator::accept(const lshift_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const lshift_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const rshift_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const rshift_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const log_rshift_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const log_rshift_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const bitwise_and_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const bitwise_and_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const bitwise_or_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const bitwise_or_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const bitwise_xor_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const bitwise_xor_expr_node &node) {
+  return not_implemented_error(node);
 }
 // assignment binops
-inst_creator::result inst_creator::accept(const assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const add_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const add_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const subtract_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const subtract_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const multiply_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const multiply_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const divide_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const divide_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const modulo_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const modulo_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const pow_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const pow_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const lshift_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const lshift_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const rshift_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const rshift_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const log_rshift_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const log_rshift_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const and_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const and_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const or_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const or_assign_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const xor_assign_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const xor_assign_node &node) {
+  return not_implemented_error(node);
 }
 // other binops
 inst_creator::result inst_creator::accept(const comma_operator_node &node) {
-  return ir_error{"Not implemented", {}};
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const ternary_operator_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const ternary_operator_node &node) {
+  return not_implemented_error(node);
 }
 // keyword binops
-inst_creator::result inst_creator::accept(const in_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const in_expr_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const instanceof_expr_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const instanceof_expr_node &node) {
+  return not_implemented_error(node);
 }
 
-inst_creator::result inst_creator::accept(const function_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const function_stmt_node &node) {
+  // Function statements can only occur in containers such as module,
+  // block... Therefore this return value will be discarded anyways
+  return nullptr;
 }
-inst_creator::result inst_creator::accept(const class_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const class_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const label_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const label_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const var_decl_part_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const var_decl_part_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const empty_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const empty_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const var_decl_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const var_decl_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const if_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const if_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const do_while_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const do_while_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const while_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const while_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const for_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const for_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const for_in_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const for_in_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const for_of_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const for_of_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const switch_clause_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const switch_clause_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const case_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const case_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const switch_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const switch_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const break_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const break_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const continue_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const continue_stmt_node &node) {
+  return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const return_stmt_node &node) {
   assert(IP && IP->has_parent());
@@ -625,26 +657,26 @@ inst_creator::result inst_creator::accept(const return_stmt_node &node) {
   builder.set_inst_arg(*ret, ret_inst::arguments::value, *val);
   return ret;
 }
-inst_creator::result inst_creator::accept(const throw_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const throw_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const catch_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const catch_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const try_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const try_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const import_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const import_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const export_stmt_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const export_stmt_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const import_wildcard_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const import_wildcard_node &node) {
+  return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const export_wildcard_node &) {
-  return ir_error{"Not implemented", {}};
+inst_creator::result inst_creator::accept(const export_wildcard_node &node) {
+  return not_implemented_error(node);
 }
 // ===========================================
 } // namespace jnsn
