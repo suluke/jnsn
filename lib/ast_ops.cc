@@ -195,4 +195,17 @@ namespace jnsn {
   }
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
 #include "jnsn/ast.def"
+
+#define NODE(NAME, CHILD_NODES) static const char *NAME##_name = #NAME;
+#define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
+#include "jnsn/ast.def"
+const char *get_ast_node_typename(const ast_node &node) {
+  struct ast_node_name_generator : public const_ast_node_visitor<const char *>{
+#define NODE(NAME, CHILD_NODES)                                                \
+  const char *accept(const NAME##_node &node) override { return NAME##_name; }
+#define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
+#include "jnsn/ast.def"
+                                   } name_gen;
+  return name_gen.visit(node);
+}
 } // namespace jnsn

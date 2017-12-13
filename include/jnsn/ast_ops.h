@@ -13,6 +13,8 @@ public:
   friend std::ostream &operator<<(std::ostream &, const ast_to_json &);
 };
 
+const char *get_ast_node_typename(const ast_node &node);
+
 template <class nodety> bool isa(const ast_node *);
 #define NODE(NAME, CHILDREN)                                                   \
   template <> bool isa<NAME##_node>(const ast_node *);
