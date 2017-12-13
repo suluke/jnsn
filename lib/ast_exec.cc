@@ -1,5 +1,5 @@
-#include "jnsn/ast.h"
 #include "jnsn/ast_exec.h"
+#include "jnsn/ast.h"
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -261,7 +261,7 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
     return exec_error{"Encountered abstract class bin_op_expr_node"};
   }
 
-    // arithmetic binops
+  // arithmetic binops
 #define GET_EVALED_OPERANDS()                                                  \
   auto lhs_or_err = visit(*node.lhs);                                          \
   if (std::holds_alternative<exec_error>(lhs_or_err)) {                        \

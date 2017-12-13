@@ -1,7 +1,7 @@
 #ifndef JNSN_IR_CONTEXT_H
 #define JNSN_IR_CONTEXT_H
-#include "jnsn/ir/ir.h"
 #include "jnsn/ir/intrinsics.h"
+#include "jnsn/ir/ir.h"
 #include <deque>
 #include <map>
 #include <variant>

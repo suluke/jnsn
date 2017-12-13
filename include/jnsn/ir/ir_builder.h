@@ -2,6 +2,7 @@
 #define JNSN_IR_BUILDER_H
 #include "jnsn/source_location.h"
 #include <memory>
+#include <variant>
 namespace jnsn {
 
 struct module_node;

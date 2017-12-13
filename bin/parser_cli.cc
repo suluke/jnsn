@@ -18,7 +18,7 @@ static void parser_cli() {
       cout << "ERROR: " << err << '\n';
       error = true;
     }
-  } while(!error);
+  } while (!error);
 }
 
 int main(int argc, char **argv) {

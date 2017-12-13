@@ -1,8 +1,8 @@
 #ifndef JNSN_UNITTEST_PARSE_UTILS_H
 #define JNSN_UNITTEST_PARSE_UTILS_H
 
-#include "lex_utils.h"
 #include "jnsn/parser.h"
+#include "lex_utils.h"
 namespace jnsn {
 class constant_string_parser : public parser_base {
 public:

@@ -1,8 +1,8 @@
 #ifndef JNSN_STRING_TABLE_H
 #define JNSN_STRING_TABLE_H
+#include <set> // don't use unordered_set because elements might relocate
 #include <string>
 #include <string_view>
-#include <set> // don't use unordered_set because elements might relocate
 
 namespace jnsn {
 

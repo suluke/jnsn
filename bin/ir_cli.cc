@@ -1,5 +1,5 @@
-#include "jnsn/ir/module.h"
 #include "jnsn/ir/ir_builder.h"
+#include "jnsn/ir/module.h"
 #include "jnsn/parser.h"
 
 using namespace std;

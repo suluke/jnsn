@@ -18,8 +18,7 @@ namespace jnsn {
 } // namespace jnsn
 
 #ifndef NDEBUG
-#define unreachable(msg)                                                       \
-  ::jnsn::unreachable_internal(msg, __FILE__, __LINE__)
+#define unreachable(msg) ::jnsn::unreachable_internal(msg, __FILE__, __LINE__)
 #else
 #define unreachable(msg) ::jnsn::unreachable_internal()
 #endif

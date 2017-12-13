@@ -76,7 +76,9 @@ public:
   exec_value(exec_value &&) = default;
   exec_value &operator=(const exec_value &) = default;
 
-  void print(std::ostream &stream) const override { upcast_content().print(stream); }
+  void print(std::ostream &stream) const override {
+    upcast_content().print(stream);
+  }
   template <typename T> T &get() { return std::get<T>(val); }
   template <typename T> friend bool isa(const exec_value &);
 };
@@ -93,7 +95,8 @@ struct scope_value : public heap_value_base {
   scope_value *parent;
   enum scope_kind { FUNCTION, BLOCK } kind;
   std::unordered_map<std::string, exec_value> entries;
-  scope_value(scope_value *parent = nullptr, scope_kind kind = FUNCTION) : parent(parent), kind(kind) {}
+  scope_value(scope_value *parent = nullptr, scope_kind kind = FUNCTION)
+      : parent(parent), kind(kind) {}
   void print(std::ostream &stream) const override { stream << "<scope>"; };
 };
 struct function_value : public heap_value_base {
@@ -117,6 +120,7 @@ class exec_vm {
   std::vector<heap_value> heap;
   std::vector<std::vector<heap_value>::size_type> free_pool;
   heap_value &find_slot();
+
 public:
   exec_value lookup(std::string_view identifier);
   array_value &alloc_array();

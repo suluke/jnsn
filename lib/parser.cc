@@ -1,5 +1,5 @@
-#include "jnsn/ast_ops.h"
 #include "jnsn/parser.h"
+#include "jnsn/ast_ops.h"
 #include "jnsn/util.h"
 #include <algorithm>
 #include <initializer_list>

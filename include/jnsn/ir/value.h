@@ -35,7 +35,8 @@ class value {
   std::string name;
 
 protected:
-  value(ir_context &ctx, ir_value_kind dyn_kind, type ty) : ctx(ctx), dyn_kind(dyn_kind), ty(ty) {}
+  value(ir_context &ctx, ir_value_kind dyn_kind, type ty)
+      : ctx(ctx), dyn_kind(dyn_kind), ty(ty) {}
   ir_context &get_ctx() { return ctx; }
   const ir_context &get_ctx() const { return ctx; }
 

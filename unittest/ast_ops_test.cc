@@ -7,7 +7,7 @@ TEST(ast_ops_test, isa) {
   ast_node *ptr;
 #define NODE(NAME, CHILDREN)                                                   \
   {                                                                            \
-    auto node = NAME##_node({});                                                 \
+    auto node = NAME##_node({});                                               \
     ptr = &node;                                                               \
     ASSERT_TRUE(isa<NAME##_node>(ptr));                                        \
   }

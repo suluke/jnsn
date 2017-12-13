@@ -16,7 +16,7 @@ TEST(ast_test, visitor) {
   name_checker checker;
 #define NODE_CHECK(NAME)                                                       \
   {                                                                            \
-    NAME##_node node({});                                                          \
+    NAME##_node node({});                                                      \
     ast_node &as_base = node;                                                  \
     auto *res = checker.visit(as_base);                                        \
     ASSERT_STREQ(res, #NAME);                                                  \

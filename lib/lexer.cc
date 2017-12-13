@@ -572,7 +572,7 @@ result lexer_base::lex_closing_brace() {
   }
   text << '}';
   bool ended = false;
-  while(peek()) {
+  while (peek()) {
     advance();
     if (current() == '`') {
       ended = true;

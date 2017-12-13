@@ -8,12 +8,8 @@ static void lexer_cli() {
     void operator()(lexer_error err) {
       cout << err.msg << ' ' << '(' << err.loc << ')' << '\n';
     }
-    void operator()(std::monostate eof) {
-      cout << "EOF\n";
-    }
-    void operator()(token T) {
-      cout << T << '\n';
-    }
+    void operator()(std::monostate eof) { cout << "EOF\n"; }
+    void operator()(token T) { cout << T << '\n'; }
   } visitor;
   bool error = false;
   do {
@@ -28,7 +24,7 @@ static void lexer_cli() {
         break;
       }
     } while (!std::holds_alternative<lexer_base::eof_t>(res));
-  } while(!error);
+  } while (!error);
 }
 
 int main(int argc, char **argv) {

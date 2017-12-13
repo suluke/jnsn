@@ -94,6 +94,7 @@ class str_val : public global_value {
   str_val(string_table_entry val, ir_context &ctx)
       : global_value(ctx, ir_value_kind::const_str_kind, c_str_type::create()),
         val(val) {}
+
 public:
   void print(std::ostream &stream, unsigned indent = 0) const;
 };
