@@ -2,6 +2,7 @@
 #define JNSN_IR_H
 #include "jnsn/ir/instructions.h"
 #include "jnsn/string_table.h"
+#include <cassert>
 #include <vector>
 
 namespace jnsn {
@@ -142,7 +143,10 @@ class function : public global_value {
 public:
   function(const function &) = default;
   function(function &&) = default;
-  basic_block *get_entry() const { return blocks.front(); }
+  basic_block *get_entry() const {
+    assert(!blocks.empty());
+    return blocks.front();
+  }
   bool is_intrinsic() {
     auto &name = get_name();
     if (name.empty())
