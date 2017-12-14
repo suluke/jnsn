@@ -54,7 +54,6 @@ call_inst *ir_builder::cast_to_number(basic_block &IP, value &val) {
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
   auto *num = insert_inst<call_inst>(IP);
   set_inst_arg(*num, call_inst::arguments::callee, *to_num);
-  set_inst_arg(*num, call_inst::arguments::this_val, *ctx.get_undefined());
   set_inst_arg(*num, call_inst::arguments::arguments, *args_list);
   return num;
 }
@@ -64,7 +63,6 @@ call_inst *ir_builder::cast_to_primitive(basic_block &IP, value &val) {
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
   auto *prim = insert_inst<call_inst>(IP);
   set_inst_arg(*prim, call_inst::arguments::callee, *to_prim);
-  set_inst_arg(*prim, call_inst::arguments::this_val, *ctx.get_undefined());
   set_inst_arg(*prim, call_inst::arguments::arguments, *args_list);
   return prim;
 }
@@ -74,7 +72,6 @@ call_inst *ir_builder::cast_to_string(basic_block &IP, value &val) {
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
   auto *str = insert_inst<call_inst>(IP);
   set_inst_arg(*str, call_inst::arguments::callee, *to_str);
-  set_inst_arg(*str, call_inst::arguments::this_val, *ctx.get_undefined());
   set_inst_arg(*str, call_inst::arguments::arguments, *args_list);
   return str;
 }
@@ -84,7 +81,6 @@ call_inst *ir_builder::test_is_string(basic_block &IP, value &val) {
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
   auto *res = insert_inst<call_inst>(IP);
   set_inst_arg(*res, call_inst::arguments::callee, *is_str);
-  set_inst_arg(*res, call_inst::arguments::this_val, *ctx.get_undefined());
   set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
   return res;
 }
@@ -94,23 +90,23 @@ call_inst *ir_builder::concat_strings(basic_block &IP, value &lhs, value &rhs) {
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
   auto *res = insert_inst<call_inst>(IP);
   set_inst_arg(*res, call_inst::arguments::callee, *concat);
-  set_inst_arg(*res, call_inst::arguments::this_val, *ctx.get_undefined());
   set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
   return res;
 }
 // =========================================
 
-std::optional<semantic_error> ast_to_ir::build_function_params(const ast_node &func,
-                                                        basic_block &BB) {
+std::optional<semantic_error>
+ast_to_ir::build_function_params(const ast_node &func, basic_block &BB) {
   const auto *params = get_function_params(func);
   for (const auto &name : params->names) {
     auto *def = builder.insert_inst<define_inst>(BB);
-    builder.set_inst_arg(*def, define_inst::arguments::name, *builder.get_str_val(to_str(name)));
+    builder.set_inst_arg(*def, define_inst::arguments::name,
+                         *builder.get_str_val(to_str(name)));
   }
   return std::nullopt;
 }
-std::optional<semantic_error> ast_to_ir::build_function_body(const ast_node &body,
-                                                        basic_block &BB) {
+std::optional<semantic_error>
+ast_to_ir::build_function_body(const ast_node &body, basic_block &BB) {
   hoist_collector hoists;
   hoists.visit(body);
   for (const auto *var : hoists.vars) {
@@ -122,8 +118,17 @@ std::optional<semantic_error> ast_to_ir::build_function_body(const ast_node &bod
   }
   for (const auto *fun : hoists.funcs) {
     assert(mappings.funcs.count(fun));
+    auto *F = mappings.funcs[fun];
+    auto *bind = builder.insert_inst<bind_scope_inst>(BB);
+    builder.set_inst_arg(*bind, bind_scope_inst::arguments::func, *F);
+    auto *def = builder.insert_inst<define_inst>(BB);
+    auto *name = builder.get_str_val(to_str(fun->name));
+    builder.set_inst_arg(*def, define_inst::arguments::name, *name);
+    auto *store = builder.insert_inst<store_inst>(BB);
+    builder.set_inst_arg(*store, store_inst::arguments::address, *def);
+    builder.set_inst_arg(*store, store_inst::arguments::value, *bind);
   }
-  auto res = inst_creator(builder, &BB).visit(body);
+  auto res = inst_creator(builder, mappings, &BB).visit(body);
   if (std::holds_alternative<ir_error>(res)) {
     auto err = std::get<ir_error>(res);
     return semantic_error{std::move(err.msg), std::move(err.loc)};
@@ -173,11 +178,8 @@ inst_creator::result inst_creator::accept(const module_node &node) {
 }
 
 static ir_error not_implemented_error(const ast_node &node) {
-  return ir_error{std::string("Not implemented: ") + get_ast_node_typename(node), node.loc};
-}
-
-inst_creator::result inst_creator::accept(const param_list_node &node) {
-  return not_implemented_error(node);
+  return ir_error{
+      std::string("Not implemented: ") + get_ast_node_typename(node), node.loc};
 }
 inst_creator::result inst_creator::accept(const block_node &node) {
   for (auto *child : node.stmts) {
@@ -188,8 +190,18 @@ inst_creator::result inst_creator::accept(const block_node &node) {
   }
   return nullptr;
 }
+inst_creator::result inst_creator::accept(const function_stmt_node &node) {
+  // Function statements can only occur in containers such as module,
+  // block... Therefore this return value will be discarded anyways
+  // Codegen of bind_scope happens during hoisting process
+  return nullptr;
+}
 inst_creator::result inst_creator::accept(const function_expr_node &node) {
-  return not_implemented_error(node);
+  assert(mappings.funcs.count(&node));
+  auto *F = mappings.funcs[&node];
+  auto *bind = builder.insert_inst<bind_scope_inst>(*IP);
+  builder.set_inst_arg(*bind, bind_scope_inst::arguments::func, *F);
+  return bind;
 }
 inst_creator::result inst_creator::accept(const class_func_node &node) {
   return not_implemented_error(node);
@@ -198,7 +210,11 @@ inst_creator::result inst_creator::accept(const class_expr_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const arrow_function_node &node) {
-  return not_implemented_error(node);
+  assert(mappings.funcs.count(&node));
+  auto *F = mappings.funcs[&node];
+  auto *bind = builder.insert_inst<bind_scope_inst>(*IP);
+  builder.set_inst_arg(*bind, bind_scope_inst::arguments::func, *F);
+  return bind;
 }
 inst_creator::result inst_creator::accept(const identifier_expr_node &node) {
   return not_implemented_error(node);
@@ -250,7 +266,8 @@ inst_creator::result inst_creator::accept(const object_literal_node &node) {
 inst_creator::result inst_creator::accept(const member_access_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const computed_member_access_node &node) {
+inst_creator::result
+inst_creator::accept(const computed_member_access_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const argument_list_node &node) {
@@ -585,12 +602,6 @@ inst_creator::result inst_creator::accept(const in_expr_node &node) {
 }
 inst_creator::result inst_creator::accept(const instanceof_expr_node &node) {
   return not_implemented_error(node);
-}
-
-inst_creator::result inst_creator::accept(const function_stmt_node &node) {
-  // Function statements can only occur in containers such as module,
-  // block... Therefore this return value will be discarded anyways
-  return nullptr;
 }
 inst_creator::result inst_creator::accept(const class_stmt_node &node) {
   return not_implemented_error(node);

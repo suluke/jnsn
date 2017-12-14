@@ -97,13 +97,23 @@ struct hoist_collector : public ast_walker<hoist_collector> {
   }
 };
 
+/// Collects all functions in post order
+struct function_collector : public ast_walker<function_collector> {
+  std::vector<const ast_node *> funcs;
+  void on_leave(const function_expr_node &node) { funcs.emplace_back(&node); }
+  void on_leave(const function_stmt_node &node) { funcs.emplace_back(&node); }
+  void on_leave(const arrow_function_node &node) { funcs.emplace_back(&node); }
+  void on_leave(const class_func_node &node) { funcs.emplace_back(&node); }
+};
+
 using inst_result = std::variant<ir_error, value *>;
 struct inst_creator : public const_ast_node_visitor<inst_result> {
   using result = inst_result;
   ir_builder &builder;
+  ast_ir_mappings &mappings;
   basic_block *IP;
-  inst_creator(ir_builder &builder, basic_block *IP)
-      : builder(builder), IP(IP) {}
+  inst_creator(ir_builder &builder, ast_ir_mappings &mappings, basic_block *IP)
+      : builder(builder), mappings(mappings), IP(IP) {}
   result accept(const statement_node &) override {
     return ir_error{"Encountered abstract class statement_node", {}};
   }
@@ -111,7 +121,9 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const expression_node &) override {
     return ir_error{"Encountered abstract class expression_node", {}};
   }
-  result accept(const param_list_node &) override;
+  result accept(const param_list_node &node) override {
+    return ir_error{"param_list_nodes are codegen'ed separately", node.loc};
+  }
   result accept(const block_node &node) override;
   result accept(const function_expr_node &) override;
   result accept(const class_func_node &) override;
@@ -240,15 +252,5 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const import_wildcard_node &) override;
   result accept(const export_wildcard_node &) override;
 };
-
-/// Collects all functions in post order
-struct function_collector : public ast_walker<function_collector> {
-  std::vector<const ast_node *> funcs;
-  void on_leave(const function_expr_node &node) { funcs.emplace_back(&node); }
-  void on_leave(const function_stmt_node &node) { funcs.emplace_back(&node); }
-  void on_leave(const arrow_function_node &node) { funcs.emplace_back(&node); }
-  void on_leave(const class_func_node &node) { funcs.emplace_back(&node); }
-};
-
 } // namespace jnsn
 #endif // JNSN_IR_BUILDER_INTERNAL_H

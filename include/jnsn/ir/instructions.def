@@ -50,8 +50,7 @@ INSTRUCTION(leave_scope, ARGS(), PROPS(), RETURN(void))
 
 // normal operations
 INSTRUCTION(call,
-            ARGS(ARG(callee, addr) ARG(this_val, register)
-                     ARG(arguments, addr)),
+            ARGS(ARG(callee, addr) ARG(arguments, addr)),
             PROPS(), RETURN(register))
 INSTRUCTION(load, ARGS(ARG(address, addr)), PROPS(), RETURN(register))
 INSTRUCTION(store, ARGS(ARG(address, addr) ARG(value, register)), PROPS(),
