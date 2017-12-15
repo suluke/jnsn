@@ -281,7 +281,11 @@ inst_creator::result inst_creator::accept(const int_literal_node &node) {
       static_cast<double>(std::strtol(node.val.data(), nullptr, 10)));
 }
 inst_creator::result inst_creator::accept(const float_literal_node &node) {
-  return not_implemented_error(node);
+  size_t processed = 0;
+  auto *val = builder.ctx.get_c_num_val(
+      std::stod(node.val.str(), &processed));
+  assert(processed == node.val.size());
+  return val;
 }
 inst_creator::result inst_creator::accept(const hex_literal_node &node) {
   return builder.ctx.get_c_num_val(
