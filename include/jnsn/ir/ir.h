@@ -122,6 +122,7 @@ public:
   size_t size() const { return instructions.size(); }
   inst_list::const_iterator begin() const { return instructions.begin(); }
   inst_list::const_iterator end() const { return instructions.end(); }
+  bool has_terminator();
 };
 
 /// Function
@@ -189,6 +190,10 @@ template <class ty> bool isa(const value &val) {
     }
   }
   return ty::kind == val.get_kind();
+}
+template <class ty> bool isa(const value *val) {
+  assert(val);
+  return isa<ty>(*val);
 }
 } // namespace jnsn
 #endif // JNSN_IR_H

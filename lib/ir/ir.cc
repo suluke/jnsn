@@ -141,6 +141,17 @@ void instruction::print(std::ostream &stream, unsigned indent) const {
   }
 #include "jnsn/ir/instructions.def"
 
+bool basic_block::has_terminator() {
+  if (instructions.empty())
+    return false;
+  auto *lastInst = instructions.back();
+  if (isa<ret_inst>(lastInst) || isa<br_inst>(lastInst) ||
+      isa<cbr_inst>(lastInst) || isa<throw_inst>(lastInst)) {
+    return true;
+  }
+  return false;
+}
+
 std::string basic_block::get_unique_id() const {
   if (!has_parent()) {
     if (!has_name())
@@ -218,7 +229,6 @@ void function::print(std::ostream &stream, unsigned indent) const {
   stream << "function " << get_unique_id() << " {\n";
   for (auto *block : blocks) {
     block->print(stream, indent + 2);
-    stream << "\n";
   }
   stream << "}\n";
 }

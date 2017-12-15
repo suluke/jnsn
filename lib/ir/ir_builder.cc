@@ -222,6 +222,10 @@ inst_creator::result inst_creator::accept(const module_node &node) {
       return std::get<ir_error>(res);
     }
   }
+  if (!IP->has_terminator()) {
+    auto *ret = builder.insert_inst<ret_inst>(*IP);
+    builder.set_inst_arg(*ret, ret_inst::arguments::value, *builder.ctx.get_undefined());
+  }
   return nullptr;
 }
 
@@ -235,6 +239,10 @@ inst_creator::result inst_creator::accept(const block_node &node) {
     if (std::holds_alternative<ir_error>(res)) {
       return std::get<ir_error>(res);
     }
+  }
+  if (!IP->has_terminator()) {
+    auto *ret = builder.insert_inst<ret_inst>(*IP);
+    builder.set_inst_arg(*ret, ret_inst::arguments::value, *builder.ctx.get_undefined());
   }
   return nullptr;
 }
@@ -449,23 +457,30 @@ inst_creator::result inst_creator::accept(const add_node &node) {
   // codegen for concat
   call_inst *concat = nullptr;
   {
-    auto *lhs_str = builder.cast_to_string(*on_concat, *lhs_prim);
-    auto *rhs_str = builder.cast_to_string(*on_concat, *rhs_prim);
+    IP = on_concat;
+    auto *lhs_str = builder.cast_to_string(*IP, *lhs_prim);
+    auto *rhs_str = builder.cast_to_string(*IP, *rhs_prim);
 
-    concat = builder.concat_strings(*on_concat, *lhs_str, *rhs_str);
+    concat = builder.concat_strings(*IP, *lhs_str, *rhs_str);
 
-    auto *concat_br = builder.insert_inst<br_inst>(*on_concat);
+    auto *concat_br = builder.insert_inst<br_inst>(*IP);
     builder.set_inst_arg(*concat_br, br_inst::arguments::target,
                          *val_unification);
   }
 
   // codegen for addition
-  IP = on_add;
-  // TODO we could optimize already by re-using the cast-to-primitive args
-  auto add_or_err = arithmetic_binop_codegen<add_node, add_inst>(node);
-  if (std::holds_alternative<ir_error>(add_or_err))
-    return std::get<ir_error>(add_or_err);
-  add_inst *add = std::get<add_inst *>(add_or_err);
+  add_inst *add = nullptr;
+  {
+    IP = on_add;
+    // TODO we could optimize already by re-using the cast-to-primitive args
+    auto add_or_err = arithmetic_binop_codegen<add_node, add_inst>(node);
+    if (std::holds_alternative<ir_error>(add_or_err))
+      return std::get<ir_error>(add_or_err);
+    add = std::get<add_inst *>(add_or_err);
+    auto *add_br = builder.insert_inst<br_inst>(*IP);
+    builder.set_inst_arg(*add_br, br_inst::arguments::target,
+                         *val_unification);
+  }
 
   // now unify results
   auto *val = builder.insert_inst<phi_inst>(*val_unification);
