@@ -62,6 +62,15 @@ call_inst *ir_builder::cast_to_primitive(basic_block &IP, value &val) {
   set_inst_arg(*prim, call_inst::arguments::arguments, *args_list);
   return prim;
 }
+call_inst *ir_builder::cast_to_bool(basic_block &IP, value &val) {
+  std::array<value *, 1> args = {&val};
+  auto *to_bool = get_intrinsic(intrinsic::to_bool);
+  auto *args_list = prepare_call_args(IP, args.begin(), args.end());
+  auto *as_bool = insert_inst<call_inst>(IP);
+  set_inst_arg(*as_bool, call_inst::arguments::callee, *to_bool);
+  set_inst_arg(*as_bool, call_inst::arguments::arguments, *args_list);
+  return as_bool;
+}
 call_inst *ir_builder::cast_to_string(basic_block &IP, value &val) {
   std::array<value *, 1> args = {&val};
   auto *to_str = get_intrinsic(intrinsic::to_string);
@@ -662,7 +671,40 @@ inst_creator::result inst_creator::accept(const var_decl_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const if_stmt_node &node) {
-  return not_implemented_error(node);
+  auto cond_or_error = visit(*node.condition);
+  if (std::holds_alternative<ir_error>(cond_or_error)) {
+    return std::get<ir_error>(cond_or_error);
+  }
+  auto *cond = std::get<value *>(cond_or_error);
+  auto *as_bool = builder.cast_to_bool(*IP, *cond);
+  auto *br = builder.insert_inst<cbr_inst>(*IP);
+  auto *if_body = builder.make_block(*IP->get_parent());
+  if_body->set_name("if_then");
+  basic_block *false_target = nullptr;
+  if (node.else_stmt) {
+    false_target = builder.make_block(*IP->get_parent());
+    false_target->set_name("if_else");
+  }
+  auto *after = builder.make_block(*IP->get_parent());
+  after->set_name("after_if");
+  if (!false_target) {
+    false_target = after;
+  }
+  builder.set_inst_arg(*br, cbr_inst::arguments::cond, *as_bool);
+  builder.set_inst_arg(*br, cbr_inst::arguments::true_target, *if_body);
+  builder.set_inst_arg(*br, cbr_inst::arguments::false_target, *false_target);
+  IP = if_body;
+  visit(*node.body);
+  auto *then_br = builder.insert_inst<br_inst>(*IP);
+  builder.set_inst_arg(*then_br, br_inst::arguments::target, *after);
+  if (node.else_stmt) {
+    IP = false_target;
+    visit(**node.else_stmt);
+    auto *else_br = builder.insert_inst<br_inst>(*IP);
+    builder.set_inst_arg(*else_br, br_inst::arguments::target, *after);
+  }
+  IP = after;
+  return nullptr;
 }
 inst_creator::result inst_creator::accept(const do_while_node &node) {
   return not_implemented_error(node);
