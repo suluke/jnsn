@@ -769,7 +769,14 @@ inst_creator::result inst_creator::accept(const return_stmt_node &node) {
   return ret;
 }
 inst_creator::result inst_creator::accept(const throw_stmt_node &node) {
-  return not_implemented_error(node);
+  auto val_or_err = visit(*node.value);
+  if (std::holds_alternative<ir_error>(val_or_err)) {
+    return std::get<ir_error>(val_or_err);
+  }
+  auto *val = std::get<value *>(val_or_err);
+  auto *thrw = builder.insert_inst<throw_inst>(*IP);
+  builder.set_inst_arg(*thrw, throw_inst::arguments::value, *val);
+  return thrw;
 }
 inst_creator::result inst_creator::accept(const catch_node &node) {
   return not_implemented_error(node);
