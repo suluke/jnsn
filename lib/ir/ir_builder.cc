@@ -89,7 +89,8 @@ call_inst *ir_builder::concat_strings(basic_block &IP, value &lhs, value &rhs) {
   set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
   return res;
 }
-call_inst *ir_builder::load_or_undefined(basic_block &IP, value &addr, str_val &prop) {
+call_inst *ir_builder::load_or_undefined(basic_block &IP, value &addr,
+                                         str_val &prop) {
   std::array<value *, 2> args = {&addr, &prop};
   auto *lou = get_intrinsic(intrinsic::load_or_undefined);
   auto *args_list = prepare_call_args(IP, args.begin(), args.end());
@@ -129,7 +130,8 @@ ast_to_ir::build_function_params(const ast_node &func, basic_block &BB) {
     auto *def = builder.insert_inst<define_inst>(BB);
     builder.set_inst_arg(*def, define_inst::arguments::name,
                          *builder.get_str_val(name.str()));
-    auto *val = builder.load_or_undefined(BB, *args, *builder.get_str_val(std::to_string(argnum++)));
+    auto *val = builder.load_or_undefined(
+        BB, *args, *builder.get_str_val(std::to_string(argnum++)));
     auto *store = builder.insert_inst<store_inst>(BB);
     builder.set_inst_arg(*store, store_inst::arguments::address, *def);
     builder.set_inst_arg(*store, store_inst::arguments::value, *val);
@@ -137,7 +139,8 @@ ast_to_ir::build_function_params(const ast_node &func, basic_block &BB) {
   // arrow functions do not have 'arguments'
   if (isa<arrow_function_node>(func)) {
     auto *undef = builder.insert_inst<undefine_inst>(BB);
-    builder.set_inst_arg(*undef, undefine_inst::arguments::name, *arguments_str);
+    builder.set_inst_arg(*undef, undefine_inst::arguments::name,
+                         *arguments_str);
   }
   return std::nullopt;
 }
@@ -467,7 +470,8 @@ inst_creator::result inst_creator::accept(const add_node &node) {
 }
 
 template <class InstTy>
-static inst_creator::result to_inster_result(std::variant<ir_error, InstTy *> res) {
+static inst_creator::result
+to_inster_result(std::variant<ir_error, InstTy *> res) {
   if (std::holds_alternative<ir_error>(res))
     return std::get<ir_error>(res);
   return static_cast<value *>(std::get<InstTy *>(res));
