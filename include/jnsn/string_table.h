@@ -21,6 +21,7 @@ public:
   operator std::string_view() const { return text; }
   bool empty() const { return text.empty(); }
   const char *data() const { return text.data(); }
+  std::string str() const { return std::string{data(), size()}; }
   std::string_view::size_type size() const noexcept { return text.size(); }
   std::string_view::iterator begin() const { return text.begin(); }
   std::string_view::iterator end() const { return text.end(); }

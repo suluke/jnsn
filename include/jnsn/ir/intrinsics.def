@@ -18,6 +18,7 @@ INTRINSIC(to_string, ARGS(ARG(val, register)), RETURN(string))
 INTRINSIC(to_bool, ARGS(ARG(val, register)), RETURN(bool))
 INTRINSIC(to_number, ARGS(ARG(val, register)), RETURN(number))
 INTRINSIC(concat, ARGS(ARG(s1, string) ARG(s2, string)), RETURN(string))
+INTRINSIC(load_or_undefined, ARGS(ARG(address, addr) ARG(prop, c_str)), RETURN(register))
 
 #undef RETURN
 #undef ARGS

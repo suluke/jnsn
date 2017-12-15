@@ -33,6 +33,7 @@ struct ir_builder {
   call_inst *cast_to_string(basic_block &IP, value &val);
   call_inst *test_is_string(basic_block &IP, value &val);
   call_inst *concat_strings(basic_block &IP, value &lhs, value &rhs);
+  call_inst *load_or_undefined(basic_block &IP, value &address, str_val &prop);
   function *get_intrinsic(intrinsic i) { return ctx.get_intrinsic(i); }
 
   template <class ty> ty *insert_inst(basic_block &bb) {

@@ -5,10 +5,6 @@
 
 namespace jnsn {
 
-static std::string to_str(const string_table_entry &s) {
-  return std::string{s.data(), s.size()};
-}
-
 static const param_list_node *get_function_params(const ast_node &node) {
   if (isa<function_expr_node>(node)) {
     return static_cast<const function_expr_node &>(node).params;
@@ -93,15 +89,55 @@ call_inst *ir_builder::concat_strings(basic_block &IP, value &lhs, value &rhs) {
   set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
   return res;
 }
+call_inst *ir_builder::load_or_undefined(basic_block &IP, value &addr, str_val &prop) {
+  std::array<value *, 2> args = {&addr, &prop};
+  auto *lou = get_intrinsic(intrinsic::load_or_undefined);
+  auto *args_list = prepare_call_args(IP, args.begin(), args.end());
+  auto *res = insert_inst<call_inst>(IP);
+  set_inst_arg(*res, call_inst::arguments::callee, *lou);
+  set_inst_arg(*res, call_inst::arguments::arguments, *args_list);
+  return res;
+}
 // =========================================
 
 std::optional<semantic_error>
 ast_to_ir::build_function_params(const ast_node &func, basic_block &BB) {
   const auto *params = get_function_params(func);
+  auto *args = builder.insert_inst<lookup_inst>(BB);
+  auto *arguments_str = builder.get_str_val("arguments");
+  builder.set_inst_arg(*args, lookup_inst::arguments::name, *arguments_str);
+  // Set up 'this' from arguments object
+  if (!isa<arrow_function_node>(func)) {
+    auto *this_str = builder.get_str_val("this");
+    auto *def = builder.insert_inst<define_inst>(BB);
+    builder.set_inst_arg(*def, define_inst::arguments::name, *this_str);
+    auto *addr = builder.insert_inst<get_prop_inst>(BB);
+    builder.set_inst_arg(*addr, get_prop_inst::arguments::address, *args);
+    builder.set_inst_arg(*addr, get_prop_inst::arguments::prop, *this_str);
+    auto *load = builder.insert_inst<load_inst>(BB);
+    builder.set_inst_arg(*load, load_inst::arguments::address, *addr);
+    auto *store = builder.insert_inst<store_inst>(BB);
+    builder.set_inst_arg(*store, store_inst::arguments::address, *def);
+    builder.set_inst_arg(*store, store_inst::arguments::value, *load);
+    // 'arguments.this' should not be visible to client code
+    auto *del = builder.insert_inst<del_prop_inst>(BB);
+    builder.set_inst_arg(*del, del_prop_inst::arguments::address, *args);
+    builder.set_inst_arg(*del, del_prop_inst::arguments::prop, *this_str);
+  }
+  unsigned argnum = 0;
   for (const auto &name : params->names) {
     auto *def = builder.insert_inst<define_inst>(BB);
     builder.set_inst_arg(*def, define_inst::arguments::name,
-                         *builder.get_str_val(to_str(name)));
+                         *builder.get_str_val(name.str()));
+    auto *val = builder.load_or_undefined(BB, *args, *builder.get_str_val(std::to_string(argnum++)));
+    auto *store = builder.insert_inst<store_inst>(BB);
+    builder.set_inst_arg(*store, store_inst::arguments::address, *def);
+    builder.set_inst_arg(*store, store_inst::arguments::value, *val);
+  }
+  // arrow functions do not have 'arguments'
+  if (isa<arrow_function_node>(func)) {
+    auto *undef = builder.insert_inst<undefine_inst>(BB);
+    builder.set_inst_arg(*undef, undefine_inst::arguments::name, *arguments_str);
   }
   return std::nullopt;
 }
@@ -112,7 +148,7 @@ ast_to_ir::build_function_body(const ast_node &body, basic_block &BB) {
   for (const auto *var : hoists.vars) {
     for (auto *part : var->parts) {
       auto *define = builder.insert_inst<define_inst>(BB);
-      auto *name = builder.get_str_val(to_str(part->name));
+      auto *name = builder.get_str_val(part->name.str());
       builder.set_inst_arg(*define, define_inst::arguments::name, *name);
     }
   }
@@ -122,7 +158,7 @@ ast_to_ir::build_function_body(const ast_node &body, basic_block &BB) {
     auto *bind = builder.insert_inst<bind_scope_inst>(BB);
     builder.set_inst_arg(*bind, bind_scope_inst::arguments::func, *F);
     auto *def = builder.insert_inst<define_inst>(BB);
-    auto *name = builder.get_str_val(to_str(fun->name));
+    auto *name = builder.get_str_val(fun->name.str());
     builder.set_inst_arg(*def, define_inst::arguments::name, *name);
     auto *store = builder.insert_inst<store_inst>(BB);
     builder.set_inst_arg(*store, store_inst::arguments::address, *def);
@@ -143,7 +179,7 @@ ast_to_ir::result ast_to_ir::build(const module_node &ast) {
     auto *F = builder.make_function();
     if (isa<function_stmt_node>(ast_func)) {
       const auto as_stmt = static_cast<const function_stmt_node *>(ast_func);
-      F->set_name(to_str(as_stmt->name));
+      F->set_name(as_stmt->name.str());
     }
     mappings.funcs.emplace(ast_func, F);
     auto *entryBB = builder.make_block(*F);
@@ -428,7 +464,7 @@ inst_creator::result inst_creator::accept(const add_node &node) {
 }
 
 template <class InstTy>
-inst_creator::result to_inster_result(std::variant<ir_error, InstTy *> res) {
+static inst_creator::result to_inster_result(std::variant<ir_error, InstTy *> res) {
   if (std::holds_alternative<ir_error>(res))
     return std::get<ir_error>(res);
   return static_cast<value *>(std::get<InstTy *>(res));
