@@ -227,9 +227,9 @@ inst_creator::result inst_creator::accept(const block_node &node) {
   return nullptr;
 }
 inst_creator::result inst_creator::accept(const function_stmt_node &node) {
-  // Function statements can only occur in containers such as module,
-  // block... Therefore this return value will be discarded anyways
-  // Codegen of bind_scope happens during hoisting process
+  // Function statements are *statements*, so they cannot be assigned to
+  // anything. Therefore this return value doesn't matter (as long as
+  // it's not an ir_error, of course)
   return nullptr;
 }
 inst_creator::result inst_creator::accept(const function_expr_node &node) {
@@ -287,6 +287,9 @@ inst_creator::result inst_creator::accept(const template_string_node &node) {
       std::string{node.val.data() + 1, node.val.size() - 2});
 }
 inst_creator::result inst_creator::accept(const template_literal_node &node) {
+  return not_implemented_error(node);
+}
+inst_creator::result inst_creator::accept(const tagged_template_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const array_literal_node &node) {

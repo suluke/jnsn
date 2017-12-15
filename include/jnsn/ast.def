@@ -48,8 +48,10 @@ DERIVED(oct_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(bin_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(string_literal, EXTENDS(expression), CHILDREN(STRING(val)))
 DERIVED(regex_literal, EXTENDS(expression), CHILDREN(STRING(val)))
-DERIVED(template_string, EXTENDS(expression), CHILDREN(STRING(val)))
-DERIVED(template_literal, EXTENDS(expression), CHILDREN(STRINGS(strs) MANY(expression, exprs)))
+DERIVED(template, EXTENDS(expression), CHILDREN())
+DERIVED(template_string, EXTENDS(template), CHILDREN(STRING(val)))
+DERIVED(template_literal, EXTENDS(template), CHILDREN(STRINGS(strs) MANY(expression, exprs)))
+DERIVED(tagged_template, EXTENDS(expression), CHILDREN(ONE(template, literal)))
 DERIVED(array_literal, EXTENDS(expression), CHILDREN(MANY(expression, values)))
 // I don't like object entries being expressions, but that's the just the
 // superset of spread_expr and identifier_expr, which are all legal in

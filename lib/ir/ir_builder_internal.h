@@ -142,8 +142,12 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const bin_literal_node &node) override;
   result accept(const string_literal_node &node) override;
   result accept(const regex_literal_node &) override;
+  result accept(const template_node &) override {
+    return ir_error{"Encountered abstract node type 'template_node'", {}};
+  }
   result accept(const template_string_node &node) override;
   result accept(const template_literal_node &node) override;
+  result accept(const tagged_template_node &node) override;
   result accept(const array_literal_node &node) override;
   result accept(const object_entry_node &) override;
   result accept(const object_literal_node &) override;

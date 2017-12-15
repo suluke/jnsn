@@ -157,10 +157,16 @@ struct exec_visitor : const_ast_node_visitor<ast_executor::result> {
   result accept(const regex_literal_node &) override {
     return exec_error{"Not implemented"};
   }
+  result accept(const template_node &) override {
+    return exec_error{"Encountered abstract node type 'template_node'"};
+  }
   result accept(const template_string_node &node) override {
     return exec_value(string_value(node.val->substr(1, node.val->size() - 2)));
   }
   result accept(const template_literal_node &node) override {
+    return exec_error{"Not implemented"};
+  }
+  result accept(const tagged_template_node &node) override {
     return exec_error{"Not implemented"};
   }
   result accept(const array_literal_node &node) override {
