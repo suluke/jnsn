@@ -8,8 +8,30 @@ ast_to_ir::result build_ir_from_ast(const module_node &ast, ir_context &ctx) {
   return ast_to_ir(ctx).build(ast);
 }
 } // namespace jnsn
-
 using namespace jnsn;
+
+static inst_creator::result load_value(value &val, ir_builder &builder, basic_block &IP) {
+  if (!isa<register_type>(val.get_type()))
+    return ir_error{"Cannot load a value from value that isn't a register-val", {}};
+  if (val.get_type() == register_type::create())
+    return ir_error{"Type 'register' is insufficient to be able to know if a value load needs to happen", {}};
+  if (isa<addr_type>(val.get_type())) {
+    auto *load = builder.insert_inst<load_inst>(IP);
+    builder.set_inst_arg(*load, load_inst::arguments::address, val);
+    return load;
+  }
+  return &val;
+}
+static inst_creator::result load_address(value &val, ir_builder &builder, basic_block &IP) {
+  if (!isa<register_type>(val.get_type()))
+    return ir_error{"Cannot load a address of value that isn't a register-val", {}};
+  if (val.get_type() == register_type::create())
+    return ir_error{"Type 'register' is insufficient to be able to know how to get a value's address", {}};
+  if (isa<addr_type>(val.get_type()))
+    return &val;
+  return builder.ctx.get_undefined();
+}
+
 static const param_list_node *get_function_params(const ast_node &node) {
   if (isa<function_expr_node>(node)) {
     return static_cast<const function_expr_node &>(node).params;
@@ -196,7 +218,9 @@ inst_creator::result inst_creator::accept(const arrow_function_node &node) {
   return bind;
 }
 inst_creator::result inst_creator::accept(const identifier_expr_node &node) {
-  return not_implemented_error(node);
+  auto *lookup = builder.insert_inst<lookup_inst>(*IP);
+  builder.set_inst_arg(*lookup, lookup_inst::arguments::name, *builder.get_str_val(node.str.str()));
+  return lookup;
 }
 
 inst_creator::result inst_creator::accept(const int_literal_node &node) {
@@ -328,6 +352,20 @@ inst_creator::arithmetic_binop_codegen(const AstNodeTy &node) {
   value *lhs, *rhs;
   if (auto err = load_binop_args<AstNodeTy>(node, &lhs, &rhs)) {
     return *err;
+  }
+  {
+    auto lhsval_or_err = load_value(*lhs, builder, *IP);
+    if (std::holds_alternative<ir_error>(lhsval_or_err)) {
+      return std::get<ir_error>(lhsval_or_err);
+    }
+    lhs = std::get<value *>(lhsval_or_err);
+  }
+  {
+    auto rhsval_or_err = load_value(*rhs, builder, *IP);
+    if (std::holds_alternative<ir_error>(rhsval_or_err)) {
+      return std::get<ir_error>(rhsval_or_err);
+    }
+    rhs = std::get<value *>(rhsval_or_err);
   }
   /* turn args into numbers */
   auto *lhs_num = builder.cast_to_number(*IP, *lhs);

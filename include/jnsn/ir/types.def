@@ -7,22 +7,22 @@
 #endif
 
 TYPE(value) // = {addr, str, num, bool, null, undefined}
-SUBTYPE(register, value)
 SUBTYPE(void, value)
-SUBTYPE(addr, register) // = (object *)
-SUBTYPE(bool, register)
-SUBTYPE(c_bool, bool)
-SUBTYPE(number, register)
-SUBTYPE(c_num, number)
-SUBTYPE(string, register)
-SUBTYPE(c_str, string)
-SUBTYPE(regex, register)
-SUBTYPE(null, register)
-SUBTYPE(undefined, register)
+SUBTYPE(register, value)
+  SUBTYPE(addr, register) // = (object *)
+  SUBTYPE(bool, register)
+    SUBTYPE(c_bool, bool)
+  SUBTYPE(number, register)
+    SUBTYPE(c_num, number)
+  SUBTYPE(string, register)
+    SUBTYPE(c_str, string)
+  SUBTYPE(regex, register)
+  SUBTYPE(null, register)
+  SUBTYPE(undefined, register)
 SUBTYPE(function, value)
 SUBTYPE(basic_block, value)
 SUBTYPE(object, value)
-SUBTYPE(bound_function, object) // = (function, scope)
+  SUBTYPE(bound_function, object) // = (function, scope)
 
 #undef TYPE
 #undef SUBTYPE

@@ -19,7 +19,7 @@ class type {
 public:
   type(const type &) = default;
   type(type &&) = default;
-  static inline type create() { return type(value_ty); }
+  bool operator==(const type &o) { return ty == o.ty; }
 };
 #define TYPE(NAME)                                                             \
   struct NAME##_type : public type {                                           \
