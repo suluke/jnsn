@@ -1,6 +1,6 @@
-#include "jnsn/ir/ir_builder.h"
 #include "jnsn/ir/module.h"
-#include "jnsn/parser.h"
+#include "jnsn/js/ir_construction.h"
+#include "jnsn/js/parser.h"
 
 using namespace std;
 using namespace jnsn;

@@ -1,6 +1,6 @@
-#ifndef JNSN_PARSING_AST_WALKER_H
-#define JNSN_PARSING_AST_WALKER_H
-#include "jnsn/ast.h"
+#ifndef JNSN_JS_AST_WALKER_H
+#define JNSN_JS_AST_WALKER_H
+#include "jnsn/js/ast.h"
 namespace jnsn {
 
 template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
@@ -10,12 +10,12 @@ template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual bool on_enter(const NAME##_node &) { return true; }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual void on_leave(const NAME##_node &) {}
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 #define CHILDREN(...) __VA_ARGS__
 #define ONE(OF, NAME) visit(*node.NAME);
@@ -41,8 +41,8 @@ template <class impl> struct ast_walker : public const_ast_node_visitor<void> {
     }                                                                          \
     this->on_leave(node);                                                      \
   }
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 }; // namespace jnsn
 
 } // namespace jnsn
-#endif // JNSN_PARSING_AST_WALKER_H
+#endif // JNSN_JS_AST_WALKER_H

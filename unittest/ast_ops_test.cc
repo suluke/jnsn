@@ -1,4 +1,4 @@
-#include "jnsn/ast_ops.h"
+#include "jnsn/js/ast_ops.h"
 #include "gtest/gtest.h"
 
 using namespace jnsn;
@@ -12,7 +12,7 @@ TEST(ast_ops_test, isa) {
     ASSERT_TRUE(isa<NAME##_node>(ptr));                                        \
   }
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
   {
     auto node = module_node({});
     ASSERT_FALSE(isa<statement_node>(node));

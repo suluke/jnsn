@@ -1,5 +1,5 @@
-#ifndef JNSN_PARSING_LEXER_H
-#define JNSN_PARSING_LEXER_H
+#ifndef JNSN_JS_LEXER_H
+#define JNSN_JS_LEXER_H
 
 #include "jnsn/source_location.h"
 #include "jnsn/string_table.h"
@@ -14,13 +14,13 @@ namespace jnsn {
 
 enum class token_type {
 #define TOKEN_TYPE(NAME, STR) NAME,
-#include "jnsn/tokens.def"
+#include "jnsn/js/tokens.def"
 };
 std::ostream &operator<<(std::ostream &stream, const token_type ty);
 
 enum class keyword_type {
 #define KEYWORD(NAME) kw_##NAME,
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
 };
 
 ///
@@ -139,4 +139,4 @@ public:
 };
 } // namespace jnsn
 
-#endif // JNSN_PARSING_LEXER_H
+#endif // JNSN_JS_LEXER_H

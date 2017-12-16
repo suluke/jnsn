@@ -1,5 +1,5 @@
-#include "jnsn/ast_exec.h"
-#include "jnsn/ast.h"
+#include "jnsn/js/ast_exec.h"
+#include "jnsn/js/ast.h"
 #include <cmath>
 #include <cstdlib>
 #include <map>

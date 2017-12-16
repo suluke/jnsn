@@ -1,5 +1,5 @@
-#include "jnsn/parser.h"
-#include "jnsn/ast_ops.h"
+#include "jnsn/js/parser.h"
+#include "jnsn/js/ast_ops.h"
 #include "jnsn/util.h"
 #include <algorithm>
 #include <initializer_list>
@@ -16,7 +16,7 @@ static std::string to_string(token_type t) {
 #define TOKEN_TYPE(NAME, STR)                                                  \
   case token_type::NAME:                                                       \
     return #NAME;
-#include "jnsn/tokens.def"
+#include "jnsn/js/tokens.def"
   }
   unreachable("Unknown token_type");
 }
@@ -243,13 +243,13 @@ static bool is_unary_prefix_op(token op) {
 #define PREFIX_OP(TYPE, PRECEDENCE)                                            \
   if (op.type == token_type::TYPE)                                             \
     return true;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   if (op.type == token_type::KEYWORD) {
     auto kwty = lexer_base::get_keyword_type(op);
 #define PREFIX_OP_KW(TYPE, PRECEDENCE)                                         \
   if (kwty == keyword_type::kw_##TYPE)                                         \
     return true;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   }
   return false;
 }
@@ -262,13 +262,13 @@ static bool is_binary_operator(token op, bool comma_is_operator = true) {
   if (op.type == token_type::TYPE) {                                           \
     return true;                                                               \
   }
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   if (op.type == token_type::KEYWORD) {
     auto kwty = lexer_base::get_keyword_type(op);
 #define INFIX_OP_KW(TYPE, X, Y)                                                \
   if (kwty == keyword_type::kw_##TYPE)                                         \
     return true;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   }
   return false;
 }
@@ -676,13 +676,13 @@ static int get_precedence(token op) {
 #define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
   case token_type::TYPE:                                                       \
     return PRECEDENCE;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   case token_type::KEYWORD: {
     auto kwty = lexer_base::get_keyword_type(op);
 #define INFIX_OP_KW(TYPE, PRECEDENCE, ASSOCIATIVITY)                           \
   if (kwty == keyword_type::kw_##TYPE)                                         \
     return PRECEDENCE;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   }
   default:
     return -1; // FIXME more explicit error handling
@@ -695,13 +695,13 @@ static associativity get_associativity(token op) {
 #define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
   if (op.type == token_type::TYPE)                                             \
     return associativity::ASSOCIATIVITY;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   if (op.type == token_type::KEYWORD) {
     auto kwty = lexer_base::get_keyword_type(op);
 #define INFIX_OP_KW(TYPE, PRECEDENCE, ASSOCIATIVITY)                           \
   if (kwty == keyword_type::kw_##TYPE)                                         \
     return associativity::ASSOCIATIVITY;
-#include "jnsn/operators.def"
+#include "jnsn/js/operators.def"
   }
   unreachable("Unknown binary operator");
 }

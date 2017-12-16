@@ -1,5 +1,5 @@
-#include "jnsn/ast_exec.h"
-#include "jnsn/parser.h"
+#include "jnsn/js/ast_exec.h"
+#include "jnsn/js/parser.h"
 
 using namespace std;
 using namespace jnsn;

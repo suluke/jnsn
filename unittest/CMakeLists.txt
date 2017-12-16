@@ -28,35 +28,35 @@ add_subdirectory("${PROJECT_BINARY_DIR}/googletest/src"
 set(UNITTEST_RUNS)
 macro(add_unittest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${ARGN})
-  target_link_libraries(${test_name} gtest_main gtest jnsn)
+  target_link_libraries(${test_name} gtest_main gtest jnsn_js)
   add_custom_target(run_${test_name} DEPENDS ${test_name} COMMAND ${test_name} --gtest_color=true)
   list(APPEND UNITTEST_RUNS run_${test_name})
 endmacro()
 
 add_unittest(lexer_test
   lexer_test.cc
-  ../include/jnsn/lexer.h
+  ../include/jnsn/js/lexer.h
+  ../include/jnsn/js/tokens.def
+  ../include/jnsn/js/keywords.def
   ../include/jnsn/string_table.h
-  ../include/jnsn/tokens.def
-  ../include/jnsn/keywords.def
 )
 add_unittest(ast_test
   ast_test.cc
-  ../include/jnsn/ast.h
-  ../include/jnsn/ast.def
-  ../include/jnsn/ast_visitor.h
+  ../include/jnsn/js/ast.h
+  ../include/jnsn/js/ast.def
+  ../include/jnsn/js/ast_visitor.h
 )
 add_unittest(ast_ops_test
   ast_ops_test.cc
-  ../include/jnsn/ast.h
-  ../include/jnsn/ast.def
-  ../include/jnsn/ast_visitor.h
-  ../include/jnsn/ast_ops.h
+  ../include/jnsn/js/ast.h
+  ../include/jnsn/js/ast.def
+  ../include/jnsn/js/ast_visitor.h
+  ../include/jnsn/js/ast_ops.h
 )
 add_unittest(parser_test
   parser_test.cc
   gtest_utils.h
-  ../include/jnsn/parser.h
+  ../include/jnsn/js/parser.h
 )
 add_unittest(ir_test
   ir_test.cc
@@ -73,7 +73,7 @@ add_unittest(ir_test
 )
 add_unittest(exec_test
   exec_test.cc
-  ../include/jnsn/ast_exec.h
+  ../include/jnsn/js/ast_exec.h
 )
 
 add_custom_target(unittests

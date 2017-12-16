@@ -1,4 +1,4 @@
-#include "jnsn/lexer.h"
+#include "jnsn/js/lexer.h"
 #include "jnsn/util.h"
 #include <algorithm>
 #include <cctype>
@@ -12,7 +12,7 @@ std::ostream &operator<<(std::ostream &stream, const token_type ty) {
 #define TOKEN_TYPE(NAME, STR)                                                  \
   if (ty == token_type::NAME)                                                  \
     stream << #NAME;
-#include "jnsn/tokens.def"
+#include "jnsn/js/tokens.def"
   return stream;
 }
 std::ostream &operator<<(std::ostream &stream, const token &tok) {
@@ -41,29 +41,8 @@ static bool is_keyword(string_table::entry word) {
 #define KEYWORD(NAME)                                                          \
   if (word == #NAME)                                                           \
     return true;
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
   return false;
-}
-
-#define KEYWORD(NAME) static const char *kw_##NAME##_str = #NAME;
-#include "jnsn/keywords.def"
-
-static const char *find_kw(std::string &s) {
-#define KEYWORD(NAME)                                                          \
-  if (s == #NAME)                                                              \
-    return kw_##NAME##_str;
-#include "jnsn/keywords.def"
-  return nullptr;
-}
-
-/// string_table impl
-string_table::entry string_table::get_handle(std::string s) {
-  if (const char *kw = find_kw(s)) {
-    return {kw};
-  }
-  auto it_ins = table.insert(std::move(s));
-  auto it = it_ins.first;
-  return std::string_view{it->data(), it->size()};
 }
 
 static constexpr bool one_of(unit u, const unit *alternatives) {
@@ -833,10 +812,12 @@ result lexer_base::lex_id_keyword() {
 keyword_type lexer_base::get_keyword_type(const token &t) {
   assert(t.type == token_type::KEYWORD);
 #define KEYWORD(NAME)                                                          \
-  if (t.text.data() == kw_##NAME##_str) {                                      \
+  constexpr const char *kw_##NAME##_str = #NAME;                               \
+  constexpr std::string_view kw_##NAME##_view(kw_##NAME##_str);                \
+  if (t.text == kw_##NAME##_view) {                                            \
     return keyword_type::kw_##NAME;                                            \
   }
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
   unreachable("Unknown keyword type");
 }
 

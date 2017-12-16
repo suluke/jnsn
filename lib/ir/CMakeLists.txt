@@ -1,0 +1,21 @@
+set(SOURCES
+  ir.cc
+  ir_context.cc
+  ir_builder.cc
+  module.cc
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/instructions.def
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/instructions.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/intrinsics.def
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/ir.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/ir_builder.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/ir_context.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/module.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/types.def
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/types.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/value.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/source_location.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/string_table.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/util.h)
+
+add_library(jnsn_ir
+  ${SOURCES})

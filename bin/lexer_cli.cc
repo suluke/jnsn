@@ -1,4 +1,4 @@
-#include "jnsn/lexer.h"
+#include "jnsn/js/lexer.h"
 
 using namespace std;
 using namespace jnsn;

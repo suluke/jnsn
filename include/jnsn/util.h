@@ -1,3 +1,5 @@
+#ifndef JNSN_UTIL_H
+#define JNSN_UTIL_H
 #include <cstdlib>
 #include <iostream>
 
@@ -21,4 +23,5 @@ namespace jnsn {
 #define unreachable(msg) ::jnsn::unreachable_internal(msg, __FILE__, __LINE__)
 #else
 #define unreachable(msg) ::jnsn::unreachable_internal()
-#endif
+#endif // NDEBUG
+#endif // JNSN_UTIL_H

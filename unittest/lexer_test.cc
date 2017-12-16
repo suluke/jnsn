@@ -12,11 +12,11 @@ protected:
 
 TEST_F(string_table_test, keywords) {
 #define KEYWORD(NAME) const auto NAME##_handle = str_table.get_handle(#NAME);
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
 #define KEYWORD(NAME) const auto NAME##_handle2 = str_table.get_handle(#NAME);
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
 #define KEYWORD(NAME) ASSERT_EQ(NAME##_handle.data(), NAME##_handle2.data());
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
 }
 
 class lexer_test : public ::testing::Test {
@@ -102,7 +102,7 @@ TEST_F(lexer_test, operators) {
   if (string{STR} != "" && string{STR} != ".") {                               \
     SINGLE_NOTEXT_TOKEN(STR, NAME);                                            \
   }
-#include "jnsn/tokens.def"
+#include "jnsn/js/tokens.def"
 }
 
 TEST_F(lexer_test, strings) {
@@ -195,5 +195,5 @@ TEST_F(lexer_test, keyword_types) {
 #define KEYWORD(NAME)                                                          \
   ASSERT_EQ(keyword_type::kw_##NAME,                                           \
             lexer_base::get_keyword_type(TOKEN(KEYWORD, #NAME)));
-#include "jnsn/keywords.def"
+#include "jnsn/js/keywords.def"
 }

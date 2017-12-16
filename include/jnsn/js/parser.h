@@ -1,8 +1,8 @@
-#ifndef JNSN_PARSING_PARSER_H
-#define JNSN_PARSING_PARSER_H
+#ifndef JNSN_JS_PARSER_H
+#define JNSN_JS_PARSER_H
 
-#include "jnsn/ast.h"
-#include "jnsn/lexer.h"
+#include "jnsn/js/ast.h"
+#include "jnsn/js/lexer.h"
 #include <stack>
 
 namespace jnsn {
@@ -83,5 +83,4 @@ class cin_line_parser : public parser_base {
 };
 
 } // namespace jnsn
-
-#endif // JNSN_PARSING_PARSER_H
+#endif // JNSN_JS_PARSER_H

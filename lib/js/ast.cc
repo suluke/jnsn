@@ -1,5 +1,5 @@
-#include "jnsn/ast.h"
-#include "jnsn/ast_ops.h"
+#include "jnsn/js/ast.h"
+#include "jnsn/js/ast_ops.h"
 #include <cassert>
 #include <iostream>
 
@@ -8,7 +8,7 @@ using namespace jnsn;
 void ast_node_store::clear() {
 #define NODE(NAME, CHILD_NODES) NAME##_vec.clear();
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NAME##_vec.clear();
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 }
 
 #define NODE(NAME, CHILD_NODES)                                                \
@@ -29,7 +29,7 @@ void ast_node_store::clear() {
     return &storage->back();                                                   \
   }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, const ast_node *ref) {

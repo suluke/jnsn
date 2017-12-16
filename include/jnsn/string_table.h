@@ -50,7 +50,11 @@ public:
   using entry = string_table_entry;
   using iterator = container::iterator;
   using const_iterator = container::const_iterator;
-  entry get_handle(std::string s);
+  entry get_handle(std::string s) {
+    auto it_ins = table.insert(std::move(s));
+    auto it = it_ins.first;
+    return std::string_view{it->data(), it->size()};
+  }
   iterator begin() { return table.begin(); }
   const_iterator begin() const { return table.begin(); }
   iterator end() { return table.end(); }

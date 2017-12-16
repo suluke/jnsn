@@ -1,8 +1,8 @@
-#ifndef JNSN_PARSING_AST_H
-#define JNSN_PARSING_AST_H
+#ifndef JNSN_JS_AST_H
+#define JNSN_JS_AST_H
 
-#include "jnsn/ast_visitor.h"
-#include "jnsn/lexer.h"
+#include "jnsn/js/ast_visitor.h"
+#include "jnsn/js/lexer.h"
 #include <cassert>
 #include <memory>
 #include <vector>
@@ -36,7 +36,7 @@ class ast_node_store;
 #define STRINGS(NAME) std::vector<string_table::entry> NAME;
 #define MAYBE_STR(NAME) std::optional<string_table::entry> NAME;
 #define MAYBE(OF, NAME) std::optional<OF##_node *> NAME;
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 /// The place where different nodes live
 class ast_node_store {
@@ -48,12 +48,12 @@ class ast_node_store {
 #define NODE(NAME, CHILD_NODES)                                                \
   std::vector<no_reloc_buf_ptr<NAME##_node>> NAME##_vec;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 public:
 #define NODE(NAME, CHILD_NODES) NAME##_node *make_##NAME(source_location loc);
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
   void clear();
 };
@@ -61,4 +61,4 @@ public:
 std::ostream &operator<<(std::ostream &, const ast_node *);
 } // namespace jnsn
 
-#endif // JNSN_PARSING_AST_H
+#endif // JNSN_JS_AST_H

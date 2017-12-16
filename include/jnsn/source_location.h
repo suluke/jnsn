@@ -47,5 +47,4 @@ public:
 };
 
 } // namespace jnsn
-
 #endif // JNSN_SOURCE_LOCATION_H

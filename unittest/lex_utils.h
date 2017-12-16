@@ -1,6 +1,6 @@
 #ifndef JNSN_UNITTEST_LEX_UTILS_H
 #define JNSN_UNITTEST_LEX_UTILS_H
-#include "jnsn/lexer.h"
+#include "jnsn/js/lexer.h"
 namespace jnsn {
 ///
 ///

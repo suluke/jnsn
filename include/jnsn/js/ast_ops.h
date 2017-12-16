@@ -1,6 +1,6 @@
-#ifndef JNSN_PARSING_AST_OPS_H
-#define JNSN_PARSING_AST_OPS_H
-#include "jnsn/ast.h"
+#ifndef JNSN_JS_AST_OPS_H
+#define JNSN_JS_AST_OPS_H
+#include "jnsn/js/ast.h"
 
 namespace jnsn {
 
@@ -19,11 +19,11 @@ template <class nodety> bool isa(const ast_node *);
 #define NODE(NAME, CHILDREN)                                                   \
   template <> bool isa<NAME##_node>(const ast_node *);
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 template <class nodety> bool isa(const ast_node &node) {
   return isa<nodety>(&node);
 }
 
 } // namespace jnsn
-#endif // JNSN_PARSING_AST_OPS_H
+#endif // JNSN_JS_AST_OPS_H

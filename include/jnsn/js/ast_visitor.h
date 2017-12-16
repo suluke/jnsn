@@ -1,5 +1,5 @@
-#ifndef JNSN_PARSING_AST_VISITOR_H
-#define JNSN_PARSING_AST_VISITOR_H
+#ifndef JNSN_JS_AST_VISITOR_H
+#define JNSN_JS_AST_VISITOR_H
 #include "jnsn/source_location.h"
 
 namespace jnsn {
@@ -19,19 +19,19 @@ struct ast_node {
 /// forward declaration of all ast nodes
 #define NODE(NAME, CHILD_NODES) struct NAME##_node;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 class const_ast_node_visitor_base {
 /// make ast nodes friend classes
 #define NODE(NAME, CHILD_NODES) friend struct NAME##_node;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 #define NODE(NAME, CHILD_NODES)                                                \
   virtual void gen_result(const NAME##_node &node) = 0;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
   virtual void gen_result(const NAME##_node &node) = 0;
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 protected:
   void dispatch(const ast_node &node) { node.accept(*this); }
 };
@@ -42,10 +42,10 @@ class const_ast_node_visitor : public const_ast_node_visitor_base {
 #define NODE(NAME, CHILD_NODES)                                                \
   void gen_result(const NAME##_node &node) override { result = accept(node); }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 #define NODE(NAME, CHILD_NODES) virtual RET_TY accept(const NAME##_node &) = 0;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 public:
   RET_TY visit(const ast_node &n) {
     dispatch(n);
@@ -59,15 +59,14 @@ class const_ast_node_visitor<void> : public const_ast_node_visitor_base {
   void gen_result(const NAME##_node &node) override { accept(node); }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
   void gen_result(const NAME##_node &node) override { accept(node); }
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 #define NODE(NAME, CHILD_NODES) virtual void accept(const NAME##_node &) = 0;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES)                                   \
   virtual void accept(const NAME##_node &) = 0;
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 public:
   void visit(const ast_node &n) { dispatch(n); }
 };
 
 } // namespace jnsn
-
-#endif // JNSN_PARSING_AST_VISITOR_H
+#endif // JNSN_JS_AST_VISITOR_H

@@ -1,5 +1,5 @@
-#include "jnsn/ast.h"
-#include "jnsn/ast_walker.h"
+#include "jnsn/js/ast.h"
+#include "jnsn/js/ast_walker.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
@@ -9,7 +9,7 @@ struct name_checker : public const_ast_node_visitor<const char *> {
 #define NODE(NAME, CHILD_NODES)                                                \
   const char *accept(const NAME##_node &) override { return #NAME; }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, ANCESTOR)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 };
 
 TEST(ast_test, visitor) {
@@ -23,7 +23,7 @@ TEST(ast_test, visitor) {
   }
 #define NODE(NAME, CHILD_NODES) NODE_CHECK(NAME)
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE_CHECK(NAME)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 #undef NODE_CHECK
 }
 

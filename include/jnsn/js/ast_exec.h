@@ -1,5 +1,5 @@
-#ifndef JNSN_PARSING_AST_EXECUTOR_H
-#define JNSN_PARSING_AST_EXECUTOR_H
+#ifndef JNSN_JS_AST_EXECUTOR_H
+#define JNSN_JS_AST_EXECUTOR_H
 #include <iostream>
 #include <memory>
 #include <string>
@@ -136,4 +136,4 @@ public:
 };
 
 } // namespace jnsn
-#endif // JNSN_PARSING_AST_EXECUTOR_H
+#endif // JNSN_JS_AST_EXECUTOR_H

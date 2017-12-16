@@ -1,4 +1,4 @@
-#include "jnsn/ast_ops.h"
+#include "jnsn/js/ast_ops.h"
 #include <sstream>
 
 using namespace jnsn;
@@ -85,7 +85,7 @@ struct parent_json_printer : public const_ast_node_visitor<void> {
     CHILD_NODES;                                                               \
   }
 
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 };
 
 struct json_printer : public const_ast_node_visitor<void> {
@@ -160,7 +160,7 @@ struct json_printer : public const_ast_node_visitor<void> {
     CHILD_NODES;                                                               \
     stream << "}";                                                             \
   }
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 };
 
 namespace jnsn {
@@ -184,7 +184,7 @@ struct isa_checker : public const_ast_node_visitor<bool> {
     return std::is_same_v<NAME##_node, nodety> ||                              \
            accept(static_cast<const BASE &>(node));                            \
   }
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 };
 
 namespace jnsn {
@@ -194,17 +194,17 @@ namespace jnsn {
     return isa_checker<NAME##_node>().visit(*node);                            \
   }
 #define DERIVED(NAME, EXTENDS, CHILDREN) NODE(NAME, CHILDREN)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 
 #define NODE(NAME, CHILD_NODES) static const char *NAME##_name = #NAME;
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
 const char *get_ast_node_typename(const ast_node &node) {
   struct ast_node_name_generator : public const_ast_node_visitor<const char *>{
 #define NODE(NAME, CHILD_NODES)                                                \
   const char *accept(const NAME##_node &node) override { return NAME##_name; }
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
-#include "jnsn/ast.def"
+#include "jnsn/js/ast.def"
                                    } name_gen;
   return name_gen.visit(node);
 }

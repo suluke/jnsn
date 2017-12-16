@@ -1,4 +1,4 @@
-#include "jnsn/parser.h"
+#include "jnsn/js/parser.h"
 
 using namespace std;
 using namespace jnsn;
