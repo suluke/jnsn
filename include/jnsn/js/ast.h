@@ -31,7 +31,7 @@ class ast_node_store;
     CHILD_NODES                                                                \
   };
 #define MANY(OF, NAME) std::vector<OF##_node *> NAME;
-#define ONE(OF, NAME) OF##_node *NAME;
+#define ONE(OF, NAME) OF##_node *NAME = nullptr;
 #define STRING(NAME) string_table::entry NAME;
 #define STRINGS(NAME) std::vector<string_table::entry> NAME;
 #define MAYBE_STR(NAME) std::optional<string_table::entry> NAME;

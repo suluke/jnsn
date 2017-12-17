@@ -1,4 +1,5 @@
 #include "jnsn/js/ast.h"
+#include "jnsn/js/ast_analysis.h"
 #include "jnsn/js/ast_walker.h"
 #include "gtest/gtest.h"
 #include <sstream>
@@ -104,8 +105,15 @@ TEST(ast_test, node_store) {
 
 TEST(ast_test, printing) {
   ast_node_store store;
-  auto node = store.make_module({});
+  auto *node = store.make_module({});
   std::stringstream ss;
   ss << node;
   ASSERT_EQ(ss.str(), "{\"type\": \"module\", \"stmts\": []}\n");
+}
+
+TEST(ast_test, analysis) {
+  ast_node_store store;
+  auto *node = store.make_function_expr({});
+  auto report = analyze_js_ast(*node);
+  ASSERT_TRUE(report);
 }

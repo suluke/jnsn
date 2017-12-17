@@ -1,12 +1,14 @@
 set(SOURCES
   ast.cc
   ast_exec.cc
+  ast_analysis.cc
   ast_ops.cc
   ir_construction.cc
   lexer.cc
   parser.cc
   ${PROJECT_SOURCE_DIR}/include/jnsn/js/ast.def
   ${PROJECT_SOURCE_DIR}/include/jnsn/js/ast.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/js/ast_analysis.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/js/ast_ops.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/js/ast_visitor.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/js/ir_construction.h

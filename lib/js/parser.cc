@@ -1,8 +1,10 @@
 #include "jnsn/js/parser.h"
+#include "jnsn/js/ast_analysis.h"
 #include "jnsn/js/ast_ops.h"
 #include "jnsn/util.h"
 #include <algorithm>
 #include <initializer_list>
+#include <sstream>
 
 using namespace jnsn;
 
@@ -112,7 +114,7 @@ void parser_base::reset() {
   rewind_stack = {};
 }
 
-parser_base::result parser_base::parse() {
+parser_base::result parser_base::parse(bool verify) {
   reset();
   while (!error && advance()) {
     auto stmt = parse_statement();
@@ -124,6 +126,14 @@ parser_base::result parser_base::parse() {
 
   if (error) {
     return *error;
+  }
+  if (verify) {
+    auto report = analyze_js_ast(*module);
+    if (report) {
+      std::stringstream ss;
+      ss << "\n" << report;
+      return parser_error{ss.str(), {0, 0}};
+    }
   }
   return module;
 }

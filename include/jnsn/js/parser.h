@@ -74,7 +74,7 @@ private:
   void set_error(std::string msg, source_location loc);
 
 public:
-  result parse();
+  result parse(bool verify = true);
 };
 
 class cin_line_parser : public parser_base {
