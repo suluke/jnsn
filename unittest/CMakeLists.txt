@@ -71,10 +71,6 @@ add_unittest(ir_test
   ../include/jnsn/ir/types.h
   ../include/jnsn/ir/value.h
 )
-add_unittest(exec_test
-  exec_test.cc
-  ../include/jnsn/js/ast_exec.h
-)
 
 add_custom_target(unittests
   DEPENDS ${UNITTEST_RUNS}

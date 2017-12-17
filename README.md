@@ -18,9 +18,6 @@ For each step in the parsing/compilation pipeline, I usually write a small cli t
 Therefore you'll find the following binaries in `<build>/bin`:
 * `lexer_cli`: Asks for code, outputs the token stream from the lexer
 * `parser_cli`: Asks for code, outputs an unformatted JSON representation of the parsed AST
-* `exec_cli`: Asks for code. Currently uses the `ast_exec` class to try to interpret parts of the parsed AST.
-  Unfortunately, after realizing that JS needs at least two passes through the AST (for hoisting), I dropped development of `ast_exec`.
-  I'll leave it in the repo as long as there is no proper execution engine (which I hope will be implemented on IR-level)
 * `ir_cli`: Asks for code and outputs the IR `module` as created by `ast_to_ir`
 
 If you are less interested in playing around and instead are interested in what each stage is currently capable of, take a look at the [unittests/](unittests/) directory.
@@ -37,4 +34,3 @@ It will produce two targets of interest in the generated build system:
 The former should be self-explanatory.
 `unittests` uses a downloaded copy of the `googletest` framework to compile and link against this project's unittest suite.
 Furthermore, it also automatically runs the unittests.
- 
