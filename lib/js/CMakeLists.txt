@@ -1,5 +1,6 @@
 set(SOURCES
   ast.cc
+  ast_exec.cc
   ast_analysis.cc
   ast_ops.cc
   ir_construction.cc
