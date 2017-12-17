@@ -34,3 +34,11 @@ It will produce two targets of interest in the generated build system:
 The former should be self-explanatory.
 `unittests` uses a downloaded copy of the `googletest` framework to compile and link against this project's unittest suite.
 Furthermore, it also automatically runs the unittests.
+
+## Contributing
+Code submitted as a Pull Request should meet the following criteria:
+1. It should be formatted according to `clang-format -sort-includes -style=llvm`.
+   The cmake targets `jnsn-{check|update}-format` can be helpful here.
+2. New code should bring new tests.
+   Especially for bugfixes, a regression test is necessary.
+   New features should come with a set of tests that demonstrate what they do/how they can be used.

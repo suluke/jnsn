@@ -1,7 +1,7 @@
 #ifndef JNSN_JS_AST_ANALYSIS_INTERNAL_H
 #define JNSN_JS_AST_ANALYSIS_INTERNAL_H
-#include "jnsn/js/ast_analysis.h"
 #include "jnsn/js/ast.h"
+#include "jnsn/js/ast_analysis.h"
 
 namespace jnsn {
 class ast_analysis_manager : public const_ast_node_visitor<bool> {
@@ -11,16 +11,19 @@ public:
     am.visit(ast);
     return am.report;
   }
+
 private:
   using result = bool;
   ast_analysis_report report;
   result accept(const statement_node &node) override {
-    report.errors.emplace_back("Encountered abstract class statement_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class statement_node",
+                               node.loc);
     return true;
   }
   result accept(const module_node &node) override;
   result accept(const expression_node &node) override {
-    report.errors.emplace_back("Encountered abstract class expression_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class expression_node",
+                               node.loc);
     return true;
   }
   result accept(const param_list_node &node) override;
@@ -32,7 +35,8 @@ private:
   result accept(const identifier_expr_node &node) override;
 
   result accept(const number_literal_node &node) override {
-    report.errors.emplace_back("Encountered abstract class number_literal_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class number_literal_node",
+                               node.loc);
     return true;
   }
   result accept(const int_literal_node &node) override;
@@ -43,7 +47,8 @@ private:
   result accept(const string_literal_node &node) override;
   result accept(const regex_literal_node &) override;
   result accept(const template_node &node) override {
-    report.errors.emplace_back("Encountered abstract class template_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class template_node",
+                               node.loc);
     return true;
   }
   result accept(const template_string_node &node) override;
@@ -62,7 +67,8 @@ private:
   result accept(const new_target_node &) override;
   // Unary expressions
   result accept(const unary_expr_node &node) override {
-    report.errors.emplace_back("Encountered abstract class unary_expr_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class unary_expr_node",
+                               node.loc);
     return true;
   }
   result accept(const postfix_increment_node &node) override;
@@ -79,7 +85,8 @@ private:
 
   // arithmetic binops
   result accept(const bin_op_expr_node &node) override {
-    report.errors.emplace_back("Encountered abstract class bin_op_expr_node", node.loc);
+    report.errors.emplace_back("Encountered abstract class bin_op_expr_node",
+                               node.loc);
     return true;
   }
   result accept(const add_node &node) override;
@@ -155,7 +162,7 @@ private:
   result accept(const export_wildcard_node &) override;
 };
 struct children_not_null {
-#define NODE(NAME, CHECK_CHILDREN) \
+#define NODE(NAME, CHECK_CHILDREN)                                             \
   static bool check(const NAME##_node &node, ast_analysis_report &report);
 #define DERIVED(NAME, ANCESTORS, CHECK_CHILDREN) NODE(NAME, CHECK_CHILDREN)
 #include "jnsn/js/ast.def"

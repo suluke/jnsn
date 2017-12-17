@@ -10,11 +10,15 @@ ast_to_ir::result build_ir_from_ast(const module_node &ast, ir_context &ctx) {
 } // namespace jnsn
 using namespace jnsn;
 
-static inst_creator::result load_value(value &val, ir_builder &builder, basic_block &IP) {
+static inst_creator::result load_value(value &val, ir_builder &builder,
+                                       basic_block &IP) {
   if (!isa<register_type>(val.get_type()))
-    return ir_error{"Cannot load a value from value that isn't a register-val", {}};
+    return ir_error{"Cannot load a value from value that isn't a register-val",
+                    {}};
   if (val.get_type() == register_type::create())
-    return ir_error{"Type 'register' is insufficient to be able to know if a value load needs to happen", {}};
+    return ir_error{"Type 'register' is insufficient to be able to know if a "
+                    "value load needs to happen",
+                    {}};
   if (isa<addr_type>(val.get_type())) {
     auto *load = builder.insert_inst<load_inst>(IP);
     builder.set_inst_arg(*load, load_inst::arguments::address, val);
@@ -22,11 +26,15 @@ static inst_creator::result load_value(value &val, ir_builder &builder, basic_bl
   }
   return &val;
 }
-static inst_creator::result load_address(value &val, ir_builder &builder, basic_block &IP) {
+static inst_creator::result load_address(value &val, ir_builder &builder,
+                                         basic_block &IP) {
   if (!isa<register_type>(val.get_type()))
-    return ir_error{"Cannot load a address of value that isn't a register-val", {}};
+    return ir_error{"Cannot load a address of value that isn't a register-val",
+                    {}};
   if (val.get_type() == register_type::create())
-    return ir_error{"Type 'register' is insufficient to be able to know how to get a value's address", {}};
+    return ir_error{"Type 'register' is insufficient to be able to know how to "
+                    "get a value's address",
+                    {}};
   if (isa<addr_type>(val.get_type()))
     return &val;
   return builder.ctx.get_undefined();
@@ -219,7 +227,8 @@ inst_creator::result inst_creator::accept(const arrow_function_node &node) {
 }
 inst_creator::result inst_creator::accept(const identifier_expr_node &node) {
   auto *lookup = builder.insert_inst<lookup_inst>(*IP);
-  builder.set_inst_arg(*lookup, lookup_inst::arguments::name, *builder.get_str_val(node.str.str()));
+  builder.set_inst_arg(*lookup, lookup_inst::arguments::name,
+                       *builder.get_str_val(node.str.str()));
   return lookup;
 }
 
