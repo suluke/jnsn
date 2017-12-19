@@ -48,6 +48,7 @@ INSTRUCTION(undefine, ARGS(ARG(name, c_str)), PROPS(), RETURN(void))
 INSTRUCTION(lookup, ARGS(ARG(name, c_str)), PROPS(), RETURN(addr))
 INSTRUCTION(enter_scope, ARGS(), PROPS(), RETURN(void))
 INSTRUCTION(leave_scope, ARGS(), PROPS(), RETURN(void))
+INSTRUCTION(get_scope_obj, ARGS(), PROPS(), RETURN(addr))
 
 // normal operations
 INSTRUCTION(call,
