@@ -360,22 +360,28 @@ ast_analysis_manager::accept(const xor_assign_node &node) {
   return children_not_null::check(node, report);
 }
 // destructuring assignments
-ast_analysis_manager::result ast_analysis_manager::accept(const array_destruct_key_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const array_destruct_key_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const array_destruct_keys_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const array_destruct_keys_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const array_destruct_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const array_destruct_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const object_destruct_key_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const object_destruct_key_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const object_destruct_keys_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const object_destruct_keys_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const object_destruct_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const object_destruct_node &node) {
   return children_not_null::check(node, report);
 }
 // other binops
@@ -421,10 +427,12 @@ ast_analysis_manager::result
 ast_analysis_manager::accept(const var_decl_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const decl_array_destruct_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const decl_array_destruct_node &node) {
   return children_not_null::check(node, report);
 }
-ast_analysis_manager::result ast_analysis_manager::accept(const decl_object_destruct_node &node) {
+ast_analysis_manager::result
+ast_analysis_manager::accept(const decl_object_destruct_node &node) {
   return children_not_null::check(node, report);
 }
 ast_analysis_manager::result

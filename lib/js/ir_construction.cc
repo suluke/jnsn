@@ -632,16 +632,19 @@ inst_creator::result inst_creator::accept(const xor_assign_node &node) {
 inst_creator::result inst_creator::accept(const array_destruct_key_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const array_destruct_keys_node &node) {
+inst_creator::result
+inst_creator::accept(const array_destruct_keys_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const array_destruct_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const object_destruct_key_node &node) {
+inst_creator::result
+inst_creator::accept(const object_destruct_key_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const object_destruct_keys_node &node) {
+inst_creator::result
+inst_creator::accept(const object_destruct_keys_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const object_destruct_node &node) {
@@ -670,10 +673,12 @@ inst_creator::result inst_creator::accept(const label_stmt_node &node) {
 inst_creator::result inst_creator::accept(const var_decl_part_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const decl_array_destruct_node &node) {
+inst_creator::result
+inst_creator::accept(const decl_array_destruct_node &node) {
   return not_implemented_error(node);
 }
-inst_creator::result inst_creator::accept(const decl_object_destruct_node &node) {
+inst_creator::result
+inst_creator::accept(const decl_object_destruct_node &node) {
   return not_implemented_error(node);
 }
 inst_creator::result inst_creator::accept(const empty_stmt_node &node) {
