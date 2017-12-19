@@ -65,7 +65,7 @@ private:
   result accept(const spread_expr_node &) override;
   result accept(const new_expr_node &) override;
   result accept(const new_target_node &) override;
-  // Unary expressions
+  // unary expressions
   result accept(const unary_expr_node &node) override {
     report.errors.emplace_back("Encountered abstract class unary_expr_node",
                                node.loc);
@@ -127,6 +127,13 @@ private:
   result accept(const and_assign_node &) override;
   result accept(const or_assign_node &) override;
   result accept(const xor_assign_node &) override;
+  // destructuring assignments
+  result accept(const array_destruct_key_node &node) override;
+  result accept(const array_destruct_keys_node &node) override;
+  result accept(const array_destruct_node &node) override;
+  result accept(const object_destruct_key_node &node) override;
+  result accept(const object_destruct_keys_node &node) override;
+  result accept(const object_destruct_node &node) override;
   // other binops
   result accept(const comma_operator_node &node) override;
   result accept(const ternary_operator_node &) override;
@@ -140,6 +147,8 @@ private:
   result accept(const var_decl_part_node &) override;
   result accept(const empty_stmt_node &) override;
   result accept(const var_decl_node &) override;
+  result accept(const decl_array_destruct_node &node) override;
+  result accept(const decl_object_destruct_node &node) override;
   result accept(const if_stmt_node &) override;
   result accept(const do_while_node &) override;
   result accept(const while_stmt_node &) override;

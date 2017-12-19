@@ -182,6 +182,13 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const and_assign_node &) override;
   result accept(const or_assign_node &) override;
   result accept(const xor_assign_node &) override;
+  // destructuring assignments
+  result accept(const array_destruct_key_node &node) override;
+  result accept(const array_destruct_keys_node &node) override;
+  result accept(const array_destruct_node &node) override;
+  result accept(const object_destruct_key_node &node) override;
+  result accept(const object_destruct_keys_node &node) override;
+  result accept(const object_destruct_node &node) override;
   // other binops
   result accept(const comma_operator_node &node) override;
   result accept(const ternary_operator_node &) override;
@@ -195,6 +202,8 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const var_decl_part_node &) override;
   result accept(const empty_stmt_node &) override;
   result accept(const var_decl_node &) override;
+  result accept(const decl_array_destruct_node &node) override;
+  result accept(const decl_object_destruct_node &node) override;
   result accept(const if_stmt_node &) override;
   result accept(const do_while_node &) override;
   result accept(const while_stmt_node &) override;

@@ -120,6 +120,14 @@ DERIVED(log_rshift_assign, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(and_assign, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(or_assign, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(xor_assign, EXTENDS(bin_op_expr), CHILDREN())
+// destructuring assignments
+NODE(array_destruct_key, CHILDREN(STRING(key) MAYBE(expression, init)))
+NODE(array_destruct_keys, CHILDREN(MANY(array_destruct_key, keys) MAYBE_STR(rest)))
+DERIVED(array_destruct, EXTENDS(expression), CHILDREN(ONE(array_destruct_keys, lhs) ONE(expression, rhs)))
+NODE(object_destruct_key, CHILDREN(STRING(key) MAYBE_STR(renamed) MAYBE(expression, init)))
+NODE(object_destruct_keys, CHILDREN(MANY(object_destruct_key, keys))) // FIXME tc39.github.io/proposal-object-rest-spread
+DERIVED(object_destruct, EXTENDS(expression), CHILDREN(ONE(object_destruct_keys, lhs) ONE(expression, rhs)))
+
 // other binops
 DERIVED(comma_operator, EXTENDS(bin_op_expr), CHILDREN())
 DERIVED(ternary_operator, EXTENDS(bin_op_expr), CHILDREN(ONE(expression, mid)))
@@ -133,6 +141,8 @@ DERIVED(label_stmt, EXTENDS(statement), CHILDREN(STRING(label) ONE(statement, st
 NODE(var_decl_part, CHILDREN(STRING(name) MAYBE(expression, init)))
 DERIVED(empty_stmt, EXTENDS(statement), CHILDREN())
 DERIVED(var_decl, EXTENDS(statement), CHILDREN(STRING(keyword) MANY(var_decl_part, parts)))
+DERIVED(decl_array_destruct, EXTENDS(statement), CHILDREN(STRING(keyword) ONE(array_destruct, destruct)))
+DERIVED(decl_object_destruct, EXTENDS(statement), CHILDREN(STRING(keyword) ONE(object_destruct, destruct)))
 DERIVED(if_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body) MAYBE(statement, else_stmt)))
 DERIVED(do_while, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))
 DERIVED(while_stmt, EXTENDS(statement), CHILDREN(ONE(expression, condition) ONE(statement, body)))

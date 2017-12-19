@@ -4,6 +4,7 @@
 * spread in call args       (XFAIL)
 * class (+static)           (XFAIL)
 * import/export             (XFAIL)
+* destructuring assignments
 * break/continue LABEL
 * HTML comments
 * Tagged template literals.
