@@ -10,6 +10,13 @@ class string_table;
 class string_table_entry {
   friend class string_table;
   std::string_view text;
+  // Having this constructor private is the whole point why we don't
+  // just use an alias declaration for string_table_entry:
+  // You can't just go and create one from a string literal, which helps
+  // avoiding bugs where a programmer assumes a method works by-value
+  // but the method relies on the pointer identity of the string, for
+  // example.
+  // FIXME find and document a real example where this matters
   string_table_entry(std::string_view text) : text(std::move(text)) {}
 
 public:
@@ -26,6 +33,7 @@ public:
   std::string_view::iterator begin() const { return text.begin(); }
   std::string_view::iterator end() const { return text.end(); }
   bool operator==(const string_table_entry &o) const { return text == o.text; }
+  bool operator<(const string_table_entry &o) const { return text < o.text; }
   const std::string_view *operator->() const { return &text; }
   friend std::ostream &operator<<(std::ostream &stream,
                                   const string_table_entry &entry) {
