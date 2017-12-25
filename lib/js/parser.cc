@@ -7,11 +7,22 @@
 #include <sstream>
 
 using namespace jnsn;
+template <class nodety> using res = parser_base::res<nodety>;
+
+template <class resty>
+static std::optional<parser_error> is_error(const resty &res) {
+  if (std::holds_alternative<parser_error>(res)) {
+    return std::get<parser_error>(res);
+  }
+  return std::nullopt;
+}
+template <class base, class child> static res<base> upcast_res(res<child> res) {
+  if (std::holds_alternative<parser_error>(res))
+    return std::get<parser_error>(res);
+  return std::get<0>(res);
+}
 
 lexer_base::result parser_base::next_token() { return get_lexer().next(); }
-void parser_base::set_error(std::string msg, source_location loc) {
-  error = {msg, loc};
-}
 
 static std::string to_string(token_type t) {
   switch (t) {
@@ -23,18 +34,14 @@ static std::string to_string(token_type t) {
   unreachable("Unknown token_type");
 }
 
-#define ADVANCE_OR_ERROR(MESSAGE, RETURN_VAL)                                  \
+#define ADVANCE_OR_ERROR(MESSAGE)                                              \
   do {                                                                         \
-    /* Make sure we haven't already encountered an error */                    \
-    if (error) {                                                               \
-      return RETURN_VAL;                                                       \
+    auto adv = advance();                                                      \
+    if (auto error = is_error(adv)) {                                          \
+      return *error;                                                           \
     }                                                                          \
-    auto read_success = advance();                                             \
-    if (!read_success) {                                                       \
-      set_error(MESSAGE, {});                                                  \
-    }                                                                          \
-    if (error) {                                                               \
-      return RETURN_VAL;                                                       \
+    if (!std::get<bool>(adv)) {                                                \
+      return parser_error{MESSAGE, current_token.loc};                         \
     }                                                                          \
   } while (false)
 
@@ -52,10 +59,9 @@ static std::string to_string(token_type t) {
       }                                                                        \
     }                                                                          \
     if (!found_expected) {                                                     \
-      set_error("Unexpected token. Expected: " #TYPES ". Was: " +              \
-                    to_string(current_token.type),                             \
-                current_token.loc);                                            \
-      return RETURN_VAL;                                                       \
+      return parser_error{"Unexpected token. Expected: " #TYPES ". Was: " +    \
+                              to_string(current_token.type),                   \
+                          current_token.loc};                                  \
     }                                                                          \
   } while (false)
 
@@ -64,15 +70,15 @@ static std::string to_string(token_type t) {
 
 #define ASSERT_PARSE_RESULT(VARNAME)                                           \
   do {                                                                         \
-    if (error || !VARNAME) {                                                   \
-      assert(error && !VARNAME);                                               \
-      return nullptr;                                                          \
+    if (std::holds_alternative<parser_error>(VARNAME)) {                       \
+      return std::get<parser_error>(VARNAME);                                  \
     }                                                                          \
   } while (false)
 
 #define SUBPARSE(VARNAME, PARSE_CALL)                                          \
-  auto *VARNAME = PARSE_CALL;                                                  \
-  ASSERT_PARSE_RESULT(VARNAME);
+  auto VARNAME##_or_err = PARSE_CALL;                                          \
+  ASSERT_PARSE_RESULT(VARNAME##_or_err);                                       \
+  auto *VARNAME = std::get<0>(VARNAME##_or_err);
 
 namespace jnsn {
 std::ostream &operator<<(std::ostream &stream, const parser_error &err) {
@@ -80,7 +86,7 @@ std::ostream &operator<<(std::ostream &stream, const parser_error &err) {
 }
 } // namespace jnsn
 
-bool parser_base::advance() {
+std::variant<bool, parser_error> parser_base::advance() {
   if (!rewind_stack.empty()) {
     current_token = rewind_stack.top();
     rewind_stack.pop();
@@ -92,8 +98,7 @@ bool parser_base::advance() {
       return false;
     } else if (std::holds_alternative<lexer_error>(T)) {
       auto err = std::get<lexer_error>(T);
-      set_error("Lexer Error: " + err.msg, err.loc);
-      return false;
+      return parser_error{"Lexer Error: " + err.msg, err.loc};
     }
     current_token = std::get<token>(T);
   } while (current_token.type == token_type::LINE_COMMENT ||
@@ -116,17 +121,17 @@ void parser_base::reset() {
 
 parser_base::result parser_base::parse(bool verify) {
   reset();
-  while (!error && advance()) {
-    auto stmt = parse_statement();
-    if (!stmt || error) {
-      break;
+  for (;;) {
+    auto adv = advance();
+    if (auto error = is_error(adv)) {
+      return *error;
     }
+    if (!std::get<bool>(adv))
+      break;
+    SUBPARSE(stmt, parse_statement());
     module->stmts.emplace_back(stmt);
   }
 
-  if (error) {
-    return *error;
-  }
   if (verify) {
     auto report = analyze_js_ast(*module);
     if (report) {
@@ -305,382 +310,6 @@ static bool is_var_decl_kw(token t) {
          kwty == keyword_type::kw_let;
 }
 
-statement_node *parser_base::parse_statement() {
-  statement_node *stmt = nullptr;
-  if (current_token.type == token_type::SEMICOLON) {
-    return nodes.make_empty_stmt(current_token.loc);
-  } else if (current_token.type == token_type::BRACE_OPEN) {
-    return parse_block_or_obj(false);
-  } else if (current_token.type == token_type::KEYWORD) {
-    stmt = parse_keyword_stmt();
-  } else if (current_token.type == token_type::IDENTIFIER) {
-    auto ident = current_token;
-    if (!advance()) {
-      stmt = parse_expression(true);
-    } else if (current_token.type == token_type::COLON) {
-      auto *label = nodes.make_label_stmt(current_token.loc);
-      label->label = ident.text;
-      ADVANCE_OR_ERROR("Unexpected EOF after label", nullptr);
-      SUBPARSE(follow, parse_statement());
-      label->stmt = follow;
-      stmt = label;
-    } else {
-      rewind(ident);
-      stmt = parse_expression(true);
-    }
-  } else {
-    // parse expression statement
-    stmt = parse_expression(true);
-  }
-  ASSERT_PARSE_RESULT(stmt);
-  auto final_token = current_token;
-  auto read_success = advance();
-  if (error) {
-    return nullptr;
-  }
-  if (read_success) {
-    if (!is_stmt_end(current_token)) {
-      set_error("Unexpected token after statement: " +
-                    to_string(current_token.type),
-                current_token.loc);
-      return nullptr;
-    }
-    if (current_token.type != token_type::SEMICOLON) {
-      rewind(final_token);
-    }
-  }
-  return stmt;
-}
-
-statement_node *parser_base::parse_keyword_stmt() {
-  assert(current_token.type == token_type::KEYWORD);
-  auto kwty = lexer_base::get_keyword_type(current_token);
-  if (kwty == keyword_type::kw_function) {
-    return parse_function_stmt();
-  } else if (kwty == keyword_type::kw_if) {
-    return parse_if_stmt();
-  } else if (kwty == keyword_type::kw_do) {
-    return parse_do_while();
-  } else if (kwty == keyword_type::kw_while) {
-    return parse_while_stmt();
-  } else if (kwty == keyword_type::kw_for) {
-    return parse_for_stmt();
-  } else if (kwty == keyword_type::kw_switch) {
-    return parse_switch_stmt();
-  } else if (kwty == keyword_type::kw_break) {
-    return nodes.make_break_stmt(current_token.loc); // FIXME break LABEL
-  } else if (kwty == keyword_type::kw_continue) {
-    return nodes.make_continue_stmt(current_token.loc); // FIXME continue LABEL
-  } else if (kwty == keyword_type::kw_return) {
-    return parse_return_stmt();
-  } else if (kwty == keyword_type::kw_throw) {
-    return parse_throw_stmt();
-  } else if (kwty == keyword_type::kw_try) {
-    return parse_try_stmt();
-  } else if (kwty == keyword_type::kw_import) {
-    return parse_import();
-  } else if (kwty == keyword_type::kw_export) {
-    return parse_export();
-  } else if (kwty == keyword_type::kw_class) {
-    return parse_class_stmt();
-  } else if (kwty == keyword_type::kw_super) {
-    auto *id = nodes.make_identifier_expr(current_token.loc);
-    id->str = current_token.text;
-    return parse_call(id);
-  } else if (is_var_decl_kw(current_token)) {
-    return parse_var_decl();
-  } else {
-    return parse_keyword_expr();
-  }
-}
-
-expression_node *parser_base::parse_keyword_expr() {
-  assert(current_token.type == token_type::KEYWORD);
-  if (is_unary_prefix_op(current_token)) {
-    return parse_unary_or_atomic_expr();
-  }
-  return parse_atomic_keyword_expr();
-}
-
-if_stmt_node *parser_base::parse_if_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_if);
-  auto *if_stmt = nodes.make_if_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after if", nullptr);
-  EXPECT(PAREN_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after if (", nullptr);
-  SUBPARSE(condition, parse_expression(true));
-  ADVANCE_OR_ERROR("Unexpected EOF after if condition", nullptr);
-  EXPECT(PAREN_CLOSE, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF. Expected if body", nullptr);
-  SUBPARSE(body, parse_statement());
-  if_stmt->condition = condition;
-  if_stmt->body = body;
-  auto last_token = current_token;
-  if (advance()) {
-    if (current_token.type == token_type::KEYWORD &&
-        lexer_base::get_keyword_type(current_token) == keyword_type::kw_else) {
-      ADVANCE_OR_ERROR("Unexpected EOF after else", nullptr);
-      SUBPARSE(else_stmt, parse_statement());
-      if_stmt->else_stmt = else_stmt;
-    } else {
-      rewind(last_token);
-    }
-  }
-  return if_stmt;
-}
-
-do_while_node *parser_base::parse_do_while() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_do);
-  auto *dowhile_stmt = nodes.make_do_while(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after do", nullptr);
-  SUBPARSE(body, parse_statement());
-  ADVANCE_OR_ERROR("Unexpected EOF. Expected 'while'", nullptr);
-  EXPECT(KEYWORD, nullptr);
-  if (lexer_base::get_keyword_type(current_token) != keyword_type::kw_while) {
-    set_error("Expected while after do", current_token.loc);
-    return nullptr;
-  }
-  ADVANCE_OR_ERROR("Unexpected EOF after do...while", nullptr);
-  EXPECT(PAREN_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after do...while(", nullptr);
-  SUBPARSE(condition, parse_expression(true));
-  ADVANCE_OR_ERROR("Unexpected EOF after do...while condition", nullptr);
-  EXPECT(PAREN_CLOSE, nullptr);
-  dowhile_stmt->body = body;
-  dowhile_stmt->condition = condition;
-  return dowhile_stmt;
-}
-
-while_stmt_node *parser_base::parse_while_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_while);
-  auto *while_stmt = nodes.make_while_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after while", nullptr);
-  EXPECT(PAREN_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after while(", nullptr);
-  SUBPARSE(condition, parse_expression(true));
-  ADVANCE_OR_ERROR("Unexpected EOF after while condition", nullptr);
-  EXPECT(PAREN_CLOSE, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF. Expected while body", nullptr);
-  SUBPARSE(body, parse_statement());
-  while_stmt->condition = condition;
-  while_stmt->body = body;
-  return while_stmt;
-}
-
-statement_node *parser_base::parse_for_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_for);
-  auto for_tok = current_token;
-  ADVANCE_OR_ERROR("Unexpected EOF after for", nullptr);
-  EXPECT(PAREN_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after for (", nullptr);
-
-  std::optional<token> keyword;
-  if (current_token.type == token_type::KEYWORD &&
-      is_var_decl_kw(current_token)) {
-    keyword = current_token;
-    ADVANCE_OR_ERROR("Unexpected EOF after variable decl keyword", nullptr);
-    EXPECT(IDENTIFIER, nullptr);
-  }
-  // Try for (... in ... ) or for (... of ...)
-  if (current_token.type == token_type::IDENTIFIER) {
-    auto var = current_token;
-    ADVANCE_OR_ERROR("Unexpected EOF in for head", nullptr);
-    if (current_token.type == token_type::IDENTIFIER &&
-        current_token.text == "of") {
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... of", nullptr);
-      SUBPARSE(iterable, parse_expression(true));
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>", nullptr);
-      EXPECT(PAREN_CLOSE, nullptr);
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>)", nullptr);
-      SUBPARSE(body, parse_statement());
-      auto *forof = nodes.make_for_of(for_tok.loc);
-      if (keyword) {
-        forof->keyword = keyword->text;
-      }
-      forof->var = var.text;
-      forof->iterable = iterable;
-      forof->body = body;
-      return forof;
-    } else if (current_token.type == token_type::KEYWORD &&
-               lexer_base::get_keyword_type(current_token) ==
-                   keyword_type::kw_in) {
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... in", nullptr);
-      SUBPARSE(iterable, parse_expression(true));
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>", nullptr);
-      EXPECT(PAREN_CLOSE, nullptr);
-      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>)", nullptr);
-      SUBPARSE(body, parse_statement());
-      auto *forin = nodes.make_for_in(for_tok.loc);
-      if (keyword) {
-        forin->keyword = keyword->text;
-      }
-      forin->var = var.text;
-      forin->iterable = iterable;
-      forin->body = body;
-      return forin;
-    } else {
-      rewind(var);
-    }
-  }
-  if (keyword) {
-    rewind(*keyword);
-  }
-  // parse c-style for (...;...;...)
-  SUBPARSE(pre_stmt, parse_statement());
-  EXPECT(SEMICOLON, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after for-loop pre-statement", nullptr);
-  SUBPARSE(condition, parse_expression(true));
-  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition", nullptr);
-  EXPECT(SEMICOLON, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition;", nullptr);
-  SUBPARSE(latch_stmt, parse_statement());
-  ADVANCE_OR_ERROR("Unexpected EOF after for-loop latch stmt", nullptr);
-  EXPECT(PAREN_CLOSE, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after for(...)", nullptr);
-  SUBPARSE(body, parse_statement());
-  auto *for_stmt = nodes.make_for_stmt(for_tok.loc);
-  for_stmt->pre_stmt = pre_stmt;
-  for_stmt->condition = condition;
-  for_stmt->latch_stmt = latch_stmt;
-  for_stmt->body = body;
-  return for_stmt;
-}
-
-switch_stmt_node *parser_base::parse_switch_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) ==
-             keyword_type::kw_switch);
-  auto *switch_stmt = nodes.make_switch_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after switch", nullptr);
-  EXPECT(PAREN_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after switch (", nullptr);
-  SUBPARSE(value, parse_expression(true));
-  switch_stmt->value = value;
-  ADVANCE_OR_ERROR("Unexpected EOF after switch value", nullptr);
-  EXPECT(PAREN_CLOSE, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after switch (value)", nullptr);
-  EXPECT(BRACE_OPEN, nullptr);
-  ADVANCE_OR_ERROR("Unexpected EOF after switch (value) {", nullptr);
-  bool hasDefault = false;
-  do {
-    EXPECT_SEVERAL(TYPELIST(token_type::KEYWORD, token_type::BRACE_CLOSE),
-                   nullptr);
-    if (current_token.type == token_type::BRACE_CLOSE) {
-      break;
-    }
-    auto loc = current_token.loc;
-    auto kwty = lexer_base::get_keyword_type(current_token);
-    switch_clause_node *clause = nullptr;
-    if (kwty == keyword_type::kw_default) {
-      if (hasDefault) {
-        set_error("Switch statement already has a default clause",
-                  current_token.loc);
-        return nullptr;
-      }
-      hasDefault = true;
-      clause = nodes.make_switch_clause(loc);
-      ADVANCE_OR_ERROR("Unexpected EOF after default", nullptr);
-    } else if (kwty == keyword_type::kw_case) {
-      auto *case_clause = nodes.make_case(loc);
-      ADVANCE_OR_ERROR("Unexpected EOF after case", nullptr);
-      SUBPARSE(condition, parse_expression(true));
-      case_clause->condition = condition;
-      ADVANCE_OR_ERROR("Unexpected EOF after case condition", nullptr);
-      clause = case_clause;
-    } else {
-      set_error("Unexpected keyword in switch", current_token.loc);
-      return nullptr;
-    }
-    EXPECT(COLON, nullptr);
-    switch_stmt->clauses.emplace_back(clause);
-    ADVANCE_OR_ERROR("Unexpected EOF after colon (switch clause)", nullptr);
-    do {
-      if (current_token.type == token_type::KEYWORD) {
-        auto kwty = lexer_base::get_keyword_type(current_token);
-        if (kwty == keyword_type::kw_case || kwty == keyword_type::kw_default) {
-          break;
-        }
-      } else if (current_token.type == token_type::BRACE_CLOSE) {
-        break;
-      }
-      SUBPARSE(stmt, parse_statement());
-      clause->stmts.emplace_back(stmt);
-      ADVANCE_OR_ERROR("Unexpected EOF in switch clauses block", nullptr);
-    } while (true);
-  } while (true);
-  return switch_stmt;
-}
-
-return_stmt_node *parser_base::parse_return_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) ==
-             keyword_type::kw_return);
-  auto *ret = nodes.make_return_stmt(current_token.loc);
-  if (advance() && !is_stmt_end(current_token)) {
-    SUBPARSE(expr, parse_expression(true));
-    ret->value = expr;
-  }
-  return ret;
-}
-
-throw_stmt_node *parser_base::parse_throw_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_throw);
-  auto *thro = nodes.make_throw_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after throw", nullptr);
-  SUBPARSE(expr, parse_expression(true));
-  thro->value = expr;
-  return thro;
-}
-
-try_stmt_node *parser_base::parse_try_stmt() {
-  assert(current_token.type == token_type::KEYWORD &&
-         lexer_base::get_keyword_type(current_token) == keyword_type::kw_try);
-  auto *try_stmt = nodes.make_try_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF after try", nullptr);
-  EXPECT(BRACE_OPEN, nullptr);
-  SUBPARSE(body, parse_block());
-  try_stmt->body = body;
-  ADVANCE_OR_ERROR("Unexpected EOF after try {}", nullptr);
-  if (current_token.type == token_type::KEYWORD &&
-      lexer_base::get_keyword_type(current_token) == keyword_type::kw_catch) {
-    auto *ctch = nodes.make_catch(current_token.loc);
-    ADVANCE_OR_ERROR("Unexpected EOF after catch", nullptr);
-    EXPECT(PAREN_OPEN, nullptr);
-    ADVANCE_OR_ERROR("Unexpected EOF after catch(", nullptr);
-    EXPECT(IDENTIFIER, nullptr);
-    auto id = current_token;
-    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>", nullptr);
-    EXPECT(PAREN_CLOSE, nullptr);
-    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>)", nullptr);
-    EXPECT(BRACE_OPEN, nullptr);
-    SUBPARSE(catch_block, parse_block());
-    ctch->var = id.text;
-    ctch->body = catch_block;
-    try_stmt->catch_block = ctch;
-    if (!advance()) {
-      return try_stmt;
-    }
-  }
-  if (current_token.type == token_type::KEYWORD &&
-      lexer_base::get_keyword_type(current_token) == keyword_type::kw_finally) {
-    ADVANCE_OR_ERROR("Unexpected EOF after finally", nullptr);
-    EXPECT(BRACE_OPEN, nullptr);
-    SUBPARSE(finally_block, parse_block());
-    try_stmt->finally = finally_block;
-  }
-  if (!try_stmt->catch_block && !try_stmt->finally) {
-    set_error("Encountered try without any catch or finally block",
-              current_token.loc);
-    return nullptr;
-  }
-  return try_stmt;
-}
-
 static int get_precedence(token op) {
   switch (op.type) {
 #define INFIX_OP(TYPE, PRECEDENCE, ASSOCIATIVITY)                              \
@@ -716,29 +345,6 @@ static associativity get_associativity(token op) {
   unreachable("Unknown binary operator");
 }
 
-expression_node *parser_base::parse_expression(bool comma_is_operator) {
-  expression_node *expr = parse_unary_or_atomic_expr();
-  if (expr) {
-    auto final_token = current_token;
-    if (!advance()) {
-      return expr;
-    }
-    if (is_expression_end(current_token, comma_is_operator)) {
-      rewind(final_token);
-      return expr;
-    }
-    if (is_binary_operator(current_token, comma_is_operator)) {
-      return parse_bin_op(expr, comma_is_operator);
-    }
-    rewind(final_token);
-    return expr;
-  } else if (error) {
-    return nullptr;
-  }
-  set_error("Not implemented (parse expression)", current_token.loc);
-  return nullptr;
-}
-
 static unary_expr_node *make_unary_prefix_op(token op, expression_node *value,
                                              ast_node_store &nodes) {
   assert(is_unary_prefix_op(op));
@@ -767,185 +373,6 @@ static unary_expr_node *make_unary_prefix_op(token op, expression_node *value,
   }
   assert(expr && "Unary prefix operator not implemented");
   expr->value = value;
-  return expr;
-}
-
-/// Parses everything with operator precedence >= 16
-expression_node *parser_base::parse_unary_or_atomic_expr() {
-  expression_node *expr = nullptr;
-  if (is_unary_prefix_op(current_token)) {
-    auto op = current_token;
-    ADVANCE_OR_ERROR("Unexpected EOF after unary prefix operator", nullptr);
-    SUBPARSE(value, parse_atomic_expr());
-    expr = make_unary_prefix_op(op, value, nodes);
-  } else {
-    expr = parse_atomic_expr();
-  }
-  ASSERT_PARSE_RESULT(expr);
-  return expr;
-}
-
-/// parses everything with operator precedence >= 17
-expression_node *parser_base::parse_atomic_expr() {
-  expression_node *expr = nullptr;
-  if (current_token.type == token_type::KEYWORD) {
-    expr = parse_atomic_keyword_expr();
-  } else if (current_token.type == token_type::IDENTIFIER) {
-    auto *id = nodes.make_identifier_expr(current_token.loc);
-    id->str = current_token.text;
-    expr = id;
-  } else if (current_token.is_number_literal()) {
-    expr = parse_number_literal();
-  } else if (current_token.type == token_type::STRING_LITERAL ||
-             current_token.type == token_type::TEMPLATE_STRING) {
-    expr = parse_string_literal();
-  } else if (current_token.type == token_type::TEMPLATE_HEAD) {
-    expr = parse_template_literal();
-  } else if (current_token.type == token_type::REGEX_LITERAL) {
-    auto *regex = nodes.make_regex_literal(current_token.loc);
-    regex->val = current_token.text;
-    expr = regex;
-  } else if (current_token.type == token_type::BRACKET_OPEN) {
-    expr = parse_array_literal();
-  } else if (current_token.type == token_type::BRACE_OPEN) {
-    expr = parse_object_literal();
-  } else if (current_token.type == token_type::PAREN_OPEN) {
-    expr = parse_parens_expr();
-  }
-  if (!expr) {
-    if (!error) {
-      set_error("Unexpected token: " + to_string(current_token.type) +
-                    ". Expected atomic expression",
-                current_token.loc);
-    }
-    return nullptr;
-  }
-  /// parse everything up to operator precedence >= 18
-  do {
-    auto prev_token = current_token;
-    if (advance()) {
-      if (current_token.type == token_type::DOT) {
-        // member access
-        expr = parse_member_access(expr);
-      } else if (current_token.type == token_type::PAREN_OPEN) {
-        // call
-        expr = parse_call(expr);
-      } else if (current_token.type == token_type::BRACKET_OPEN) {
-        // computed member access
-        expr = parse_computed_access(expr);
-      } else {
-        rewind(prev_token);
-        break;
-      }
-    } else {
-      break;
-    }
-  } while (true);
-  /// parse everything up to operator precedence >= 17
-  auto prev_token = current_token;
-  if (advance()) {
-    if (current_token.type == token_type::INCR) {
-      auto *incr = nodes.make_postfix_increment(current_token.loc);
-      incr->value = expr;
-      expr = incr;
-    } else if (current_token.type == token_type::DECR) {
-      auto *decr = nodes.make_postfix_decrement(current_token.loc);
-      decr->value = expr;
-      expr = decr;
-    } else {
-      rewind(prev_token);
-    }
-  }
-  return expr;
-}
-
-expression_node *parser_base::parse_parens_expr() {
-  assert(current_token.type == token_type::PAREN_OPEN);
-  auto loc = current_token.loc;
-  ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis", nullptr);
-  std::optional<token> reason_no_paramlist;
-  std::optional<token> rest_param;
-  std::vector<expression_node *> exprs;
-  if (current_token.type != token_type::PAREN_CLOSE) {
-    do {
-      token begin = current_token;
-      if (current_token.type == token_type::DOTDOTDOT) {
-        ADVANCE_OR_ERROR("Unexpected EOF after rest operator", nullptr);
-        EXPECT(IDENTIFIER, nullptr);
-        rest_param = current_token;
-        rest_param->loc = begin.loc; // in case this causes an error later
-        ADVANCE_OR_ERROR("Unexpected EOF in param list", nullptr);
-        EXPECT(PAREN_CLOSE, nullptr);
-        break;
-      }
-      SUBPARSE(expr, parse_expression(false));
-      if (!reason_no_paramlist && !isa<identifier_expr_node>(expr)) {
-        reason_no_paramlist = begin;
-      }
-      exprs.emplace_back(expr);
-      ADVANCE_OR_ERROR(
-          "Unexpected EOF before closing parenthesis was encountered", nullptr);
-      EXPECT_SEVERAL(TYPELIST(token_type::PAREN_CLOSE, token_type::COMMA),
-                     nullptr);
-      if (current_token.type == token_type::PAREN_CLOSE) {
-        break;
-      } else if (current_token.type == token_type::COMMA) {
-        ADVANCE_OR_ERROR(
-            "Unexpected EOF before closing parenthesis was encountered",
-            nullptr);
-      }
-    } while (true);
-  }
-  EXPECT(PAREN_CLOSE, nullptr);
-  auto paren_close = current_token;
-  if (advance()) {
-    if (current_token.type == token_type::ARROW) {
-      if (reason_no_paramlist) {
-        set_error("Invalid entry in arrow function param list",
-                  reason_no_paramlist->loc);
-        return nullptr;
-      }
-      std::vector<string_table::entry> param_names;
-      std::transform(exprs.begin(), exprs.end(),
-                     std::back_inserter(param_names),
-                     [](expression_node *expr) {
-                       return static_cast<identifier_expr_node *>(expr)->str;
-                     });
-      auto *params = nodes.make_param_list(loc);
-      params->names = param_names;
-      if (rest_param) {
-        params->rest = rest_param->text;
-      }
-      ADVANCE_OR_ERROR("Unexpected EOF after arrow", nullptr);
-      statement_node *body = nullptr;
-      if (current_token.type == token_type::BRACE_OPEN) {
-        body = parse_block_or_obj(true);
-      } else {
-        body = parse_expression(false);
-      }
-      ASSERT_PARSE_RESULT(body);
-      auto *func = nodes.make_arrow_function(loc);
-      func->params = params;
-      func->body = body;
-      return func;
-    }
-    rewind(paren_close);
-  }
-  if (rest_param) {
-    set_error("Unexpected token", rest_param->loc);
-    return nullptr;
-  }
-  auto *expr = exprs.front();
-  auto it = exprs.begin();
-  ++it;
-  while (it != exprs.end()) {
-    auto *comma =
-        nodes.make_comma_operator(expr->loc); // FIXME bad location estimation
-    comma->lhs = expr;
-    comma->rhs = *it;
-    expr = comma;
-    ++it;
-  }
   return expr;
 }
 
@@ -1045,23 +472,622 @@ static bin_op_expr_node *make_binary_expr(token op, expression_node *lhs,
   return res;
 }
 
-bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
-                                            bool comma_is_operator) {
+res<statement_node> parser_base::parse_statement() {
+  statement_node *stmt = nullptr;
+  if (current_token.type == token_type::SEMICOLON) {
+    return nodes.make_empty_stmt(current_token.loc);
+  } else if (current_token.type == token_type::BRACE_OPEN) {
+    SUBPARSE(block, parse_block());
+    return block;
+  } else if (current_token.type == token_type::KEYWORD) {
+    SUBPARSE(kw_stmt, parse_keyword_stmt());
+    stmt = kw_stmt;
+  } else if (current_token.type == token_type::IDENTIFIER) {
+    auto ident = current_token;
+    auto adv = advance();
+    if (auto error = is_error(adv)) {
+      return *error;
+    } else if (!std::get<bool>(adv)) {
+      SUBPARSE(expr, parse_expression(true));
+      stmt = expr;
+    } else if (current_token.type == token_type::COLON) {
+      auto *label = nodes.make_label_stmt(current_token.loc);
+      label->label = ident.text;
+      ADVANCE_OR_ERROR("Unexpected EOF after label");
+      SUBPARSE(follow, parse_statement());
+      label->stmt = follow;
+      stmt = label;
+    } else {
+      rewind(ident);
+      SUBPARSE(expr, parse_expression(true));
+      stmt = expr;
+    }
+  } else {
+    // parse expression statement
+    SUBPARSE(expr, parse_expression(true));
+    stmt = expr;
+  }
+  assert(stmt);
+  auto final_token = current_token;
+  auto adv = advance();
+  if (auto error = is_error(adv)) {
+    return *error;
+  } else if (std::get<bool>(adv)) {
+    if (!is_stmt_end(current_token)) {
+      return parser_error{"Unexpected token after statement: " +
+                              to_string(current_token.type),
+                          current_token.loc};
+    }
+    if (current_token.type != token_type::SEMICOLON) {
+      rewind(final_token);
+    }
+  }
+  return stmt;
+}
+
+res<statement_node> parser_base::parse_keyword_stmt() {
+  assert(current_token.type == token_type::KEYWORD);
+  auto kwty = lexer_base::get_keyword_type(current_token);
+  if (kwty == keyword_type::kw_function) {
+    return upcast_res<statement_node>(parse_function_stmt());
+  } else if (kwty == keyword_type::kw_if) {
+    return upcast_res<statement_node>(parse_if_stmt());
+  } else if (kwty == keyword_type::kw_do) {
+    return upcast_res<statement_node>(parse_do_while());
+  } else if (kwty == keyword_type::kw_while) {
+    return upcast_res<statement_node>(parse_while_stmt());
+  } else if (kwty == keyword_type::kw_for) {
+    return upcast_res<statement_node>(parse_for_stmt());
+  } else if (kwty == keyword_type::kw_switch) {
+    return upcast_res<statement_node>(parse_switch_stmt());
+  } else if (kwty == keyword_type::kw_break) {
+    return nodes.make_break_stmt(current_token.loc); // FIXME break LABEL
+  } else if (kwty == keyword_type::kw_continue) {
+    return nodes.make_continue_stmt(current_token.loc); // FIXME continue LABEL
+  } else if (kwty == keyword_type::kw_return) {
+    return upcast_res<statement_node>(parse_return_stmt());
+  } else if (kwty == keyword_type::kw_throw) {
+    return upcast_res<statement_node>(parse_throw_stmt());
+  } else if (kwty == keyword_type::kw_try) {
+    return upcast_res<statement_node>(parse_try_stmt());
+  } else if (kwty == keyword_type::kw_import) {
+    return upcast_res<statement_node>(parse_import());
+  } else if (kwty == keyword_type::kw_export) {
+    return upcast_res<statement_node>(parse_export());
+  } else if (kwty == keyword_type::kw_class) {
+    return upcast_res<statement_node>(parse_class_stmt());
+  } else if (kwty == keyword_type::kw_super) {
+    auto *id = nodes.make_identifier_expr(current_token.loc);
+    id->str = current_token.text;
+    return upcast_res<statement_node>(parse_call(id));
+  } else if (is_var_decl_kw(current_token)) {
+    return upcast_res<statement_node>(parse_var_decl());
+  } else {
+    return upcast_res<statement_node>(parse_keyword_expr());
+  }
+}
+
+res<expression_node> parser_base::parse_keyword_expr() {
+  assert(current_token.type == token_type::KEYWORD);
+  if (is_unary_prefix_op(current_token)) {
+    return parse_unary_or_atomic_expr();
+  }
+  return parse_atomic_keyword_expr();
+}
+
+res<if_stmt_node> parser_base::parse_if_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_if);
+  auto *if_stmt = nodes.make_if_stmt(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after if");
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after if (");
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after if condition");
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected if body");
+  SUBPARSE(body, parse_statement());
+  if_stmt->condition = condition;
+  if_stmt->body = body;
+  auto last_token = current_token;
+  auto adv = advance();
+  if (auto error = is_error(adv)) {
+    return *error;
+  } else if (std::get<bool>(adv)) {
+    if (current_token.type == token_type::KEYWORD &&
+        lexer_base::get_keyword_type(current_token) == keyword_type::kw_else) {
+      ADVANCE_OR_ERROR("Unexpected EOF after else");
+      SUBPARSE(else_stmt, parse_statement());
+      if_stmt->else_stmt = else_stmt;
+    } else {
+      rewind(last_token);
+    }
+  }
+  return if_stmt;
+}
+
+res<do_while_node> parser_base::parse_do_while() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_do);
+  auto *dowhile_stmt = nodes.make_do_while(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after do");
+  SUBPARSE(body, parse_statement());
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected 'while'");
+  EXPECT(KEYWORD, nullptr);
+  if (lexer_base::get_keyword_type(current_token) != keyword_type::kw_while) {
+    return parser_error{"Expected while after do", current_token.loc};
+  }
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while");
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while(");
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after do...while condition");
+  EXPECT(PAREN_CLOSE, nullptr);
+  dowhile_stmt->body = body;
+  dowhile_stmt->condition = condition;
+  return dowhile_stmt;
+}
+
+res<while_stmt_node> parser_base::parse_while_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_while);
+  auto *while_stmt = nodes.make_while_stmt(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after while");
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after while(");
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after while condition");
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF. Expected while body");
+  SUBPARSE(body, parse_statement());
+  while_stmt->condition = condition;
+  while_stmt->body = body;
+  return while_stmt;
+}
+
+res<statement_node> parser_base::parse_for_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_for);
+  auto for_tok = current_token;
+  ADVANCE_OR_ERROR("Unexpected EOF after for");
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for (");
+
+  std::optional<token> keyword;
+  if (current_token.type == token_type::KEYWORD &&
+      is_var_decl_kw(current_token)) {
+    keyword = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after variable decl keyword");
+    EXPECT(IDENTIFIER, nullptr);
+  }
+  // Try for (... in ... ) or for (... of ...)
+  if (current_token.type == token_type::IDENTIFIER) {
+    auto var = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF in for head");
+    if (current_token.type == token_type::IDENTIFIER &&
+        current_token.text == "of") {
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of");
+      SUBPARSE(iterable, parse_expression(true));
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>");
+      EXPECT(PAREN_CLOSE, nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... of <iterable>)");
+      SUBPARSE(body, parse_statement());
+      auto *forof = nodes.make_for_of(for_tok.loc);
+      if (keyword) {
+        forof->keyword = keyword->text;
+      }
+      forof->var = var.text;
+      forof->iterable = iterable;
+      forof->body = body;
+      return forof;
+    } else if (current_token.type == token_type::KEYWORD &&
+               lexer_base::get_keyword_type(current_token) ==
+                   keyword_type::kw_in) {
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in");
+      SUBPARSE(iterable, parse_expression(true));
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>");
+      EXPECT(PAREN_CLOSE, nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF after for (... in <iterable>)");
+      SUBPARSE(body, parse_statement());
+      auto *forin = nodes.make_for_in(for_tok.loc);
+      if (keyword) {
+        forin->keyword = keyword->text;
+      }
+      forin->var = var.text;
+      forin->iterable = iterable;
+      forin->body = body;
+      return forin;
+    } else {
+      rewind(var);
+    }
+  }
+  if (keyword) {
+    rewind(*keyword);
+  }
+  // parse c-style for (...;...;...)
+  SUBPARSE(pre_stmt, parse_statement());
+  EXPECT(SEMICOLON, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop pre-statement");
+  SUBPARSE(condition, parse_expression(true));
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition");
+  EXPECT(SEMICOLON, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop condition;");
+  SUBPARSE(latch_stmt, parse_statement());
+  ADVANCE_OR_ERROR("Unexpected EOF after for-loop latch stmt");
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after for(...)");
+  SUBPARSE(body, parse_statement());
+  auto *for_stmt = nodes.make_for_stmt(for_tok.loc);
+  for_stmt->pre_stmt = pre_stmt;
+  for_stmt->condition = condition;
+  for_stmt->latch_stmt = latch_stmt;
+  for_stmt->body = body;
+  return for_stmt;
+}
+
+res<switch_stmt_node> parser_base::parse_switch_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_switch);
+  auto *switch_stmt = nodes.make_switch_stmt(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch");
+  EXPECT(PAREN_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (");
+  SUBPARSE(value, parse_expression(true));
+  switch_stmt->value = value;
+  ADVANCE_OR_ERROR("Unexpected EOF after switch value");
+  EXPECT(PAREN_CLOSE, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (value)");
+  EXPECT(BRACE_OPEN, nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after switch (value) {");
+  bool hasDefault = false;
+  do {
+    EXPECT_SEVERAL(TYPELIST(token_type::KEYWORD, token_type::BRACE_CLOSE),
+                   nullptr);
+    if (current_token.type == token_type::BRACE_CLOSE) {
+      break;
+    }
+    auto loc = current_token.loc;
+    auto kwty = lexer_base::get_keyword_type(current_token);
+    switch_clause_node *clause = nullptr;
+    if (kwty == keyword_type::kw_default) {
+      if (hasDefault) {
+        return parser_error{"Switch statement already has a default clause",
+                            current_token.loc};
+      }
+      hasDefault = true;
+      clause = nodes.make_switch_clause(loc);
+      ADVANCE_OR_ERROR("Unexpected EOF after default");
+    } else if (kwty == keyword_type::kw_case) {
+      auto *case_clause = nodes.make_case(loc);
+      ADVANCE_OR_ERROR("Unexpected EOF after case");
+      SUBPARSE(condition, parse_expression(true));
+      case_clause->condition = condition;
+      ADVANCE_OR_ERROR("Unexpected EOF after case condition");
+      clause = case_clause;
+    } else {
+      return parser_error{"Unexpected keyword in switch", current_token.loc};
+    }
+    EXPECT(COLON, nullptr);
+    switch_stmt->clauses.emplace_back(clause);
+    ADVANCE_OR_ERROR("Unexpected EOF after colon (switch clause)");
+    do {
+      if (current_token.type == token_type::KEYWORD) {
+        auto kwty = lexer_base::get_keyword_type(current_token);
+        if (kwty == keyword_type::kw_case || kwty == keyword_type::kw_default) {
+          break;
+        }
+      } else if (current_token.type == token_type::BRACE_CLOSE) {
+        break;
+      }
+      SUBPARSE(stmt, parse_statement());
+      clause->stmts.emplace_back(stmt);
+      ADVANCE_OR_ERROR("Unexpected EOF in switch clauses block");
+    } while (true);
+  } while (true);
+  return switch_stmt;
+}
+
+res<return_stmt_node> parser_base::parse_return_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) ==
+             keyword_type::kw_return);
+  auto *ret = nodes.make_return_stmt(current_token.loc);
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  if (std::get<bool>(adv) && !is_stmt_end(current_token)) {
+    SUBPARSE(expr, parse_expression(true));
+    ret->value = expr;
+  }
+  return ret;
+}
+
+res<throw_stmt_node> parser_base::parse_throw_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_throw);
+  auto *thro = nodes.make_throw_stmt(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after throw");
+  SUBPARSE(expr, parse_expression(true));
+  thro->value = expr;
+  return thro;
+}
+
+res<try_stmt_node> parser_base::parse_try_stmt() {
+  assert(current_token.type == token_type::KEYWORD &&
+         lexer_base::get_keyword_type(current_token) == keyword_type::kw_try);
+  auto *try_stmt = nodes.make_try_stmt(current_token.loc);
+  ADVANCE_OR_ERROR("Unexpected EOF after try");
+  EXPECT(BRACE_OPEN, nullptr);
+  SUBPARSE(body, parse_block());
+  try_stmt->body = body;
+  ADVANCE_OR_ERROR("Unexpected EOF after try {}");
+  if (current_token.type == token_type::KEYWORD &&
+      lexer_base::get_keyword_type(current_token) == keyword_type::kw_catch) {
+    auto *ctch = nodes.make_catch(current_token.loc);
+    ADVANCE_OR_ERROR("Unexpected EOF after catch");
+    EXPECT(PAREN_OPEN, nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(");
+    EXPECT(IDENTIFIER, nullptr);
+    auto id = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>");
+    EXPECT(PAREN_CLOSE, nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF after catch(<name>)");
+    EXPECT(BRACE_OPEN, nullptr);
+    SUBPARSE(catch_block, parse_block());
+    ctch->var = id.text;
+    ctch->body = catch_block;
+    try_stmt->catch_block = ctch;
+    auto adv = advance();
+    if (auto error = is_error(adv))
+      return *error;
+    if (!std::get<bool>(adv)) {
+      return try_stmt;
+    }
+  }
+  if (current_token.type == token_type::KEYWORD &&
+      lexer_base::get_keyword_type(current_token) == keyword_type::kw_finally) {
+    ADVANCE_OR_ERROR("Unexpected EOF after finally");
+    EXPECT(BRACE_OPEN, nullptr);
+    SUBPARSE(finally_block, parse_block());
+    try_stmt->finally = finally_block;
+  }
+  if (!try_stmt->catch_block && !try_stmt->finally) {
+    return parser_error{"Encountered try without any catch or finally block",
+                        current_token.loc};
+  }
+  return try_stmt;
+}
+
+res<expression_node> parser_base::parse_expression(bool comma_is_operator) {
+  SUBPARSE(front, parse_unary_or_atomic_expr());
+  expression_node *expr = front;
+  auto final_token = current_token;
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  if (!std::get<bool>(adv))
+    return expr;
+  if (is_expression_end(current_token, comma_is_operator)) {
+    rewind(final_token);
+    return expr;
+  }
+  if (is_binary_operator(current_token, comma_is_operator)) {
+    return upcast_res<expression_node>(parse_bin_op(expr, comma_is_operator));
+  }
+  rewind(final_token);
+  return expr;
+}
+
+/// Parses everything with operator precedence >= 16
+res<expression_node> parser_base::parse_unary_or_atomic_expr() {
+  expression_node *expr = nullptr;
+  if (is_unary_prefix_op(current_token)) {
+    auto op = current_token;
+    ADVANCE_OR_ERROR("Unexpected EOF after unary prefix operator");
+    SUBPARSE(value, parse_atomic_expr());
+    expr = make_unary_prefix_op(op, value, nodes);
+  } else {
+    SUBPARSE(atomic, parse_atomic_expr());
+    expr = atomic;
+  }
+  assert(expr);
+  return expr;
+}
+
+/// parses everything with operator precedence >= 17
+res<expression_node> parser_base::parse_atomic_expr() {
+  expression_node *expr = nullptr;
+  if (current_token.type == token_type::KEYWORD) {
+    SUBPARSE(atomic, parse_atomic_keyword_expr());
+    expr = atomic;
+  } else if (current_token.type == token_type::IDENTIFIER) {
+    auto *id = nodes.make_identifier_expr(current_token.loc);
+    id->str = current_token.text;
+    expr = id;
+  } else if (current_token.is_number_literal()) {
+    SUBPARSE(num, parse_number_literal());
+    expr = num;
+  } else if (current_token.type == token_type::STRING_LITERAL ||
+             current_token.type == token_type::TEMPLATE_STRING) {
+    SUBPARSE(str, parse_string_literal());
+    expr = str;
+  } else if (current_token.type == token_type::TEMPLATE_HEAD) {
+    SUBPARSE(tmplt, parse_template_literal());
+    expr = tmplt;
+  } else if (current_token.type == token_type::REGEX_LITERAL) {
+    auto *regex = nodes.make_regex_literal(current_token.loc);
+    regex->val = current_token.text;
+    expr = regex;
+  } else if (current_token.type == token_type::BRACKET_OPEN) {
+    SUBPARSE(arr, parse_array_literal());
+    expr = arr;
+  } else if (current_token.type == token_type::BRACE_OPEN) {
+    SUBPARSE(obj, parse_object_literal());
+    expr = obj;
+  } else if (current_token.type == token_type::PAREN_OPEN) {
+    SUBPARSE(parens, parse_parens_expr());
+    expr = parens;
+  } else {
+    return parser_error{"Unexpected token: " + to_string(current_token.type) +
+                            ". Expected atomic expression",
+                        current_token.loc};
+  }
+  /// parse everything up to operator precedence >= 18
+  do {
+    auto prev_token = current_token;
+    auto adv = advance();
+    if (auto error = is_error(adv))
+      return *error;
+    if (std::get<bool>(adv)) {
+      if (current_token.type == token_type::DOT) {
+        // member access
+        SUBPARSE(acc, parse_member_access(expr));
+        expr = acc;
+      } else if (current_token.type == token_type::PAREN_OPEN) {
+        // call
+        SUBPARSE(call, parse_call(expr));
+        expr = call;
+      } else if (current_token.type == token_type::BRACKET_OPEN) {
+        // computed member access
+        SUBPARSE(acc, parse_computed_access(expr));
+        expr = acc;
+      } else {
+        rewind(prev_token);
+        break;
+      }
+    } else {
+      break;
+    }
+  } while (true);
+  /// parse everything up to operator precedence >= 17
+  auto prev_token = current_token;
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  if (std::get<bool>(adv)) {
+    if (current_token.type == token_type::INCR) {
+      auto *incr = nodes.make_postfix_increment(current_token.loc);
+      incr->value = expr;
+      expr = incr;
+    } else if (current_token.type == token_type::DECR) {
+      auto *decr = nodes.make_postfix_decrement(current_token.loc);
+      decr->value = expr;
+      expr = decr;
+    } else {
+      rewind(prev_token);
+    }
+  }
+  return expr;
+}
+
+res<expression_node> parser_base::parse_parens_expr() {
+  assert(current_token.type == token_type::PAREN_OPEN);
+  auto loc = current_token.loc;
+  ADVANCE_OR_ERROR("Unexpected EOF after opening parenthesis");
+  std::optional<token> reason_no_paramlist;
+  std::optional<token> rest_param;
+  std::vector<expression_node *> exprs;
+  if (current_token.type != token_type::PAREN_CLOSE) {
+    do {
+      token begin = current_token;
+      if (current_token.type == token_type::DOTDOTDOT) {
+        ADVANCE_OR_ERROR("Unexpected EOF after rest operator");
+        EXPECT(IDENTIFIER, nullptr);
+        rest_param = current_token;
+        rest_param->loc = begin.loc; // in case this causes an error later
+        ADVANCE_OR_ERROR("Unexpected EOF in param list");
+        EXPECT(PAREN_CLOSE, nullptr);
+        break;
+      }
+      SUBPARSE(expr, parse_expression(false));
+      if (!reason_no_paramlist && !isa<identifier_expr_node>(expr)) {
+        reason_no_paramlist = begin;
+      }
+      exprs.emplace_back(expr);
+      ADVANCE_OR_ERROR(
+          "Unexpected EOF before closing parenthesis was encountered");
+      EXPECT_SEVERAL(TYPELIST(token_type::PAREN_CLOSE, token_type::COMMA),
+                     nullptr);
+      if (current_token.type == token_type::PAREN_CLOSE) {
+        break;
+      } else if (current_token.type == token_type::COMMA) {
+        ADVANCE_OR_ERROR(
+            "Unexpected EOF before closing parenthesis was encountered");
+      }
+    } while (true);
+  }
+  EXPECT(PAREN_CLOSE, nullptr);
+  auto paren_close = current_token;
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  if (std::get<bool>(adv)) {
+    if (current_token.type == token_type::ARROW) {
+      if (reason_no_paramlist) {
+        return parser_error{"Invalid entry in arrow function param list",
+                            reason_no_paramlist->loc};
+      }
+      std::vector<string_table::entry> param_names;
+      std::transform(exprs.begin(), exprs.end(),
+                     std::back_inserter(param_names),
+                     [](expression_node *expr) {
+                       return static_cast<identifier_expr_node *>(expr)->str;
+                     });
+      auto *params = nodes.make_param_list(loc);
+      params->names = param_names;
+      if (rest_param) {
+        params->rest = rest_param->text;
+      }
+      ADVANCE_OR_ERROR("Unexpected EOF after arrow");
+      statement_node *body = nullptr;
+      if (current_token.type == token_type::BRACE_OPEN) {
+        SUBPARSE(blk, parse_block());
+        body = blk;
+      } else {
+        SUBPARSE(expr, parse_expression(false));
+        body = expr;
+      }
+      assert(body);
+      auto *func = nodes.make_arrow_function(loc);
+      func->params = params;
+      func->body = body;
+      return func;
+    }
+    rewind(paren_close);
+  }
+  if (rest_param) {
+    return parser_error{"Unexpected token", rest_param->loc};
+  }
+  auto *expr = exprs.front();
+  auto it = exprs.begin();
+  ++it;
+  while (it != exprs.end()) {
+    auto *comma =
+        nodes.make_comma_operator(expr->loc); // FIXME bad location estimation
+    comma->lhs = expr;
+    comma->rhs = *it;
+    expr = comma;
+    ++it;
+  }
+  return expr;
+}
+
+res<bin_op_expr_node> parser_base::parse_bin_op(expression_node *lhs,
+                                                bool comma_is_operator) {
   auto op = current_token;
   assert(is_binary_operator(op, comma_is_operator));
   ADVANCE_OR_ERROR(
-      "Unexpected EOF. Expected right hand side argument of binary operation",
-      nullptr);
+      "Unexpected EOF. Expected right hand side argument of binary operation");
   bin_op_expr_node *binop = nullptr;
   // special case for ternary operator
   if (op.type == token_type::QMARK) {
     SUBPARSE(mid, parse_expression(false));
-    ADVANCE_OR_ERROR("Unexpected EOF. Expected colon for ternary operator (?:)",
-                     nullptr);
+    ADVANCE_OR_ERROR(
+        "Unexpected EOF. Expected colon for ternary operator (?:)");
     EXPECT(COLON, nullptr);
     ADVANCE_OR_ERROR(
-        "Unexpected EOF. Expected third argument to ternary operator (?:)",
-        nullptr);
+        "Unexpected EOF. Expected third argument to ternary operator (?:)");
     SUBPARSE(rhs, parse_expression(false));
 
     auto *ternary = nodes.make_ternary_operator(op.loc);
@@ -1075,9 +1101,11 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
   }
 
   auto prev_token = current_token;
-  if (!advance()) {
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  if (!std::get<bool>(adv))
     return binop;
-  }
   if (is_expression_end(current_token, comma_is_operator)) {
     rewind(prev_token);
     return binop;
@@ -1100,36 +1128,34 @@ bin_op_expr_node *parser_base::parse_bin_op(expression_node *lhs,
     return binop;
   }
 
-  set_error("Unexpected token after binop expression", current_token.loc);
-  return nullptr;
+  return parser_error{"Unexpected token after binop expression",
+                      current_token.loc};
 }
 
-expression_node *parser_base::parse_atomic_keyword_expr() {
+res<expression_node> parser_base::parse_atomic_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kwty = get_lexer().get_keyword_type(current_token);
   if (kwty == keyword_type::kw_class) {
-    return parse_class_expr();
+    return upcast_res<expression_node>(parse_class_expr());
   } else if (kwty == keyword_type::kw_function) {
-    return parse_function_expr();
+    return upcast_res<expression_node>(parse_function_expr());
   } else if (kwty == keyword_type::kw_new) {
-    return parse_new_keyword();
+    return upcast_res<expression_node>(parse_new_keyword());
   } else {
-    set_error("Not implemented (keyword)", current_token.loc);
-    return nullptr;
+    return parser_error{"Not implemented (keyword)", current_token.loc};
   }
 }
 
-expression_node *parser_base::parse_new_keyword() {
+res<expression_node> parser_base::parse_new_keyword() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_new);
   auto loc = current_token.loc;
-  ADVANCE_OR_ERROR("Unexpected EOF after new", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after new");
   if (current_token.type == token_type::DOT) {
-    ADVANCE_OR_ERROR("Unexpected EOF after new.", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF after new.");
     EXPECT(IDENTIFIER, nullptr);
     if (static_cast<std::string_view>(current_token.text) != "target") {
-      set_error("Expected new.target after new.", current_token.loc);
-      return nullptr;
+      return parser_error{"Expected new.target after new.", current_token.loc};
     }
     return nodes.make_new_target(loc);
   }
@@ -1145,72 +1171,74 @@ expression_node *parser_base::parse_new_keyword() {
   return new_expr;
 }
 
-statement_node *parser_base::parse_import() {
+res<statement_node> parser_base::parse_import() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_import);
-  set_error("Not implemented (parse_import)", current_token.loc);
-  return nullptr;
+  return parser_error{"Not implemented (parse_import)", current_token.loc};
 }
 
-statement_node *parser_base::parse_export() {
+res<statement_node> parser_base::parse_export() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_export);
-  set_error("Not implemented (parse_export)", current_token.loc);
-  return nullptr;
+  return parser_error{"Not implemented (parse_export)", current_token.loc};
 }
 
-class_stmt_node *parser_base::parse_class_stmt() {
+res<class_stmt_node> parser_base::parse_class_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_class);
-  set_error("Not implemented (parse_class_stmt)", current_token.loc);
-  return nullptr;
+  return parser_error{"Not implemented (parse_class_stmt)", current_token.loc};
 }
 
-number_literal_node *parser_base::parse_number_literal() {
+res<number_literal_node> parser_base::parse_number_literal() {
   auto literal = current_token;
   auto res = make_number_expression(current_token, nodes);
   res->val = current_token.text;
-  auto read_success = advance();
-  if (!read_success || is_follow_expression(current_token)) {
-    if (read_success) {
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  bool eof = !std::get<bool>(adv);
+  if (eof || is_follow_expression(current_token)) {
+    if (!eof) {
       rewind(literal);
     }
     return res;
   }
-  set_error("Unexpected token after number literal", current_token.loc);
-  return nullptr;
+  return parser_error{"Unexpected token after number literal",
+                      current_token.loc};
 }
 
-string_literal_node *parser_base::parse_string_literal() {
+res<string_literal_node> parser_base::parse_string_literal() {
   assert(current_token.type == token_type::STRING_LITERAL ||
          current_token.type == token_type::TEMPLATE_STRING);
   auto str = current_token;
   auto res = nodes.make_string_literal(current_token.loc);
   res->val = current_token.text;
-  auto read_success = advance();
-  if (!read_success || is_follow_expression(current_token)) {
-    if (read_success) {
+  auto adv = advance();
+  if (auto error = is_error(adv))
+    return *error;
+  bool eof = !std::get<bool>(adv);
+  if (eof || is_follow_expression(current_token)) {
+    if (!eof) {
       rewind(str);
     }
     return res;
   }
-  set_error("Unexpected token after string literal", current_token.loc);
-  return nullptr;
+  return parser_error{"Unexpected token after string literal",
+                      current_token.loc};
 }
 
-template_literal_node *parser_base::parse_template_literal() {
+res<template_literal_node> parser_base::parse_template_literal() {
   assert(current_token.type == token_type::TEMPLATE_HEAD);
   auto *tmplt = nodes.make_template_literal(current_token.loc);
   tmplt->strs.emplace_back(current_token.text);
   do {
-    ADVANCE_OR_ERROR("Unexpected EOF in template literal", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF in template literal");
     SUBPARSE(expr, parse_expression(true));
     tmplt->exprs.emplace_back(expr);
     ADVANCE_OR_ERROR(
-        "Unexpected EOF after interpolated expression in template literal",
-        nullptr);
+        "Unexpected EOF after interpolated expression in template literal");
     EXPECT_SEVERAL(
         TYPELIST(token_type::TEMPLATE_MIDDLE, token_type::TEMPLATE_END),
         nullptr);
@@ -1220,96 +1248,93 @@ template_literal_node *parser_base::parse_template_literal() {
   return tmplt;
 }
 
-function_stmt_node *parser_base::parse_function_stmt() {
+res<function_stmt_node> parser_base::parse_function_stmt() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_function);
   auto func = nodes.make_function_stmt(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   EXPECT(IDENTIFIER, nullptr);
   func->name = current_token.text;
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   EXPECT(PAREN_OPEN, nullptr);
   SUBPARSE(params, parse_param_list());
   func->params = params;
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   EXPECT(BRACE_OPEN, nullptr);
   SUBPARSE(body, parse_block());
   func->body = body;
   return func;
 }
 
-function_expr_node *parser_base::parse_function_expr() {
+res<function_expr_node> parser_base::parse_function_expr() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) ==
              keyword_type::kw_function);
   auto func = nodes.make_function_expr(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   if (current_token.type == token_type::IDENTIFIER) {
     func->name = current_token.text;
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   }
   EXPECT(PAREN_OPEN, nullptr);
   SUBPARSE(params, parse_param_list());
   func->params = params;
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing function", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing function");
   EXPECT(BRACE_OPEN, nullptr);
   SUBPARSE(body, parse_block());
   func->body = body;
   return func;
 }
 
-class_expr_node *parser_base::parse_class_expr() {
+res<class_expr_node> parser_base::parse_class_expr() {
   assert(current_token.type == token_type::KEYWORD &&
          lexer_base::get_keyword_type(current_token) == keyword_type::kw_class);
-  set_error("Not implemented (parse_class_expr)", current_token.loc);
-  return nullptr;
+  return parser_error{"Not implemented (parse_class_expr)", current_token.loc};
 }
 
-param_list_node *parser_base::parse_param_list() {
+res<param_list_node> parser_base::parse_param_list() {
   assert(current_token.type == token_type::PAREN_OPEN);
   auto node = nodes.make_param_list(current_token.loc);
   do {
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list");
     if (current_token.type == token_type::IDENTIFIER) {
       node->names.emplace_back(current_token.text);
-      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list");
     }
   } while (current_token.type == token_type::COMMA);
   if (current_token.type == token_type::DOTDOTDOT) {
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list");
     if (current_token.type == token_type::IDENTIFIER) {
       node->rest = current_token.text;
-      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF while parsing parameter list");
     }
   }
   if (current_token.type == token_type::PAREN_CLOSE) {
     return node;
   }
 
-  set_error("Unexpected token in parameter list", current_token.loc);
-  return nullptr;
+  return parser_error{"Unexpected token in parameter list", current_token.loc};
 }
 
-block_node *parser_base::parse_block() {
+res<block_node> parser_base::parse_block() {
   EXPECT(BRACE_OPEN, nullptr);
   auto block = nodes.make_block(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing block", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing block");
   while (current_token.type != token_type::BRACE_CLOSE) {
     assert(current_token.type != token_type::BRACE_OPEN);
-    auto stmt = parse_statement();
+    SUBPARSE(stmt, parse_statement());
     block->stmts.emplace_back(stmt);
-    ADVANCE_OR_ERROR("Unexpected EOF while parsing block", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF while parsing block");
   }
   return block;
 }
 
-var_decl_node *parser_base::parse_var_decl() {
+res<var_decl_node> parser_base::parse_var_decl() {
   assert(is_var_decl_kw(current_token));
   auto decl = nodes.make_var_decl(current_token.loc);
   decl->keyword = current_token.text;
-  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration",
-                   nullptr);
+  ADVANCE_OR_ERROR("Unecpected EOF while parsing variable declaration");
   EXPECT(IDENTIFIER, nullptr);
   auto *part = nodes.make_var_decl_part(current_token.loc);
   auto id = current_token;
@@ -1317,15 +1342,17 @@ var_decl_node *parser_base::parse_var_decl() {
   decl->parts.emplace_back(part);
   do {
     auto end_token = current_token;
-    if (advance()) {
+    auto adv = advance();
+    if (auto error = is_error(adv))
+      return *error;
+    if (std::get<bool>(adv)) {
       if (current_token.type == token_type::EQ) {
         ADVANCE_OR_ERROR(
-            "Unexpected EOF in variable initialization. Expected expression",
-            nullptr);
+            "Unexpected EOF in variable initialization. Expected expression");
         SUBPARSE(init, parse_expression(false));
         part->init = init;
       } else if (current_token.type == token_type::COMMA) {
-        ADVANCE_OR_ERROR("Unexpected EOF in variable declaration", nullptr);
+        ADVANCE_OR_ERROR("Unexpected EOF in variable declaration");
         EXPECT(IDENTIFIER, nullptr);
         part = nodes.make_var_decl_part(current_token.loc);
         part->name = current_token.text;
@@ -1341,134 +1368,128 @@ var_decl_node *parser_base::parse_var_decl() {
   return decl;
 }
 
-array_literal_node *parser_base::parse_array_literal() {
+res<array_literal_node> parser_base::parse_array_literal() {
   assert(current_token.type == token_type::BRACKET_OPEN);
-  ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF inside array literal");
   auto *array = nodes.make_array_literal(current_token.loc);
   if (current_token.type != token_type::BRACKET_CLOSE) {
     do {
       expression_node *expr = nullptr;
       if (current_token.type == token_type::DOTDOTDOT) {
         auto *spread = nodes.make_spread_expr(current_token.loc);
-        ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
-        expr = parse_expression(false);
-        spread->list = expr;
+        ADVANCE_OR_ERROR("Unexpected EOF after spread operator");
+        SUBPARSE(tail, parse_expression(false));
+        spread->list = tail;
         expr = spread;
       } else {
-        expr = parse_expression(false);
+        SUBPARSE(sub, parse_expression(false));
+        expr = sub;
       }
       array->values.emplace_back(expr);
-      ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF inside array literal");
       EXPECT_SEVERAL(TYPELIST(token_type::BRACKET_CLOSE, token_type::COMMA),
                      nullptr);
       if (current_token.type == token_type::BRACKET_CLOSE) {
         break;
       }
       if (current_token.type == token_type::COMMA) {
-        ADVANCE_OR_ERROR("Unexpected EOF inside array literal", nullptr);
+        ADVANCE_OR_ERROR("Unexpected EOF inside array literal");
       }
     } while (true);
   }
   return array;
 }
-object_literal_node *parser_base::parse_object_literal() {
+
+res<object_literal_node> parser_base::parse_object_literal() {
   assert(current_token.type == token_type::BRACE_OPEN);
   auto *object = nodes.make_object_literal(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF in object literal");
   do {
     if (current_token.type == token_type::BRACE_CLOSE) {
       break;
     } else if (current_token.type == token_type::DOTDOTDOT) {
       auto *spread = nodes.make_spread_expr(current_token.loc);
-      ADVANCE_OR_ERROR("Unexpected EOF after spread operator", nullptr);
-      auto *expr = parse_expression(false);
+      ADVANCE_OR_ERROR("Unexpected EOF after spread operator");
+      SUBPARSE(expr, parse_expression(false));
       spread->list = expr;
       object->entries.emplace_back(spread);
     } else if (is_possible_object_key(current_token)) {
       auto id = current_token;
-      ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF in object literal");
       if (current_token.type != token_type::COLON) {
         auto *expr = nodes.make_identifier_expr(id.loc);
         expr->str = id.text;
         object->entries.emplace_back(expr);
         rewind(id);
       } else {
-        ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+        ADVANCE_OR_ERROR("Unexpected EOF in object literal");
         auto *entry = nodes.make_object_entry(id.loc);
         entry->key = id.text;
-        auto *val = parse_expression(false);
+        SUBPARSE(val, parse_expression(false));
         entry->val = val;
         object->entries.emplace_back(entry);
       }
     } else {
-      set_error("Unexpected token", current_token.loc);
-      return nullptr;
+      return parser_error{"Unexpected token", current_token.loc};
     }
-    ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF in object literal");
     EXPECT_SEVERAL(TYPELIST(token_type::BRACE_CLOSE, token_type::COMMA),
                    nullptr);
     if (current_token.type == token_type::COMMA) {
-      ADVANCE_OR_ERROR("Unexpected EOF in object literal", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF in object literal");
     }
   } while (true);
   EXPECT(BRACE_CLOSE, nullptr);
   return object;
 }
-computed_member_access_node *
+
+res<computed_member_access_node>
 parser_base::parse_computed_access(expression_node *base) {
   auto *access = nodes.make_computed_member_access(current_token.loc);
   assert(current_token.type == token_type::BRACKET_OPEN);
-  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access");
   SUBPARSE(member, parse_expression(true));
-  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF inside computed member access");
   EXPECT(BRACKET_CLOSE, nullptr);
   access->base = base;
   access->member = member;
   return access;
 }
-member_access_node *parser_base::parse_member_access(expression_node *base) {
+res<member_access_node>
+parser_base::parse_member_access(expression_node *base) {
   assert(current_token.type == token_type::DOT);
   auto *node = nodes.make_member_access(current_token.loc);
-  ADVANCE_OR_ERROR("Unexpected EOF while parsing member access", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF while parsing member access");
   EXPECT(IDENTIFIER, nullptr);
   node->base = base;
   node->member = current_token.text;
   return node;
 }
-call_expr_node *parser_base::parse_call(expression_node *callee) {
+
+res<call_expr_node> parser_base::parse_call(expression_node *callee) {
   assert(current_token.type == token_type::PAREN_OPEN);
   auto *call = nodes.make_call_expr(current_token.loc);
   auto *args = nodes.make_argument_list(current_token.loc);
   call->callee = callee;
   call->args = args;
 
-  ADVANCE_OR_ERROR("Unexpected EOF after begin of argument list", nullptr);
+  ADVANCE_OR_ERROR("Unexpected EOF after begin of argument list");
   if (current_token.type == token_type::PAREN_CLOSE) {
     return call;
   }
   do {
     SUBPARSE(arg, parse_expression(false));
     args->values.emplace_back(arg);
-    ADVANCE_OR_ERROR("Unexpected EOF in argument list", nullptr);
+    ADVANCE_OR_ERROR("Unexpected EOF in argument list");
     if (current_token.type == token_type::COMMA) {
-      ADVANCE_OR_ERROR("Unexpected EOF in argument list", nullptr);
+      ADVANCE_OR_ERROR("Unexpected EOF in argument list");
     } else if (current_token.type == token_type::PAREN_CLOSE) {
       break;
     } else {
-      set_error("Unexpected token in argument list", current_token.loc);
-      return nullptr;
+      return parser_error{"Unexpected token in argument list",
+                          current_token.loc};
     }
   } while (true);
   assert(current_token.type == token_type::PAREN_CLOSE);
   return call;
-}
-statement_node *parser_base::parse_block_or_obj(bool prefer_block_over_obj) {
-  EXPECT(BRACE_OPEN, nullptr);
-  // Originally, I thought it should be possible to discern object literals
-  // from blocks - since browsers' developer consoles can do it, too.
-  // But it turns out this is pretty much impossible using standard parsing
-  // techniques - and also not part of the spec.
-  // See stackoverflow.com/questions/8089737/javascript-object-parsing
-  // for more
-  return parse_block();
 }

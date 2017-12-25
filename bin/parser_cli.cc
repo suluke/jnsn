@@ -10,8 +10,8 @@ static void parser_cli() {
     cout << "Enter text:\n";
     cin_line_parser parser;
     parser_base::result res = parser.parse();
-    if (std::holds_alternative<ast_root>(res)) {
-      auto mod = std::get<ast_root>(res);
+    if (std::holds_alternative<ast_root *>(res)) {
+      auto mod = std::get<ast_root *>(res);
       cout << mod;
     } else if (std::holds_alternative<parser_error>(res)) {
       auto err = std::get<parser_error>(res);

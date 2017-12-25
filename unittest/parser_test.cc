@@ -23,9 +23,9 @@ using ast_root = parser_base::ast_root;
     str.str("");                                                               \
     parser.lexer.set_text(INPUT);                                              \
     auto res = parser.parse();                                                 \
-    ASSERT_TRUE(holds_alternative<ast_root>(res))                              \
+    ASSERT_TRUE(holds_alternative<ast_root *>(res))                            \
         << std::get<parser_error>(res);                                        \
-    auto mod = get<ast_root>(res);                                             \
+    auto mod = get<ast_root *>(res);                                           \
                                                                                \
     str << mod;                                                                \
     ASSERT_EQ(str.str(), JSON "\n");                                           \
@@ -36,7 +36,7 @@ using ast_root = parser_base::ast_root;
     str.str("");                                                               \
     parser.lexer.set_text(INPUT);                                              \
     auto res = parser.parse();                                                 \
-    ASSERT_TRUE(holds_alternative<ast_root>(res));                             \
+    ASSERT_TRUE(holds_alternative<ast_root *>(res));                           \
   } while (false)
 #define PARSER_ERROR(INPUT)                                                    \
   do {                                                                         \
