@@ -74,12 +74,12 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   basic_block *IP;
   inst_creator(ir_builder &builder, ast_ir_mappings &mappings, basic_block *IP)
       : builder(builder), mappings(mappings), IP(IP) {}
-  result accept(const statement_node &) override {
-    return ir_error{"Encountered abstract class statement_node", {}};
+  result accept(const statement_node &node) override {
+    return ir_error{"Encountered abstract class statement_node", node.loc};
   }
   result accept(const module_node &node) override;
-  result accept(const expression_node &) override {
-    return ir_error{"Encountered abstract class expression_node", {}};
+  result accept(const expression_node &node) override {
+    return ir_error{"Encountered abstract class expression_node", node.loc};
   }
   result accept(const param_list_node &node) override {
     return ir_error{"param_list_nodes are codegen'ed separately", node.loc};
@@ -101,8 +101,8 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const bin_literal_node &node) override;
   result accept(const string_literal_node &node) override;
   result accept(const regex_literal_node &) override;
-  result accept(const template_node &) override {
-    return ir_error{"Encountered abstract node type 'template_node'", {}};
+  result accept(const template_node &node) override {
+    return ir_error{"Encountered abstract node type 'template_node'", node.loc};
   }
   result accept(const template_string_node &node) override;
   result accept(const template_literal_node &node) override;
@@ -119,8 +119,8 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const new_expr_node &) override;
   result accept(const new_target_node &) override;
   // Unary expressions
-  result accept(const unary_expr_node &) override {
-    return ir_error{"Encountered abstract class unary_expr_node", {}};
+  result accept(const unary_expr_node &node) override {
+    return ir_error{"Encountered abstract class unary_expr_node", node.loc};
   }
   result accept(const postfix_increment_node &node) override;
   result accept(const postfix_decrement_node &) override;
@@ -186,7 +186,12 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const array_destruct_key_node &node) override;
   result accept(const array_destruct_keys_node &node) override;
   result accept(const array_destruct_node &node) override;
-  result accept(const object_destruct_key_node &node) override;
+  result accept(const object_destruct_key_node &node) override {
+    return ir_error{"Encountered abstract class object_destruct_key_node",
+                    node.loc};
+  }
+  result accept(const object_destruct_bind_node &node) override;
+  result accept(const object_destruct_nest_node &node) override;
   result accept(const object_destruct_keys_node &node) override;
   result accept(const object_destruct_node &node) override;
   // other binops

@@ -124,7 +124,9 @@ DERIVED(xor_assign, EXTENDS(bin_op_expr), CHILDREN())
 NODE(array_destruct_key, CHILDREN(STRING(key) MAYBE(expression, init)))
 NODE(array_destruct_keys, CHILDREN(MANY(array_destruct_key, keys) MAYBE_STR(rest)))
 DERIVED(array_destruct, EXTENDS(expression), CHILDREN(ONE(array_destruct_keys, lhs) ONE(expression, rhs)))
-NODE(object_destruct_key, CHILDREN(STRING(key) MAYBE_STR(renamed) MAYBE(expression, init)))
+NODE(object_destruct_key, CHILDREN())
+DERIVED(object_destruct_bind, EXTENDS(object_destruct_key), CHILDREN(STRING(key) MAYBE_STR(renamed) MAYBE(expression, init)))
+DERIVED(object_destruct_nest, EXTENDS(object_destruct_key), CHILDREN(STRING(key) ONE(object_destruct_keys, nested)))
 NODE(object_destruct_keys, CHILDREN(MANY(object_destruct_key, keys))) // FIXME tc39.github.io/proposal-object-rest-spread
 DERIVED(object_destruct, EXTENDS(expression), CHILDREN(ONE(object_destruct_keys, lhs) ONE(expression, rhs)))
 

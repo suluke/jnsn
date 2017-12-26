@@ -373,7 +373,11 @@ ast_analysis_manager::accept(const array_destruct_node &node) {
   return children_not_null::check(node, report);
 }
 ast_analysis_manager::result
-ast_analysis_manager::accept(const object_destruct_key_node &node) {
+ast_analysis_manager::accept(const object_destruct_bind_node &node) {
+  return children_not_null::check(node, report);
+}
+ast_analysis_manager::result
+ast_analysis_manager::accept(const object_destruct_nest_node &node) {
   return children_not_null::check(node, report);
 }
 ast_analysis_manager::result

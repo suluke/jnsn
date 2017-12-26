@@ -131,7 +131,13 @@ private:
   result accept(const array_destruct_key_node &node) override;
   result accept(const array_destruct_keys_node &node) override;
   result accept(const array_destruct_node &node) override;
-  result accept(const object_destruct_key_node &node) override;
+  result accept(const object_destruct_key_node &node) override {
+    report.errors.emplace_back(
+        "Encountered abstract class object_destruct_key_node", node.loc);
+    return true;
+  }
+  result accept(const object_destruct_bind_node &node) override;
+  result accept(const object_destruct_nest_node &node) override;
   result accept(const object_destruct_keys_node &node) override;
   result accept(const object_destruct_node &node) override;
   // other binops
