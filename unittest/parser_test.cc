@@ -53,7 +53,19 @@ using ast_root = parser_base::ast_root;
     auto res = parser.parse();                                                 \
     ASSERT_TRUE(holds_alternative<parser_error>(res));                         \
     ColoredPrintf(COLOR_YELLOW, "[   XFAIL  ] ");                              \
-    ColoredPrintf(COLOR_DEFAULT, INPUT "\n");                                  \
+    ColoredPrintf(COLOR_DEFAULT, INPUT " (error)\n");                          \
+  } while (false)
+
+#define XWRONG(INPUT, EXPECTED)                                                \
+  do {                                                                         \
+    str.str("");                                                               \
+    parser.lexer.set_text(INPUT);                                              \
+    auto res = parser.parse();                                                 \
+    ASSERT_FALSE(holds_alternative<parser_error>(res));                        \
+    str << std::get<ast_root *>(res);                                          \
+    ASSERT_NE(str.str(), EXPECTED);                                            \
+    ColoredPrintf(COLOR_YELLOW, "[   XFAIL  ] ");                              \
+    ColoredPrintf(COLOR_DEFAULT, INPUT " (wrong result)\n");                   \
   } while (false)
 
 TEST_F(parser_test, empty) {
@@ -422,6 +434,14 @@ TEST_F(parser_test, assignment) {
                "{\"type\": \"computed_member_access\", \"base\": {\"type\": "
                "\"identifier_expr\", \"str\": \"b\"}, \"member\": {\"type\": "
                "\"identifier_expr\", \"str\": \"j\"}}, \"member\": \"y\"}}"));
+  XWRONG("[a] = arr",
+         MOD_WRAP("{\"type\": \"array_destruct\", \"lhs\": {\"type\": "
+                  "\"array_destruct_keys\", \"keys\": [{\"type\": "
+                  "\"array_destruct_key\", \"key\": \"a\", \"init\": null}], "
+                  "\"rest\": null}, \"rhs\": {\"type\": \"identifier\", "
+                  "\"str\": \"arr\"}}"));
+  XFAIL("let [a] = arr");
+  XFAIL("let {a} = obj");
 }
 TEST_F(parser_test, if_stmt) {
   ASSERT_PARSED_MATCHES_JSON(
