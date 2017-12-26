@@ -4,6 +4,7 @@
 #include "jnsn/js/ast_visitor.h"
 #include "jnsn/js/lexer.h"
 #include <cassert>
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -40,22 +41,19 @@ class ast_node_store;
 
 /// The place where different nodes live
 class ast_node_store {
-  template <class NTy>
-  using no_reloc_buf = std::vector<NTy>; // FIXME this would be an ideal case
-                                         // for llvm::SmallVector
-  template <class NTy>
-  using no_reloc_buf_ptr = std::unique_ptr<no_reloc_buf<NTy>>;
-#define NODE(NAME, CHILD_NODES)                                                \
-  std::vector<no_reloc_buf_ptr<NAME##_node>> NAME##_vec;
-#define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
+  using ast_node_storage = std::variant<
+#define NODE(NAME, CHILD_NODES) NAME##_node,
+#define DERIVED(NAME, BASE, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "jnsn/js/ast.def"
+      std::monostate>;
+  std::deque<ast_node_storage> nodes;
 
 public:
 #define NODE(NAME, CHILD_NODES) NAME##_node *make_##NAME(source_location loc);
 #define DERIVED(NAME, ANCESTOR, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "jnsn/js/ast.def"
 
-  void clear();
+  void clear() { nodes.clear(); }
 };
 
 std::ostream &operator<<(std::ostream &, const ast_node *);

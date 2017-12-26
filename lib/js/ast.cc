@@ -5,28 +5,9 @@
 
 using namespace jnsn;
 /// ast_node_store impl
-void ast_node_store::clear() {
-#define NODE(NAME, CHILD_NODES) NAME##_vec.clear();
-#define DERIVED(NAME, ANCESTORS, CHILD_NODES) NAME##_vec.clear();
-#include "jnsn/js/ast.def"
-}
-
 #define NODE(NAME, CHILD_NODES)                                                \
   NAME##_node *ast_node_store::make_##NAME(source_location loc) {              \
-    if (NAME##_vec.empty()) {                                                  \
-      NAME##_vec.emplace_back(std::make_unique<no_reloc_buf<NAME##_node>>());  \
-      NAME##_vec.back()->reserve(1);                                           \
-    }                                                                          \
-    auto *storage = NAME##_vec.back().get();                                   \
-    /* prevent relocation */                                                   \
-    auto cap = storage->capacity();                                            \
-    if (storage->size() == cap) {                                              \
-      NAME##_vec.emplace_back(std::make_unique<no_reloc_buf<NAME##_node>>());  \
-      storage = NAME##_vec.back().get();                                       \
-      storage->reserve(2 * cap);                                               \
-    }                                                                          \
-    storage->emplace_back(loc);                                                \
-    return &storage->back();                                                   \
+    return &std::get<NAME##_node>(nodes.emplace_back(NAME##_node{loc}));       \
   }
 #define DERIVED(NAME, ANCESTORS, CHILD_NODES) NODE(NAME, CHILD_NODES)
 #include "jnsn/js/ast.def"
