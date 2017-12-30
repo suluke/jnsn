@@ -40,6 +40,10 @@ DERIVED(class_expr, EXTENDS(expression), CHILDREN(MAYBE_STR(name) MAYBE(class_fu
 DERIVED(arrow_function, EXTENDS(expression), CHILDREN(ONE(param_list, params) ONE(statement, body)))
 DERIVED(identifier_expr, EXTENDS(expression), CHILDREN(STRING(str)))
 
+DERIVED(null_literal, EXTENDS(expression), CHILDREN())
+DERIVED(bool_literal, EXTENDS(expression), CHILDREN())
+DERIVED(true_literal, EXTENDS(bool_literal), CHILDREN())
+DERIVED(false_literal, EXTENDS(bool_literal), CHILDREN())
 DERIVED(number_literal, EXTENDS(expression), CHILDREN(STRING(val)))
 DERIVED(int_literal, EXTENDS(number_literal), CHILDREN())
 DERIVED(float_literal, EXTENDS(number_literal), CHILDREN())

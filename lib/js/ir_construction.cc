@@ -232,6 +232,15 @@ inst_creator::result inst_creator::accept(const identifier_expr_node &node) {
   return lookup;
 }
 
+inst_creator::result inst_creator::accept(const null_literal_node &node) {
+  return builder.ctx.get_null();
+}
+inst_creator::result inst_creator::accept(const true_literal_node &node) {
+  return builder.ctx.get_true();
+}
+inst_creator::result inst_creator::accept(const false_literal_node &node) {
+  return builder.ctx.get_false();
+}
 inst_creator::result inst_creator::accept(const int_literal_node &node) {
   return builder.ctx.get_c_num_val(
       static_cast<double>(std::strtol(node.val.data(), nullptr, 10)));

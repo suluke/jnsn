@@ -66,9 +66,10 @@ RESERVED(static)
 // RESERVED(yield) // already declared above
 
 // special identifiers
-//~ KEYWORD(true)
-//~ KEYWORD(false)
-//~ KEYWORD(null)
+KEYWORD(true)
+KEYWORD(false)
+KEYWORD(null)
+
 //~ KEYWORD(undefined)
 //~ KEYWORD(NaN)
 //~ KEYWORD(Infinity)

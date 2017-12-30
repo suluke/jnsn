@@ -411,7 +411,7 @@ TEST_F(parser_test, arrow_function) {
       "(...args) => null",
       MOD_WRAP("{\"type\": \"arrow_function\", \"params\": {\"type\": "
                "\"param_list\", \"names\": [], \"rest\": \"args\"}, \"body\": "
-               "{\"type\": \"identifier_expr\", \"str\": \"null\"}}"));
+               "{\"type\": \"null_literal\"}}"));
 }
 
 TEST_F(parser_test, assignment) {
@@ -447,9 +447,9 @@ TEST_F(parser_test, if_stmt) {
   ASSERT_PARSED_MATCHES_JSON(
       "if (false) if (false) 1; else 2;",
       MOD_WRAP("{\"type\": \"if_stmt\", \"condition\": {\"type\": "
-               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
-               "\"if_stmt\", \"condition\": {\"type\": \"identifier_expr\", "
-               "\"str\": \"false\"}, \"body\": {\"type\": \"int_literal\", "
+               "\"false_literal\"}, \"body\": {\"type\": "
+               "\"if_stmt\", \"condition\": {\"type\": \"false_literal\"}, "
+               "\"body\": {\"type\": \"int_literal\", "
                "\"val\": \"1\"}, \"else_stmt\": {\"type\": \"int_literal\", "
                "\"val\": \"2\"}}, \"else_stmt\": null}"));
 }
@@ -457,14 +457,14 @@ TEST_F(parser_test, do_while) {
   ASSERT_PARSED_MATCHES_JSON(
       "do 1; while (false);",
       MOD_WRAP("{\"type\": \"do_while\", \"condition\": {\"type\": "
-               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
+               "\"false_literal\"}, \"body\": {\"type\": "
                "\"int_literal\", \"val\": \"1\"}}"));
 }
 TEST_F(parser_test, while_stmt) {
   ASSERT_PARSED_MATCHES_JSON(
       "while(false) { 1; }",
       MOD_WRAP("{\"type\": \"while_stmt\", \"condition\": {\"type\": "
-               "\"identifier_expr\", \"str\": \"false\"}, \"body\": {\"type\": "
+               "\"false_literal\"}, \"body\": {\"type\": "
                "\"block\", \"stmts\": [{\"type\": \"int_literal\", \"val\": "
                "\"1\"}]}}"));
 }

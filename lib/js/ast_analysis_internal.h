@@ -34,6 +34,14 @@ private:
   result accept(const arrow_function_node &) override;
   result accept(const identifier_expr_node &node) override;
 
+  result accept(const null_literal_node &node) override;
+  result accept(const bool_literal_node &node) override {
+    report.errors.emplace_back("Encountered abstract class bool_literal_node",
+                               node.loc);
+    return true;
+  }
+  result accept(const true_literal_node &node) override;
+  result accept(const false_literal_node &node) override;
   result accept(const number_literal_node &node) override {
     report.errors.emplace_back("Encountered abstract class number_literal_node",
                                node.loc);

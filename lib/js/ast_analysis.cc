@@ -88,6 +88,18 @@ ast_analysis_manager::accept(const identifier_expr_node &node) {
 }
 
 ast_analysis_manager::result
+ast_analysis_manager::accept(const null_literal_node &node) {
+  return children_not_null::check(node, report);
+}
+ast_analysis_manager::result
+ast_analysis_manager::accept(const true_literal_node &node) {
+  return children_not_null::check(node, report);
+}
+ast_analysis_manager::result
+ast_analysis_manager::accept(const false_literal_node &node) {
+  return children_not_null::check(node, report);
+}
+ast_analysis_manager::result
 ast_analysis_manager::accept(const int_literal_node &node) {
   return children_not_null::check(node, report);
 }

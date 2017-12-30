@@ -1135,7 +1135,13 @@ res<bin_op_expr_node> parser_base::parse_bin_op(expression_node *lhs,
 res<expression_node> parser_base::parse_atomic_keyword_expr() {
   EXPECT(KEYWORD, nullptr);
   auto kwty = get_lexer().get_keyword_type(current_token);
-  if (kwty == keyword_type::kw_class) {
+  if (kwty == keyword_type::kw_null) {
+    return nodes.make_null_literal(current_token.loc);
+  } else if (kwty == keyword_type::kw_true) {
+    return nodes.make_true_literal(current_token.loc);
+  } else if (kwty == keyword_type::kw_false) {
+    return nodes.make_false_literal(current_token.loc);
+  } else if (kwty == keyword_type::kw_class) {
     return upcast_res<expression_node>(parse_class_expr());
   } else if (kwty == keyword_type::kw_function) {
     return upcast_res<expression_node>(parse_function_expr());

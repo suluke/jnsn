@@ -91,6 +91,12 @@ struct inst_creator : public const_ast_node_visitor<inst_result> {
   result accept(const arrow_function_node &) override;
   result accept(const identifier_expr_node &node) override;
 
+  result accept(const null_literal_node &node) override;
+  result accept(const bool_literal_node &node) override {
+    return ir_error{"Encountered abstract class bool_literal_node", {}};
+  }
+  result accept(const true_literal_node &node) override;
+  result accept(const false_literal_node &node) override;
   result accept(const number_literal_node &) override {
     return ir_error{"Encountered abstract class number_literal_node", {}};
   }
