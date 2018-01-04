@@ -3,6 +3,7 @@ set(SOURCES
   ir_context.cc
   ir_builder.cc
   module.cc
+  printer.cc
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/instructions.def
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/instructions.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/intrinsics.def
@@ -10,6 +11,7 @@ set(SOURCES
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/ir_builder.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/ir_context.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/module.h
+  ${PROJECT_SOURCE_DIR}/include/jnsn/ir/printer.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/types.def
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/types.h
   ${PROJECT_SOURCE_DIR}/include/jnsn/ir/value.h

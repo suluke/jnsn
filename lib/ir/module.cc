@@ -1,4 +1,5 @@
 #include "jnsn/ir/module.h"
+#include "jnsn/ir/printer.h"
 #include "jnsn/util.h"
 #include <cassert>
 #include <iostream>
@@ -15,37 +16,22 @@ function *module::get_function_by_name(std::string name) {
   return nullptr;
 }
 
-void module::print(std::ostream &stream) {
-  stream << "; global values\n";
-  for (const auto *str : strs) {
-    stream << "string " << get_unique_id(*str) << ": \"";
-    str->print(stream);
-    stream << "\"\n";
+str_val *module::get_str_val(std::string val) {
+  auto handle = ctx.internalize_string(val);
+  str_val tester(handle, ctx);
+  if (strs.count(&tester)) {
+    return *strs.find(&tester);
   }
-  stream << "\n; functions\n";
-  for (auto *F : functions) {
-    F->print(stream);
-  }
-}
-std::string module::get_unique_id(const global_value &G) {
-  assert(G.get_parent() == this);
-  if (global_names.count(&G)) {
-    return global_names[&G];
-  }
-  //~ // TODO this still needs improvements
-  if (isa<str_val>(G)) {
-    const auto *as_cstr = static_cast<const str_val *>(&G);
-    // Jeez, I'm so desperate, I'm using const_cast :(
-    auto *as_str = const_cast<str_val *>(as_cstr);
-    return "str" +
-           std::to_string(std::distance(strs.begin(), strs.find(as_str)));
-  }
-  return G.get_name();
+  auto *str = ctx.make_str_val(std::move(val));
+  str->parent = this;
+  strs.emplace(str);
+  return str;
 }
 
 namespace jnsn {
-std::ostream &operator<<(std::ostream &stream, module &mod) {
-  mod.print(stream);
+std::ostream &operator<<(std::ostream &stream, const module &mod) {
+  ir_printer::print(stream, mod);
   return stream;
 }
+
 } // namespace jnsn

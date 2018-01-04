@@ -15,17 +15,11 @@ class instruction : public value {
   static constexpr ir_value_kind kind = ir_value_kind::instruction_kind;
   basic_block *parent = nullptr;
 
-protected:
-  std::string get_unique_id() const;
-  /// Used for printing instruction's arguments
-  std::string get_unique_id(const value &val) const;
-
 public:
   instruction(ir_context &ctx, ir_value_kind kind, type ty)
       : value(ctx, kind, ty) {}
   bool has_parent() const { return parent; }
   basic_block *get_parent() const { return parent; }
-  void print(std::ostream &stream, unsigned indent = 0) const;
 };
 
 /// instruction properties
@@ -56,14 +50,18 @@ public:                                                                        \
     NAME##_inst(ir_context &ctx)                                               \
         : instruction(ctx, ir_value_kind::NAME##_inst_kind, RET) {}            \
     ARGUMENTS                                                                  \
-    void print(std::ostream &stream, unsigned indent = 0) const;               \
     PROPERTIES                                                                 \
                                                                                \
   private:                                                                     \
-    std::array<value *, static_cast<std::underlying_type_t<arguments>>(        \
-                            arguments::_ARGC_)>                                \
-        args{}; /* the {} is important for zero-initialization. FIXME only */  \
+    using arg_container =                                                      \
+        std::array<value *, static_cast<std::underlying_type_t<arguments>>(    \
+                                arguments::_ARGC_)>;                           \
+    arg_container                                                              \
+        args{}; /* the {} is important for zero-initialization. TODO only */   \
                 /* do this in Debug builds? */                                 \
+  public:                                                                      \
+    arg_container::const_iterator arg_begin() const { return args.begin(); }   \
+    arg_container::const_iterator arg_end() const { return args.end(); }       \
   };
 #include "jnsn/ir/instructions.def"
 

@@ -2,6 +2,7 @@
 #define JNSN_IR_H
 #include "jnsn/ir/instructions.h"
 #include "jnsn/string_table.h"
+#include <algorithm>
 #include <cassert>
 #include <vector>
 
@@ -17,55 +18,53 @@ struct constant : public value {
 
 protected:
   constant(ir_context &ctx, ir_value_kind k, type ty) : value(ctx, k, ty) {}
-
-public:
-  void print(std::ostream &stream, unsigned indent = 0) const;
-  std::string str() const;
 };
+
 class c_bool_val : public constant {
   template <class ty> friend bool isa(const value &);
+  friend class ir_context;
   static constexpr ir_value_kind kind = ir_value_kind::const_bool_kind;
   bool val;
 
-public:
   c_bool_val(bool val, ir_context &ctx)
       : constant(ctx, ir_value_kind::const_bool_kind, c_bool_type::create()),
         val(val) {}
-  void print(std::ostream &stream, unsigned indent = 0) const;
-  std::string str() const;
+
+public:
+  bool get_value() const { return val; }
 };
+
 class c_num_val : public constant {
   template <class ty> friend bool isa(const value &);
+  friend class ir_context;
   static constexpr ir_value_kind kind = ir_value_kind::const_num_kind;
   double val;
 
-public:
   c_num_val(double val, ir_context &ctx)
       : constant(ctx, ir_value_kind::const_num_kind, c_num_type::create()),
         val(val) {}
-  void print(std::ostream &stream, unsigned indent = 0) const;
-  std::string str() const;
-};
-class undefined_val : public constant {
-  template <class ty> friend bool isa(const value &);
-  static constexpr ir_value_kind kind = ir_value_kind::undefined_kind;
 
 public:
+  double get_value() const { return val; }
+};
+
+class undefined_val : public constant {
+  template <class ty> friend bool isa(const value &);
+  friend class ir_context;
+  static constexpr ir_value_kind kind = ir_value_kind::undefined_kind;
+
   undefined_val(ir_context &ctx)
       : constant(ctx, ir_value_kind::undefined_kind, undefined_type::create()) {
   }
-  void print(std::ostream &stream, unsigned indent = 0) const;
-  std::string str() const;
 };
+
 class null_val : public constant {
   template <class ty> friend bool isa(const value &);
+  friend class ir_context;
   static constexpr ir_value_kind kind = ir_value_kind::null_kind;
 
-public:
   null_val(ir_context &ctx)
       : constant(ctx, ir_value_kind::null_kind, null_type::create()) {}
-  void print(std::ostream &stream, unsigned indent = 0) const;
-  std::string str() const;
 };
 
 class global_value : public value {
@@ -81,9 +80,8 @@ protected:
 public:
   bool has_parent() const { return parent; }
   module *get_parent() const { return parent; }
-  std::string get_unique_id() const;
 };
-// FIXME drop the c_ prefix because strings are different from usual constants
+
 class str_val : public global_value {
   template <class ty> friend bool isa(const value &);
   friend class ir_context;
@@ -91,13 +89,12 @@ class str_val : public global_value {
   static constexpr ir_value_kind kind = ir_value_kind::const_str_kind;
   string_table_entry val;
 
-  using global_value::get_unique_id;
   str_val(string_table_entry val, ir_context &ctx)
       : global_value(ctx, ir_value_kind::const_str_kind, c_str_type::create()),
         val(val) {}
 
 public:
-  void print(std::ostream &stream, unsigned indent = 0) const;
+  std::string_view get_value() const { return val; }
 };
 
 /// BasicBlock
@@ -109,16 +106,19 @@ class basic_block : public value {
   using inst_list = std::vector<instruction *>;
   inst_list instructions;
   function *parent = nullptr;
-  std::string get_unique_id(const instruction &) const;
-  std::string get_unique_id() const;
 
-public:
   basic_block(ir_context &ctx)
       : value(ctx, ir_value_kind::basic_block_kind,
               basic_block_type::create()) {}
+
+public:
+  basic_block(const basic_block &) = default;
+  basic_block(basic_block &&) = default;
   bool has_parent() const { return parent; }
   function *get_parent() const { return parent; }
-  void print(std::ostream &stream, unsigned indent = 0) const;
+  bool contains(const instruction &inst) const {
+    return std::find(begin(), end(), &inst) != end();
+  }
   size_t size() const { return instructions.size(); }
   inst_list::const_iterator begin() const { return instructions.begin(); }
   inst_list::const_iterator end() const { return instructions.end(); }
@@ -132,14 +132,13 @@ class function : public global_value {
   friend class instruction;
   template <class ty> friend bool isa(const value &);
   static constexpr ir_value_kind kind = ir_value_kind::function_kind;
-  std::vector<basic_block *> blocks;
-  function(ir_context &ctx)
+  using block_list = std::vector<basic_block *>;
+  block_list blocks;
+  bool intrinsic = false;
+  function(ir_context &ctx, bool intrinsic = false)
       : global_value(ctx, ir_value_kind::function_kind,
-                     function_type::create()) {}
-
-  std::string get_unique_id(const instruction &) const;
-  std::string get_unique_id(const basic_block &) const;
-  using global_value::get_unique_id;
+                     function_type::create()),
+        intrinsic(intrinsic) {}
 
 public:
   function(const function &) = default;
@@ -148,13 +147,9 @@ public:
     assert(!blocks.empty());
     return blocks.front();
   }
-  bool is_intrinsic() {
-    auto &name = get_name();
-    if (name.empty())
-      return false;
-    return name[0] == '!';
-  }
-  void print(std::ostream &stream, unsigned indent = 0) const;
+  bool is_intrinsic() { return intrinsic; }
+  block_list::const_iterator begin() const { return blocks.begin(); }
+  block_list::const_iterator end() const { return blocks.end(); }
 };
 
 /// type introspection support for values

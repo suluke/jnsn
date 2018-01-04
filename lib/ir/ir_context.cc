@@ -9,9 +9,10 @@ using namespace jnsn;
 ir_context::ir_context(){
 #define INTRINSIC(NAME, ARGS, RET)                                             \
   {                                                                            \
-    auto *i = make_function();                                                 \
-    i->set_name("!" #NAME);                                                    \
-    intrinsics.emplace(intrinsic::NAME, i);                                    \
+    functions.emplace_back(function{*this, true});                             \
+    auto *I = &functions.back();                                               \
+    I->set_name(#NAME);                                                        \
+    intrinsics.emplace(intrinsic::NAME, I);                                    \
   }
 #include "jnsn/ir/intrinsics.def"
 }
